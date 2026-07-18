@@ -55,10 +55,10 @@ Legend: ✅ done & contract-tested · 🟡 partial · ⛔ TODO stub.
 | `pipeline.py` | ⛔ | C | `process_event()`, `replay_stream()` — the 7-step glue | System Architecture |
 | `retrieval.py` | ⛔ | C | `retrieve(kb, event, evidence, k)→Context` (top-k) | System Architecture step 2 |
 | `adapters/cortex.py` | ⛔ | C | `load_kb()`, `load_stream()` — CORTEX format. **Kickoff-day** | — |
-| `eval/metrics.py` | ⛔ | C | `brier()`, `ece()` (+ ASR, fraud-rate) | Fine-Tuning Plan §eval |
-| `eval/replay.py` | ⛔ | C | `main()` — replay streams, print table (`make eval`) | Fine-Tuning Plan |
-| `eval/baselines.py` | ⛔ | C | `GullibleBot`, `StubbornBot` drop-in extractors | Fine-Tuning Plan |
-| `eval/redteam.py` | ⛔ | C | `attack_stream()` — injection battery | Prompt Injection Defense |
+| `eval/metrics.py` | ✅ | C | `brier`, `ece`, `asr`, `fraud_accepted_rate`, `max_confidence_shift` — pure fns over `KB`/`EventResult`s vs sim ground truth | Fine-Tuning Plan §eval |
+| `eval/replay.py` | 🟡 | C | `main()` runs `make eval` end-to-end (seeds KB from `World`, scores each system, 2 tables). Numbers are prior-only until `engine`+`pipeline` land — harness itself is done | Fine-Tuning Plan |
+| `eval/baselines.py` | ✅ | C | `GullibleBot` (strong-`+` on top claim), `StubbornBot` (no-op) — drop-in extractors matching `FakeExtractor`'s shape | Fine-Tuning Plan |
+| `eval/redteam.py` | ✅ | C | `attack_stream()` — 5-family injection battery (payloads in `raw_text` only), gold-labelled for ASR | Prompt Injection Defense |
 | `ui/app.py` | 🟡 | C | FastAPI + `/health` done; `/`, `/stream` (SSE), `/event`, `/discredit` TODO | System Architecture |
 
 ## The escape hatch (why work can start today)
