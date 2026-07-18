@@ -328,6 +328,29 @@ def _client():
     return client_from_config()
 
 
+def _retry_flash(call, *, label: str, attempts: int = 12):
+    """Retry only transient Flash connectivity failures with bounded backoff."""
+    for attempt in range(attempts):
+        try:
+            return call()
+        except Exception as exc:
+            detail = str(exc).lower()
+            transient = any(
+                marker in detail
+                for marker in (
+                    "cannot reach the flash service",
+                    "temporary failure in name resolution",
+                    "nodename nor servname provided",
+                    "timed out",
+                    "connection reset",
+                )
+            )
+            if not transient or attempt + 1 >= attempts:
+                raise
+            time.sleep(min(30, 2**attempt))
+    raise RuntimeError(f"{label} exhausted retries")
+
+
 def _submit(name: str, path: Path, state: dict[str, Any]) -> str:
     dry_run = _server_dry_run(path)
     state.setdefault("server_dry_runs", {})[name] = dry_run
@@ -373,7 +396,7 @@ def _submit(name: str, path: Path, state: dict[str, Any]) -> str:
 
 def _monitor(name: str, run_id: str, state: dict[str, Any]) -> dict[str, Any]:
     while True:
-        status = _client().get_run(run_id)
+        status = _retry_flash(lambda: _client().get_run(run_id), label=f"monitor {run_id}")
         current = str(status.get("state", ""))
         state["stages"][name].update(
             {"state": current, "cost_usd": float(status.get("cost_usd") or 0.0)}
@@ -403,7 +426,12 @@ def _stage_run(name: str, config_name: str, paths: dict[str, Path], state: dict[
 
 
 def _checkpoint_refs(run_id: str, requested: Sequence[int]) -> list[str]:
-    available = {int(item["step"]) for item in _client().checkpoints(run_id)}
+    available = {
+        int(item["step"])
+        for item in _retry_flash(
+            lambda: _client().checkpoints(run_id), label=f"checkpoints {run_id}"
+        )
+    }
     refs = [f"{run_id}/step-{step}" for step in requested if step in available]
     return refs or [run_id]
 
@@ -422,7 +450,9 @@ def _deployment_record(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _deploy_wait(ref: str) -> dict[str, Any]:
     base_run = ref.split("/step-", 1)[0]
-    deployment = _deployment_record(_client().deploy(ref))
+    deployment = _deployment_record(
+        _retry_flash(lambda: _client().deploy(ref), label=f"deploy {ref}")
+    )
     deadline = time.monotonic() + 600
     while str(deployment.get("state", "")) not in {"ready", "deployed"}:
         if deployment.get("state") == "failed":
@@ -432,7 +462,7 @@ def _deploy_wait(ref: str) -> dict[str, Any]:
         time.sleep(5)
         matches = [
             item
-            for item in _client().deployments()
+            for item in _retry_flash(_client().deployments, label=f"deployment status {ref}")
             if str(item.get("run_id") or item.get("id")) == base_run
         ]
         if matches:

@@ -12,7 +12,7 @@ from freesolo.environments import EnvironmentEpisode
 from cortesol.core.ops import OP_NAMES, ProposedOps, ops_json_schema
 from cortesol.train.bundle import build_bundle
 from cortesol.train.config_artifacts import render_configs
-from cortesol.train.coordinator import _deployment_record, _evaluation_reserve
+from cortesol.train.coordinator import _deployment_record, _evaluation_reserve, _retry_flash
 from cortesol.train.datasets import (
     build_all,
     build_sft_rows,
@@ -53,6 +53,27 @@ def test_deployment_state_uses_nested_record_not_parent_training_state():
     }
     assert _deployment_record(nested)["state"] == "ready"
     assert _deployment_record(nested)["adapter_revision"].startswith("flash-run@step-100")
+
+
+def test_flash_retry_recovers_only_transient_connectivity(monkeypatch):
+    monkeypatch.setattr("cortesol.train.coordinator.time.sleep", lambda _: None)
+    attempts = iter(
+        [
+            RuntimeError("cannot reach the Flash service: temporary DNS failure"),
+            RuntimeError("nodename nor servname provided"),
+            {"state": "done"},
+        ]
+    )
+
+    def flaky():
+        result = next(attempts)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    assert _retry_flash(flaky, label="test") == {"state": "done"}
+    with pytest.raises(RuntimeError, match="not authorized"):
+        _retry_flash(lambda: (_ for _ in ()).throw(RuntimeError("not authorized")), label="test")
 
 
 def test_dataset_profile_is_complete_deterministic_and_sealed(generated, tmp_path):
