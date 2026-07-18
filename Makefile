@@ -2,7 +2,8 @@
 # These names are a contract: CLAUDE.md and the branch briefs reference them.
 
 .PHONY: help install test test-contract test-unit test-integration lint fmt \
-        sim fetch-papers eval run-ui train-sft train-grpo training-preflight snapshot-clean
+        sim fetch-papers eval run-ui train-sft train-grpo training-preflight snapshot-clean \
+        plan-b-setup plan-b-serve plan-b-tunnel
 
 CONDA_ENV := cortesol-train
 RUN := conda run --no-capture-output -n $(CONDA_ENV)
@@ -44,6 +45,16 @@ eval:  ## [B3] Replay held-out streams and print the metrics table
 
 run-ui:  ## [B3] Launch the live belief-graph demo (FastAPI + SSE)
 	$(RUN) uvicorn cortesol.ui.app:app --reload --port 8000
+
+plan-b-setup:  ## Pull Qwen 3.5 9B and build the schema-policy Ollama alias
+	ollama pull qwen3.5:9b
+	ollama create cortesol-proposer:plan-b -f deploy/ollama/Modelfile
+
+plan-b-serve:  ## Serve the authenticated Freesolo-compatible Plan B gateway
+	$(RUN) uvicorn cortesol.serve.gateway:app --host 127.0.0.1 --port 8787
+
+plan-b-tunnel:  ## Expose the Plan B gateway through a Cloudflare quick tunnel
+	cloudflared tunnel --url http://127.0.0.1:8787 --http-host-header 127.0.0.1:8787
 
 train-sft:  ## [B2] Build the SFT dataset and launch the Flash SFT run
 	$(RUN) python -m cortesol.train.coordinator run --from-stage smoke_sft

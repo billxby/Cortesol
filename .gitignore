@@ -15,6 +15,7 @@ uv.lock
 # Env / secrets — NEVER commit Freesolo or OpenAI keys
 .env
 .env.local
+.env.*
 *.key
 
 # Test / tooling
