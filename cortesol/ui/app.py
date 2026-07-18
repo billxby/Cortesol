@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -27,7 +28,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
-from .. import pipeline
+from .. import bootstrap, pipeline
 from ..adapters import cortex
 from ..core import propagate
 from ..core.config import EDGE_INFLUENCE, PRIOR_C_0
@@ -53,6 +54,12 @@ _STATIC = _HERE / "static"
 _SIM_STREAM_PATH = _HERE.parents[1] / "data" / "streams" / "eval_seed42.jsonl"
 _PAPERS_PATH = _HERE.parents[1] / "data" / "papers" / "raw_papers.jsonl"
 _DEMO_SEED = 42
+
+
+def _use_foundation() -> bool:
+    """Whether to open the papers demo on the pre-built foundation snapshot.
+    Read live (not cached at import) so /reset picks up an env change."""
+    return os.environ.get("CORTESOL_FOUNDATION", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 # --------------------------------------------------------------------------
@@ -144,9 +151,20 @@ class DemoState:
         return PaperFakeExtractor() if self.data_source == "papers" else FakeExtractor()
 
     def reset(self) -> None:
+        self._foundation_loaded = False
         if self.data_source == "papers":
-            self.events = cortex.load_stream(_PAPERS_PATH)
-            self.kb = cortex.seed_kb_from_papers(self.events)
+            # Foundation mode (CORTESOL_FOUNDATION=1): open on a pre-established KB —
+            # confidence earned by replaying the curated foundation through the engine
+            # (see cortesol/bootstrap.py) — and run the held-out papers live as the
+            # robustness test. Belief was moved only by the engine; loading the
+            # snapshot restores that state + its audit trajectory, it never sets ℓ.
+            loaded = bootstrap.load_foundation() if _use_foundation() else None
+            if loaded is not None:
+                self.kb, self.events = loaded
+                self._foundation_loaded = True
+            else:
+                self.events = cortex.load_stream(_PAPERS_PATH)
+                self.kb = cortex.seed_kb_from_papers(self.events)
         else:
             self.events = [
                 RawEvent(**json.loads(line))
@@ -169,6 +187,11 @@ class DemoState:
         # "revealed" only once a committed result has touched it — so Act 1 is raw
         # results arriving into a blank canvas, Act 2 is the graph forming.
         self.revealed: set[str] = set()
+        # Foundation mode inverts Act 1: the established belief graph is already
+        # there when the demo opens, and holdout results revise it. Reveal every
+        # seeded claim so the audience sees the foundation before stepping.
+        if self._foundation_loaded:
+            self.revealed = set(self.kb.claims)
 
     def reveal(self, claim_ids) -> None:
         self.revealed.update(cid for cid in claim_ids if cid in self.kb.claims)

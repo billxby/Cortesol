@@ -2,8 +2,8 @@
 # These names are a contract: CLAUDE.md and the branch briefs reference them.
 
 .PHONY: help install test test-contract test-unit test-integration lint fmt \
-        sim fetch-papers eval run-ui train-sft train-grpo training-preflight snapshot-clean \
-        plan-b-setup plan-b-serve plan-b-tunnel
+        sim fetch-papers bootstrap eval run-ui run-ui-foundation train-sft train-grpo \
+        training-preflight snapshot-clean plan-b-setup plan-b-serve plan-b-tunnel
 
 CONDA_ENV := cortesol-train
 RUN := conda run --no-capture-output -n $(CONDA_ENV)
@@ -40,11 +40,17 @@ sim:  ## [B2] Generate a toy peptide stream from the simulator and print it
 fetch-papers:  ## [B/C] Fetch real peptide abstracts from PubMed -> data/papers/ (evidence, no oracle)
 	$(RUN) python -m cortesol.ingest.fetch_papers --per-peptide 8
 
+bootstrap:  ## [C] Build the demo foundation: replay 3 critical papers/peptide through the engine -> data/snapshots/
+	$(RUN) python -m cortesol.bootstrap --per-peptide 3
+
 eval:  ## [B3] Replay held-out streams and print the metrics table
 	$(RUN) python -m cortesol.eval.replay
 
 run-ui:  ## [B3] Launch the live belief-graph demo (FastAPI + SSE)
 	$(RUN) uvicorn cortesol.ui.app:app --reload --port 8000
+
+run-ui-foundation:  ## [C] Launch the demo pre-seeded with the foundation (run `make bootstrap` first)
+	CORTESOL_FOUNDATION=1 $(RUN) uvicorn cortesol.ui.app:app --reload --port 8000
 
 plan-b-setup:  ## Pull Qwen 3.5 9B and build the schema-policy Ollama alias
 	ollama pull qwen3.5:9b

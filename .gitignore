@@ -37,6 +37,8 @@ data/sft/*.jsonl
 data/episodes/
 # generated event streams (regenerable: emit_stream(seed, n))
 data/streams/
+# demo foundation snapshot + holdout stream (regenerable: make bootstrap)
+data/snapshots/
 # demo recordings live in docs/media/ only when intentional
 *.gif
 !docs/media/*.gif
