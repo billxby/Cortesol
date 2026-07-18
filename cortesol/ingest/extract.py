@@ -223,6 +223,51 @@ class FreesoloExtractor:
             detail = exc.read().decode(errors="replace")
             raise RuntimeError(f"Flash extraction failed ({exc.code}): {detail}") from exc
 
+    def warmup(self, *, timeout: int = 200) -> dict:
+        """Fire a minimal chat request to force the serving adapter to load and
+        confirm the checkpoint answers. Cold starts can take ~90s (the adapter is
+        spun down when idle); warm calls are ~1s. NEVER raises — returns a small
+        status dict so the UI can surface a clear, honest result."""
+        import time
+
+        payload = {
+            "messages": [
+                {"role": "system", "content": "reply {}"},
+                {"role": "user", "content": "{}"},
+            ],
+            "temperature": 0.0,
+            "max_tokens": 8,
+        }
+        if self.adapter_revision:
+            payload["adapter_revision"] = self.adapter_revision
+        request = urllib.request.Request(
+            f"{self.api_url}/v1/runs/{self.run_id}/chat",
+            data=json.dumps(payload).encode(),
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+        )
+        started = time.monotonic()
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                json.load(response)
+            return {"ok": True, "latency_s": round(time.monotonic() - started, 1)}
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode(errors="replace")[:200]
+            return {
+                "ok": False,
+                "latency_s": round(time.monotonic() - started, 1),
+                "detail": f"HTTP {exc.code}: {body}",
+            }
+        except Exception as exc:  # timeout / URLError / anything else
+            return {
+                "ok": False,
+                "latency_s": round(time.monotonic() - started, 1),
+                "detail": f"{type(exc).__name__}: {exc}",
+            }
+
 
 def _match_claim(ctx: Context, prefer_efficacy: bool) -> Claim | None:
     """Map the untrusted event to a retrieved claim by peptide identity. Reads only

@@ -435,10 +435,12 @@ async def next_event() -> dict:
         # the live model call is blocking network I/O — run it off the event loop
         # so SSE pings and other requests stay responsive while the model thinks
         result, used_fallback = await asyncio.to_thread(_process_resilient, event)
-        if used_fallback:
-            # the live checkpoint didn't answer in time — reflect that honestly in
-            # the badge so the demo shows it's now running on the offline proposer
-            STATE.extractor_kind = "offline"
+        # Reflect per-event reality: only flip to "offline" when THIS event actually
+        # fell back. If the live checkpoint answered (e.g. it warmed up), flip back to
+        # "freesolo" so the badge stops lying. Purely-offline runs (no creds) keep
+        # whatever _build_extractor decided.
+        if isinstance(STATE.extractor, FreesoloExtractor):
+            STATE.extractor_kind = "offline" if used_fallback else "freesolo"
         STATE.cursor += 1
         STATE.reveal(result.dirty_claims)  # committed claims join the graph
         message = _event_message(event, result)
@@ -501,6 +503,26 @@ async def set_extractor(payload: dict) -> dict:
         STATE.reset()
         await STATE.broadcast(STATE.graph_payload())
         return {"status": "ok", "extractor_kind": kind}
+
+
+@app.post("/warmup")
+async def warmup() -> dict:
+    """Pre-warm the live Freesolo checkpoint and confirm it answers. The adapter
+    is spun down when idle, so the first call can take ~90s; this lets the demo
+    absorb that cold start on a button press instead of on the first ingest. On
+    success we (re)mark the extractor live; on failure we honestly show offline."""
+    ext = STATE.extractor
+    if not isinstance(ext, FreesoloExtractor):
+        return {
+            "status": "offline",
+            "reason": "No live Freesolo checkpoint configured — set FREESOLO_RUN_ID "
+            "and FREESOLO_API_KEY in .env, then Reset.",
+        }
+    info = await asyncio.to_thread(ext.warmup)
+    async with STATE.lock:
+        STATE.extractor_kind = "freesolo" if info.get("ok") else "offline"
+        await STATE.broadcast(STATE.graph_payload())
+    return {"status": "ok" if info.get("ok") else "error", **info}
 
 
 @app.post("/reset")

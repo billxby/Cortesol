@@ -61,6 +61,20 @@
   .model-badge.live::before { background:var(--good); box-shadow:0 0 6px var(--good); }
   .model-badge.offline { background:var(--warn-soft); border-color:#e6d5a8; color:var(--warn); }
   .model-badge.offline::before { background:var(--warn); }
+  .model-badge.warming { background:var(--blue-soft); border-color:#b6cfe8; color:var(--blue); }
+  .model-badge.warming::before { background:var(--blue); animation:blink .9s infinite; }
+  .warmbtn { font-size:12px; padding:5px 11px; border-radius:999px; }
+
+  /* toast */
+  #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; font-size:13px; padding:11px 18px; border-radius:999px;
+    box-shadow:var(--shadow-md); z-index:80; opacity:0; pointer-events:none; transition:.25s;
+    display:flex; align-items:center; gap:9px; max-width:80vw; }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.ok { background:#12603a; } #toast.err { background:#8f1720; }
+  #toast .sp { width:13px; height:13px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
+    border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
   .toplink { font-size:12.5px; color:var(--muted); white-space:nowrap; }
   .toplink:hover { color:var(--blue); }
 
@@ -94,7 +108,10 @@
   button.ghost:hover:not(:disabled) { background:var(--wash2); color:var(--ink); border-color:transparent; }
   button.danger { color:var(--accent); border-color:#e6bcc0; }
   button.danger:hover:not(:disabled) { background:var(--accent-soft); border-color:var(--accent); }
-  .retract { display:inline-flex; align-items:center; gap:6px; }
+  .ctl-group { display:inline-flex; align-items:center; gap:7px; }
+  .ctl-lbl { font-size:10px; font-weight:650; letter-spacing:.7px; text-transform:uppercase;
+    color:var(--faint); }
+  .retract { gap:6px; }
   #discredit-src { max-width:180px; }
   #source-sel { min-width:160px; }
   .toggle { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted);
@@ -257,6 +274,7 @@
     <div class="spacer"></div>
     <div class="status-cluster">
       <span id="model-badge" class="model-badge" title="The proposing model">Freesolo · live</span>
+      <button id="warm" class="warmbtn" title="Load the live checkpoint (a cold start can take ~90s) and confirm it answers">Warm up</button>
       <a class="toplink" href="/training">Training ↗</a>
     </div>
   </header>
@@ -270,13 +288,17 @@
     <button id="step" class="primary">Ingest next &#9656;</button>
     <button id="play">Auto-play</button>
     <div class="sep"></div>
-    <select id="source-sel" title="Data source">
-      <option value="papers">Papers database</option>
-      <option value="sim">Simulator stream</option>
-    </select>
-    <div class="retract">
-      <select id="discredit-src" title="Discredit a source"></select>
-      <button id="discredit" class="danger">Retract source</button>
+    <div class="ctl-group">
+      <span class="ctl-lbl">Corpus</span>
+      <select id="source-sel" title="Which body of evidence to ingest">
+        <option value="papers">Papers database</option>
+        <option value="sim">Simulator stream</option>
+      </select>
+    </div>
+    <div class="ctl-group retract">
+      <span class="ctl-lbl">Retract</span>
+      <select id="discredit-src" title="Pick a source (journal / venue) to discredit — the engine drains the belief it contributed and cascades the retraction"></select>
+      <button id="discredit" class="danger" title="Discredit the selected source and cascade the retraction">Discredit</button>
     </div>
     <div class="sep"></div>
     <label class="toggle"><input type="checkbox" id="reveal" /> Ground truth</label>
@@ -340,6 +362,8 @@
       </aside>
     </section>
   </main>
+
+  <div id="toast"></div>
 
   <div id="modal"><div class="sheet">
     <div class="top">
@@ -430,7 +454,7 @@ function GraphApp(){
     linkLineDash: (l) => (EDGE_STYLE[l.type] || {}).dash || null,
     linkWidth: (l) => 1 + Math.abs(l.weight || 1) * 1.2,
     linkDirectionalArrowLength: 3.5, linkDirectionalArrowRelPos: 1,
-    cooldownTime: 4000, d3VelocityDecay: 0.3,
+    cooldownTime: 2600, d3AlphaDecay: 0.05, d3VelocityDecay: 0.35,
     onEngineStop: () => { if (!fitted.current && GraphStore.data.nodes.length){ fitted.current = true; GraphStore.fit(); } },
   });
 }
@@ -442,7 +466,7 @@ const _ro = new ResizeObserver((entries) => {
 });
 _ro.observe($("net"));
 
-let PRIOR = 0.45, REVEAL = false, LOGN = 0;
+let PRIOR = 0.45, REVEAL = false, LOGN = 0, WARMING = false;
 let DOCS = [];                 // full document list from backend
 let VERDICTS = {};             // idx -> "reject" | "flag" | "commit"
 let CURSOR = 0, TOTAL = 0;
@@ -510,16 +534,19 @@ function matchesQuery(d){
   return hay.includes(QUERY);
 }
 
+function updateChipCounts(){
+  const counts = { all: DOCS.length, pending:0, done:0, flagged:0, refused:0 };
+  DOCS.forEach((d) => { const b = bucket(docStatus(d.idx)); if (counts[b] != null) counts[b]++; });
+  document.querySelectorAll(".chip .n").forEach((el) => { el.textContent = counts[el.dataset.c] ?? ""; });
+}
+
+// full render — used on load, source switch, filter/search change
 function renderGrid(){
   $("lib-title").textContent = IS_PAPERS ? "Papers" : "Incoming results";
   $("lib-sub").textContent = IS_PAPERS
     ? "Peer-reviewed abstracts awaiting appraisal. Click a card to read it; ingest them one at a time to build the belief graph."
     : "Simulated experimental results streaming in one at a time. Ingest them to drive the belief engine.";
-
-  // filter chip counts
-  const counts = { all: DOCS.length, pending:0, done:0, flagged:0, refused:0 };
-  DOCS.forEach((d) => { const b = bucket(docStatus(d.idx)); if (counts[b] != null) counts[b]++; });
-  document.querySelectorAll(".chip .n").forEach((el) => { el.textContent = counts[el.dataset.c] ?? ""; });
+  updateChipCounts();
 
   const grid = $("paper-grid");
   const shown = DOCS.filter((d) => (FILTER === "all" || bucket(docStatus(d.idx)) === FILTER) && matchesQuery(d));
@@ -527,8 +554,29 @@ function renderGrid(){
     grid.innerHTML = `<div class="no-results" style="grid-column:1/-1">No papers match “${esc(QUERY)}”${FILTER!=="all"?` in ${FILTER}`:""}.</div>`;
     return;
   }
-  grid.innerHTML = "";
-  shown.forEach((d) => grid.appendChild(paperCard(d)));
+  // reuse a DocumentFragment so the grid is committed to the DOM in one reflow
+  const frag = document.createDocumentFragment();
+  shown.forEach((d) => frag.appendChild(paperCard(d)));
+  grid.replaceChildren(frag);
+}
+
+// cheap in-place status refresh for a single card (no full rebuild)
+function refreshCard(idx){
+  const card = $("paper-grid").querySelector(`.pcard[data-idx="${idx}"]`);
+  if (!card) return;
+  const st = docStatus(idx);
+  card.className = `pcard ${st === "next" ? "next" : st === "pending" ? "" : "done"}`;
+  const stEl = card.querySelector(".st");
+  if (stEl){ stEl.className = `st ${st}`; stEl.textContent = STATUS_LABEL[st]; }
+}
+
+// an ingest only changes two cards (the appraised one + the new "next"). Touch
+// just those instead of rebuilding all 149 — unless a filter could change which
+// cards are visible, in which case a reflow is unavoidable.
+function updateGridForEvent(idx){
+  updateChipCounts();
+  if (FILTER === "all" && !QUERY){ refreshCard(idx); refreshCard(CURSOR); }
+  else renderGrid();
 }
 
 function paperCard(d){
@@ -552,7 +600,12 @@ $("chips").querySelectorAll(".chip").forEach((c) => c.onclick = () => {
   $("chips").querySelectorAll(".chip").forEach((x) => x.classList.toggle("active", x === c));
   renderGrid();
 });
-$("search").oninput = (e) => { QUERY = e.target.value.trim().toLowerCase(); renderGrid(); };
+let searchTimer=null;
+$("search").oninput = (e) => {
+  const v = e.target.value.trim().toLowerCase();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { QUERY = v; renderGrid(); }, 130);
+};
 
 // ---------- paper reader ----------
 async function openPaper(idx){
@@ -580,10 +633,13 @@ function syncToggles(g){
   IS_PAPERS = g.data_source === "papers";
   $("source-sel").value = g.data_source;
   $("step").textContent = IS_PAPERS ? "Ingest next paper ▸" : "Ingest next ▸";
-  const badge = $("model-badge");
-  if (g.extractor_kind === "freesolo") { badge.textContent = "Freesolo · live"; badge.className = "model-badge live"; }
-  else { badge.textContent = "offline fallback"; badge.className = "model-badge offline";
-    badge.title = "FREESOLO_API_KEY / FREESOLO_RUN_ID missing in .env — using the offline heuristic"; }
+  if (!WARMING) {
+    const badge = $("model-badge");
+    if (g.extractor_kind === "freesolo") { badge.textContent = "Freesolo · live"; badge.className = "model-badge live";
+      badge.title = "The live Freesolo checkpoint is proposing ops"; }
+    else { badge.textContent = "offline fallback"; badge.className = "model-badge offline";
+      badge.title = "The live checkpoint didn't answer — using the offline heuristic. Click “Warm up” to load it."; }
+  }
   if (g.sources) populateSources(g.sources);
   SUPPRESS = false;
 }
@@ -658,14 +714,15 @@ function connect(){
     if (m.type==="graph"){ applyGraph(m); return; }
     if (m.type==="event"){
       VERDICTS[m.t] = verdictOf(m);
-      applyGraph(m.graph);
-      renderGrid();
+      applyGraph(m.graph);           // updates CURSOR first
+      updateGridForEvent(m.t);       // then touch only the two changed cards
       pushCard(eventCard(m));
       // reveal the payoff the first time the user ingests
       if (!firstIngestSeen){ firstIngestSeen = true; setView("graph"); }
       return;
     }
-    if (m.type==="cascade"){ applyGraph(m.graph); renderGrid(); pushCard(cascadeCard(m)); return; }
+    // a cascade only shifts confidences (node colour), not paper statuses — no grid work
+    if (m.type==="cascade"){ applyGraph(m.graph); pushCard(cascadeCard(m)); return; }
   };
   es.onerror = () => {};
 }
@@ -676,6 +733,43 @@ async function post(url, body){
     body: body?JSON.stringify(body):"{}" });
   return r.json();
 }
+// ---------- toast ----------
+let toastTimer=null;
+function toast(msg, kind, spin){
+  const t=$("toast"); t.className = "show" + (kind?` ${kind}`:"");
+  t.innerHTML = (spin?`<span class="sp"></span>`:"") + esc(msg);
+  clearTimeout(toastTimer);
+  if(!spin) toastTimer=setTimeout(()=>{ t.className=""; }, 4200);
+}
+
+// ---------- warm up the live model ----------
+$("warm").onclick = async () => {
+  const btn=$("warm"), badge=$("model-badge");
+  WARMING=true; btn.disabled=true; btn.textContent="Warming…";
+  badge.textContent="warming up…"; badge.className="model-badge warming";
+  badge.title="Loading the live checkpoint — a cold start can take ~90s";
+  toast("Warming up the live checkpoint — a cold start can take ~90s…", "", true);
+  try {
+    const r = await post("/warmup");
+    WARMING=false;
+    if (r.status==="ok"){
+      badge.textContent="Freesolo · live"; badge.className="model-badge live";
+      toast(`Model ready — responded in ${r.latency_s}s. Live checkpoint is warm.`, "ok");
+    } else if (r.status==="offline"){
+      badge.textContent="offline fallback"; badge.className="model-badge offline";
+      toast(r.reason || "No live checkpoint configured.", "err");
+    } else {
+      badge.textContent="offline fallback"; badge.className="model-badge offline";
+      toast(`Warm-up failed after ${r.latency_s}s — ${r.detail||"no response"}. Staying on offline fallback.`, "err");
+    }
+  } catch(e){
+    WARMING=false; badge.textContent="offline fallback"; badge.className="model-badge offline";
+    toast("Warm-up request failed — is the UI server reachable?", "err");
+  } finally {
+    btn.disabled=false; btn.textContent="Warm up";
+  }
+};
+
 let playTimer=null;
 function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; $("play").textContent="Auto-play"; $("play").classList.remove("on"); } }
 function startPlay(){ $("play").textContent="Pause"; $("play").classList.add("on");
