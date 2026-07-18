@@ -27,6 +27,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
+from .. import pipeline
 from ..adapters import cortex
 from ..core import propagate
 from ..core.config import EDGE_INFLUENCE, PRIOR_C_0
@@ -38,7 +39,6 @@ from ..eval.baselines import ModelBaseline
 from ..eval.replay import seed_kb
 from ..ingest.extract import FakeExtractor, PaperFakeExtractor, _env, flash_available
 from ..sim.world import World
-from .. import pipeline
 
 app = FastAPI(title="Cortesol")
 
@@ -83,7 +83,7 @@ def _seed_demo_edges(kb: KB) -> None:
 
     # supports web among true binders + one contradicts, purely for topology.
     order = [binder[p] for p in ("P1", "P3", "P5") if p in binder]
-    for a, b in zip(order, order[1:]):
+    for a, b in zip(order, order[1:], strict=False):
         add(a, b, "supports", 0.8)
     if "P4" in binder and "P5" in binder:
         add(binder["P4"], binder["P5"], "contradicts", 1.0)
@@ -344,8 +344,22 @@ def paper(idx: int) -> dict:
         "peptide": f.get("peptide"),
         "target": f.get("primary_target"),
         "pmid": (f.get("pmid") or e.id.replace("pmid_", "")),
-        "status": "done" if idx < STATE.cursor else ("active" if idx == STATE.cursor else "pending"),
+        "status": (
+            "done" if idx < STATE.cursor else ("active" if idx == STATE.cursor else "pending")
+        ),
     }
+
+
+@app.get("/training")
+def training_dashboard() -> FileResponse:
+    return FileResponse(_STATIC / "training.html")
+
+
+@app.get("/api/training")
+async def training_metrics() -> dict:
+    from ..train.tracker import training_snapshot
+
+    return await asyncio.to_thread(training_snapshot)
 
 
 @app.get("/stream")
@@ -364,7 +378,7 @@ async def stream(request: Request) -> EventSourceResponse:
                 try:
                     msg = await asyncio.wait_for(queue.get(), timeout=15.0)
                     yield {"data": json.dumps(msg)}
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield {"event": "ping", "data": "{}"}
         finally:
             STATE.subscribers.discard(queue)

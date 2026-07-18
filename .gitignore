@@ -15,6 +15,7 @@ uv.lock
 # Env / secrets — NEVER commit Freesolo or OpenAI keys
 .env
 .env.local
+.env.*
 *.key
 
 # Test / tooling
@@ -24,6 +25,7 @@ uv.lock
 htmlcov/
 
 # Cortesol runtime artifacts
+runs/
 snapshots/          # KB JSON snapshots written after each event
 runs/               # eval outputs, wandb-ish local logs
 data/sft/*.jsonl    # generated SFT datasets (regenerable from the sim)

@@ -1,26 +1,21 @@
-# Freesolo Flash — SFT config (area B). TODO: fill in real values at kickoff.
-# Reference: Fine-Tuning Plan §Stage 1. Validate on 0.8B, train for real on 4B.
+# Production deterministic-gold SFT. The coordinator replaces environment.id.
+model = "Qwen/Qwen3.5-4B"
+algorithm = "sft"
+thinking = false
+seed = 0
 
-[model]
-base = "Qwen/Qwen3.5-4B"      # validate the pipeline on 0.8B first
-thinking = true               # SFT targets include <think>…</think> short rationale
+[environment]
+id = "local/cortesol-belief-update"
+pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
+
+[environment.params]
+split = "sft_train"
 
 [train]
-algorithm = "sft"
-# lora_rank = 32
-# learning_rate = 1e-4
-# max_steps = 500
-# max_completion_tokens = 512
-# save_every = 100
-# seed = 0
-
-# structured_outputs = op schema (ops.ops_json_schema()) — constrains decoding
-[train.structured_outputs]
-# schema = "path/to/ops_schema.json"   # TODO: dump ops_json_schema() here
-
-[data]
-# train = "data/sft/train.jsonl"       # rows {input, output, metadata}
-# eval  = "data/sft/eval.jsonl"
-
-[wandb]
-# project = "cortesol-sft"
+lora_rank = 32
+lora_alpha = 64
+max_context_tokens = 2048
+max_completion_tokens = 256
+max_examples = 2800
+max_steps = 500
+save_at_steps = [100, 250, 500]

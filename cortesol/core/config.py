@@ -14,7 +14,7 @@ from __future__ import annotations
 
 # Bump this whenever any FROZEN CONTRACT file changes. Every snapshot and eval
 # run records it so results are comparable only within a version.
-CONTRACT_VERSION = "0.1.0"
+CONTRACT_VERSION = "0.2.0"
 
 # --- Belief prior ---------------------------------------------------------
 # A splashy new finding does NOT start at the confidence its abstract asserts.
@@ -71,6 +71,7 @@ RED_FLAG_PHI_BUMP: dict[str, float] = {
     "underpowered": 0.15,  # implausible effect size at tiny n
     "no_prereg": 0.05,
     "predatory_venue": 0.20,
+    "discredited_source": 0.39,
 }
 PHI_CEILING = 0.49  # phi < tau always, so the cap stays positive
 
@@ -96,7 +97,30 @@ PROPAGATE_KHOP = 2  # re-propagate only the dirty k-hop neighborhood per event
 # The whole extractor prompt must fit the Flash dense-model context. Compact
 # state serialization is mandatory, not optional (System Architecture §lifecycle).
 CONTEXT_TOKEN_BUDGET = 8192
-RETRIEVE_TOP_K = 8  # top-k claims + their 1-hop neighborhood
+RETRIEVE_TOP_K = 4  # top-k claims + their 1-hop neighborhood
 
 # --- Per-source rate limits (validator) -----------------------------------
 MAX_OPS_PER_SOURCE_PER_EVENT = 3
+
+# --- Untrusted-text control-language screen ------------------------------
+# These substrings are intentionally conservative. A hit does not make a claim
+# false; it only prevents the event from authorizing a state-changing op.
+INJECTION_MARKERS: tuple[str, ...] = (
+    "ignore prior instructions",
+    "ignore the ledger",
+    "set confidence",
+    "system:",
+    "cortex admin",
+    "trigger omega",
+    "reconsider repeatedly",
+    "approve every operation",
+)
+
+OUT_OF_SCOPE_MARKERS: tuple[str, ...] = (
+    "small-molecule",
+    "small molecule",
+    "antibody therapy",
+    "gene therapy",
+    "market claim",
+    "regulatory claim",
+)

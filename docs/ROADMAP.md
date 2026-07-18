@@ -58,20 +58,23 @@ strength → a *bounded* log-odds move, so the model only needs to be right abou
 strength, not about magnitude.
 
 **Pipeline (post-train a small model on Freesolo Flash):**
-1. **`extract.py::extract()`** — wire the live Flash client (`.env FLASH_*`),
-   op-schema-constrained decoding, short `think`. *Done = returns schema-valid
-   `ProposedOps` for a real `Context`; falls back to `FakeExtractor` if unset.*
-2. **`train/make_sft.py::build_sft_dataset()`** — rejection-sample K teacher
-   completions per sim event, keep only gold-matching (RFT), short rationales,
-   Flash JSONL `{input, output, metadata}`. Ref: Fine-Tuning Plan §Stage 1.
-3. **`train/environment.py::BeliefUpdateEnv`** — GRPO env: one episode = a stream
+1. ✅ **`extract.py::extract()`** — authenticated Freesolo-only client with strict
+   `ProposedOps` parsing and fail-closed malformed handling. `FakeExtractor`
+   remains the deterministic local seam.
+2. ✅ **Deterministic dataset factory** — 64 smoke + 2,800 production SFT rows,
+   1,024 RL episodes, isolated development/final/security splits, manifest and
+   replay/hash/leakage gates. Gold comes from the simulator and must replay
+   through the real ledger; no teacher credential is required for SFT.
+3. ✅ **`train/environment.py::BeliefUpdateEnv`** — GRPO env: one episode = a stream
    applied through the REAL validator + engine; terminal reward = −Brier of final
    KB vs ground truth + capped shaping (schema-valid, provenance, correct
    REJECT/FLAG_OOD). Ref: Fine-Tuning Plan §Stage 2. Watch reward-hacking.
-4. **`train/configs/{sft,grpo,opd}.toml`** — fill real hyperparams at kickoff;
-   dump `ops_json_schema()` to the `structured_outputs.schema` path in each.
-5. **(cut line) OPD** — on-policy distillation from a teacher for smooth schema
-   adherence; lets us honestly claim "SFT + RL + distillation".
+4. ✅ **Flash configs + coordinator** — Qwen3.5-4B, Conda, schema-constrained
+   GRPO/OPD, cost cap, immutable checkpoint evaluation, and a resumable anytime
+   ladder: corrected SFT checkpoint → GRPO → short managed GLM-5.2 OPD challenger.
+5. ✅ **Checkpoint swarm fallback** — up to three independently deployed gated
+   checkpoints vote on whole canonical proposals; no operation mixing, and no
+   quorum fails closed through the same ledger.
 
 **Real-paper extension (new, for the live demo — see `ingest/fetch_papers.py`).**
 Real PubMed abstracts carry NO structured `fields` (no `metric`/`value`/`n`/`p`),

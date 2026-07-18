@@ -140,7 +140,11 @@ def parse_fields(text: str) -> dict[str, Any]:
             out["uncontrolled_design"] = True
     if design["case_report"]:
         out["case_report"] = True
-    reported = [k for k, v in design.items() if v and k not in ("open_label", "uncontrolled_design")]
+    reported = [
+        k
+        for k, v in design.items()
+        if v and k not in ("open_label", "uncontrolled_design")
+    ]
     out["study_design"] = reported or ["unspecified"]
 
     return out

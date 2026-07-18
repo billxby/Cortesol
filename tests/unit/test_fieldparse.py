@@ -3,11 +3,11 @@ quarantine wiring that consumes it. Verifies the simulator path is untouched."""
 
 from __future__ import annotations
 
+from cortesol.core.kb import KB
+from cortesol.core.schema import RawEvent, Source
 from cortesol.ingest.fieldparse import parse_fields
 from cortesol.ingest.quarantine import quarantine
 from cortesol.ingest.screen import screen
-from cortesol.core.kb import KB
-from cortesol.core.schema import RawEvent, Source
 
 
 def test_parses_rct_stats_and_design():

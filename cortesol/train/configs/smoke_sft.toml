@@ -1,0 +1,24 @@
+# Mechanical smoke SFT. Nothing advances unless this checkpoint can execute.
+# Smaller-model probes learned provenance shortcuts or collapsed into repeated
+# strings. Use the production model family so the mechanical gate predicts
+# whether the paid 4B SFT lineage can actually execute the protocol.
+model = "Qwen/Qwen3.5-4B"
+algorithm = "sft"
+thinking = false
+seed = 0
+
+[environment]
+id = "local/cortesol-belief-update"
+pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
+
+[environment.params]
+split = "sft_smoke"
+
+[train]
+lora_rank = 32
+lora_alpha = 64
+max_context_tokens = 2048
+max_completion_tokens = 256
+max_examples = 64
+max_steps = 32
+save_at_steps = [32]

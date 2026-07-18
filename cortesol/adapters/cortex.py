@@ -131,7 +131,7 @@ def seed_kb_from_papers(events: list[RawEvent]) -> KB:
         if tgt:
             by_target.setdefault(tgt, []).append(cid)
     for cids in by_target.values():
-        for a, b in zip(sorted(cids), sorted(cids)[1:]):
+        for a, b in zip(sorted(cids), sorted(cids)[1:], strict=False):
             eid = f"edge:{a}->{b}:supports"
             if eid not in kb.edges:
                 kb.add_edge(Edge(id=eid, src=a, dst=b, type=EdgeType.SUPPORTS, weight=0.6))

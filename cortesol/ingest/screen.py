@@ -9,13 +9,9 @@ flagged reports self-discount in the engine.
 
 from __future__ import annotations
 
-from ..core.domain import (
-    MIN_ACCEPTABLE_PURITY_PCT,
-    MIN_PLAUSIBLE_KD_PM,
-)
+from ..core import config, domain
 from ..core.kb import KB
 from ..core.schema import Evidence
-
 
 _BINDING_METRICS = frozenset({"Kd", "Ki", "IC50", "EC50"})
 _BINDING_ASSAYS = frozenset({"SPR", "ITC", "BLI", "FP", "binding"})
@@ -42,52 +38,64 @@ def screen(evidence: Evidence, kb: KB) -> list[str]:
     """Return the red-flag keys that fire for this evidence (RED_FLAG_PHI_BUMP +
     PEPTIDE_RED_FLAG_PHI_BUMP). Attach them to evidence.red_flags."""
     f = evidence.fields
-    flags: list[str] = []
+    flags: set[str] = set()
+    lowered_text = evidence.raw_text.lower()
+    if any(marker in lowered_text for marker in config.INJECTION_MARKERS):
+        flags.add("prompt_injection")
+    if any(marker in lowered_text for marker in config.OUT_OF_SCOPE_MARKERS):
+        flags.add("out_of_scope")
 
     # --- generic methodological flags ---
     n = f.get("n")
     p = f.get("p")
     if isinstance(p, (int, float)) and 0.045 <= p < 0.05:
-        flags.append("p_hacking")
+        flags.add("p_hacking")
+    reported_p = f.get("reported_p")
+    recomputed_p = f.get("recomputed_p")
+    if isinstance(reported_p, (int, float)) and isinstance(recomputed_p, (int, float)):
+        if abs(float(reported_p) - float(recomputed_p)) > 0.01:
+            flags.add("statcheck_fail")
     if f.get("prereg") is False:
-        flags.append("no_prereg")
+        flags.add("no_prereg")
     if isinstance(n, int) and n == 1:
-        flags.append("single_replicate")
+        flags.add("single_replicate")
     # implausibly large in-vivo effect on a handful of animals
     effect = f.get("value") if f.get("metric") == "percent_inhibition" else None
     if isinstance(effect, (int, float)) and isinstance(n, int) and effect >= 60.0 and n <= 8:
-        flags.append("underpowered")
+        flags.add("underpowered")
 
     # GRIM on any reported integer-scale group rating
     rating = f.get("group_rating")
     scale = f.get("rating_scale_max")
     if isinstance(rating, (int, float)) and isinstance(scale, int) and isinstance(n, int):
         if _grim_fails(float(rating), n, scale):
-            flags.append("grim_fail")
+            flags.add("grim_fail")
 
     # --- venue flag from the seeded Source tier ---
     src = kb.get_source(evidence.source_id)
     if src is not None and src.tier == "predatory":
-        flags.append("predatory_venue")
+        flags.add("predatory_venue")
+    if src is not None and src.discredited:
+        flags.add("discredited_source")
 
     # --- peptide-specific physical-plausibility flags ---
     if f.get("metric") == "Kd" and f.get("units") == "nM":
         value = f.get("value")
-        if isinstance(value, (int, float)) and value * 1000.0 < MIN_PLAUSIBLE_KD_PM:
+        if isinstance(value, (int, float)) and value * 1000.0 < domain.MIN_PLAUSIBLE_KD_PM:
             # value is in nM; * 1000 -> pM. Below ~1 pM is past the diffusion limit.
-            flags.append("affinity_below_diffusion_limit")
+            flags.add("affinity_below_diffusion_limit")
 
     if f.get("control_peptide") is False:
-        flags.append("no_control_peptide")
+        flags.add("no_control_peptide")
 
     purity = f.get("purity_pct")
     if isinstance(purity, (int, float)):
-        if purity < MIN_ACCEPTABLE_PURITY_PCT:
-            flags.append("low_purity")
+        if purity < domain.MIN_ACCEPTABLE_PURITY_PCT:
+            flags.add("low_purity")
     elif _is_binding_assay(f):
         # Purity is only expected for a binding assay — don't penalise a clinical
         # efficacy paper for omitting a peptide-synthesis field it never has.
-        flags.append("purity_not_reported")
+        flags.add("purity_not_reported")
 
     # --- clinical-evidence flags (real papers; parsed from abstract prose) ---
     # Fire only on EXPLICIT weakness signals — a strong RCT / meta-analysis trips
@@ -95,13 +103,13 @@ def screen(evidence: Evidence, kb: KB) -> list[str]:
     # "placebo" is not penalised.
     if f.get("study_type") == "clinical":
         if f.get("uncontrolled_design") and not f.get("controlled"):
-            flags.append("uncontrolled")  # open-label / single-arm / observational
+            flags.add("uncontrolled")  # open-label / single-arm / observational
         elif f.get("open_label") is True:
-            flags.append("unblinded")  # controlled but open-label
+            flags.add("unblinded")  # controlled but open-label
         if isinstance(n, int) and n < 10:
-            flags.append("underpowered")  # small trial for an efficacy claim
+            flags.add("underpowered")  # small trial for an efficacy claim
     if f.get("case_report") is True:
-        flags.append("case_report")
+        flags.add("case_report")
 
-    evidence.red_flags = flags
-    return flags
+    evidence.red_flags = sorted(flags)
+    return evidence.red_flags

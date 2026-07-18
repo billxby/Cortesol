@@ -1,0 +1,18 @@
+name: cortesol-train
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - networkx>=3.3
+  - numpy>=2.0
+  - pydantic>=2.7
+  - fastapi>=0.111
+  - uvicorn>=0.30
+  - pytest>=8.2
+  - ruff>=0.5
+  - pip:
+      - -e .
+      - sse-starlette>=2.1
+      - freesolo>=0.2.54,<0.3
+      - freesolo-flash==1.0.1

@@ -18,7 +18,7 @@ because there is no symbol for it. (Prompt Injection Defense §Layer-3/4.)
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -87,7 +87,7 @@ class Reject(BaseModel):
 # Discriminated union on the "op" tag — Pydantic validates the right shape and
 # structured-outputs decoding constrains the model to exactly these.
 Op = Annotated[
-    Union[ApplyEvidence, AddClaim, AddEdge, InvalidateEdge, FlagOOD, Reject],
+    ApplyEvidence | AddClaim | AddEdge | InvalidateEdge | FlagOOD | Reject,
     Field(discriminator="op"),
 ]
 

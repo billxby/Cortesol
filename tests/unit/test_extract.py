@@ -51,7 +51,14 @@ def test_valid_reply_parses_and_passes_the_op_schema(monkeypatch):
     captured: dict = {}
     good = ProposedOps(
         think="clean binding result",
-        ops=[ApplyEvidence(claim_id="c_bind_P1_MC4R", direction="+", strength="strong", evidence_id="e0")],
+        ops=[
+            ApplyEvidence(
+                claim_id="c_bind_P1_MC4R",
+                direction="+",
+                strength="strong",
+                evidence_id="e0",
+            )
+        ],
     ).model_dump_json()
     monkeypatch.setattr(ex, "_get_client", lambda: _fake_client(good, captured))
 

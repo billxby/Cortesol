@@ -24,14 +24,14 @@ FLAG_OOD and REJECT are ALWAYS allowed (flagging/refusing is safe).
 
 from __future__ import annotations
 
+import math
+
 from .config import (
     CONFLICT_MASS_THRESHOLD,
     MAX_OPS_PER_SOURCE_PER_EVENT,
-    SL_PRIOR_WEIGHT_W,
 )
 from .domain import IN_SCOPE_NAMESPACES
 from .kb import KB
-from .mathx import sigmoid
 from .ops import (
     AddClaim,
     AddEdge,
@@ -42,7 +42,7 @@ from .ops import (
     Reject,
 )
 from .results import RejectedOp, ValidationResult
-from .schema import Evidence
+from .schema import ClaimStatus, Evidence
 
 
 def _tag_in_ontology(tag: str) -> bool:
@@ -59,18 +59,9 @@ def _hard_conflict(kb: KB, op: ApplyEvidence) -> bool:
     claim = kb.get_claim(op.claim_id)
     if claim is None:
         return False
-    c = sigmoid(claim.ell)
-    # Belief mass toward the claim's current stance vs. this report's stance.
-    denom = claim.r + claim.s + SL_PRIOR_WEIGHT_W
-    certainty = 1.0 - SL_PRIOR_WEIGHT_W / denom  # 0 when brand-new, ->1 with evidence
-    b_cur = c * certainty
-    d_cur = (1.0 - c) * certainty
-    if op.direction == "+":
-        # report asserts truth; conflict lives with current disbelief mass
-        k = d_cur * certainty
-    else:
-        k = b_cur * certainty
-    return k > CONFLICT_MASS_THRESHOLD
+    incoming = {"weak": 0.25, "moderate": 0.6, "strong": 0.9}[op.strength]
+    opposing = claim.opinion["d"] if op.direction == "+" else claim.opinion["b"]
+    return incoming * opposing > CONFLICT_MASS_THRESHOLD
 
 
 def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationResult:
@@ -98,6 +89,15 @@ def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationRes
             result.rejected.append(RejectedOp(op=op, reason="rate_limit_exceeded"))
             continue
 
+        if {"prompt_injection", "out_of_scope"} & set(evidence.red_flags):
+            result.rejected.append(
+                RejectedOp(
+                    op=op,
+                    reason="state-changing operations forbidden for unsafe evidence",
+                )
+            )
+            continue
+
         if isinstance(op, ApplyEvidence):
             # (3) provenance
             if not provenance_ok or op.evidence_id != evidence.id:
@@ -107,8 +107,18 @@ def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationRes
             if kb.get_claim(op.claim_id) is None:
                 result.rejected.append(RejectedOp(op=op, reason="unknown_claim"))
                 continue
+            claim = kb.get_claim(op.claim_id)
+            if claim is not None and claim.status in {
+                ClaimStatus.QUARANTINED,
+                ClaimStatus.RETIRED,
+            }:
+                result.rejected.append(RejectedOp(op=op, reason="claim_not_writable"))
+                continue
             # (6) hard-conflict quarantine
             if _hard_conflict(kb, op):
+                claim = kb.get_claim(op.claim_id)
+                if claim is not None:
+                    claim.status = ClaimStatus.QUARANTINED
                 result.rejected.append(RejectedOp(op=op, reason="conflict_quarantine"))
                 continue
             # (2) bounded step is guaranteed downstream by the engine's clip to
@@ -122,6 +132,14 @@ def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationRes
             if not op.ontology_tags or not all(_tag_in_ontology(t) for t in op.ontology_tags):
                 result.rejected.append(RejectedOp(op=op, reason="out_of_ontology_should_flag_ood"))
                 continue
+            if not op.text.strip():
+                result.rejected.append(RejectedOp(op=op, reason="empty_claim_text"))
+                continue
+            if op.initial_evidence_id not in {None, evidence.id}:
+                result.rejected.append(
+                    RejectedOp(op=op, reason="mismatched_initial_provenance")
+                )
+                continue
             attributed += 1
             result.accepted.append(op)
             continue
@@ -134,6 +152,9 @@ def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationRes
             if kb.get_claim(op.src) is None or kb.get_claim(op.dst) is None:
                 result.rejected.append(RejectedOp(op=op, reason="unknown_endpoint"))
                 continue
+            if not math.isfinite(op.weight) or not 0.0 <= op.weight <= 1.0:
+                result.rejected.append(RejectedOp(op=op, reason="invalid_edge_weight"))
+                continue
             attributed += 1
             result.accepted.append(op)
             continue
@@ -145,6 +166,9 @@ def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationRes
                 continue
             if op.edge_id not in kb.edges:
                 result.rejected.append(RejectedOp(op=op, reason="unknown_edge"))
+                continue
+            if not kb.edges[op.edge_id].live:
+                result.rejected.append(RejectedOp(op=op, reason="edge_already_invalid"))
                 continue
             attributed += 1
             result.accepted.append(op)

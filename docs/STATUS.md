@@ -5,16 +5,14 @@
 > re-derive it by reading source. When a stub becomes real, flip its row here.
 > The sequenced "what to do next" lives in [`ROADMAP.md`](ROADMAP.md).
 >
-> Last verified against the tree: 2026-07-18. **Update:** the workflow now runs on
-> BOTH the simulator stream AND real papers, through BOTH the offline stand-ins
-> AND the live model seam. `ingest/extract.py::extract()` is the real
-> Freesolo Flash client (openai + `ops_json_schema()` constrained decoding,
-> fail-safe); `adapters/cortex.py` ingests `data/papers/raw_papers.jsonl`;
-> `ADD_CLAIM` now materialises nodes; the UI has data-source (sim/papers) and
-> extractor (fake/stock/tuned) toggles. `make test-contract` green (8); full suite
-> 28. The tuned checkpoint is a one-env-var swap (`FLASH_MODEL_TUNED`). Still
-> stubbed: `train/*` (other branch) and `adapters/cortex.py::load_kb`. Belief
-> still moves only through the engine; the UI is read-only.
+> Last verified against the tree: 2026-07-18. **Update:** the full belief path and
+> demo run end-to-end on simulator events or real papers. Offline extractors and
+> live Flash, Freesolo, and Ollama seams all feed the same schema-constrained
+> validator/ledger path. The deterministic datasets, stateless GRPO environment,
+> gated training coordinator/evaluator, checkpoint swarm, training dashboard, and
+> Plan B Ollama gateway are implemented. Belief still moves only through the
+> engine and the UI remains read-only. `adapters/cortex.py::load_kb` is still the
+> principal kickoff-day stub.
 
 ## One-idea recap
 
@@ -53,13 +51,15 @@ Legend: ✅ done & contract-tested · 🟡 partial · ⛔ TODO stub.
 | `ingest/quarantine.py` | ✅ | A | `quarantine(event)→Evidence` from `untrusted_view()`, raw_text kept as data, correlation_group computed. For prose events with no structured `metric` (real papers), enriches fields via `fieldparse.parse_fields` — existing keys always win, so the sim path is byte-identical | Prompt Injection Defense §Layer-1 |
 | `ingest/fieldparse.py` | ✅ | A | `parse_fields(text)→dict` — deterministic regex extraction from abstract prose: affinity (→nM), sample size, p-value, % effect, and trial design (randomized/blinded/controlled/meta-analysis/case-report/open-label/observational) → `study_type` | Fraud and Hype Signals |
 | `ingest/screen.py` | ✅ | A | `screen(evidence, kb)→list[str]` — GRIM, p-hacking, underpowered, no-prereg, predatory, peptide flags (sub-diffusion Kd, no control, purity binding-assay-gated), + **clinical flags** for real papers (uncontrolled/unblinded/case-report/small-trial, on explicit weakness markers only) | Fraud and Hype Signals |
-| `ingest/extract.py` | ✅ | B | `extract()` = **live Freesolo Flash client** (openai→`FLASH_BASE_URL`, constrained by `ops_json_schema()`, `serialize_state` prompt, fail-safe empty ops); resolves `FLASH_MODEL_TUNED`→`STOCK`; `.env` auto-loaded. `FakeExtractor` (sim) + `PaperFakeExtractor` (real papers) = offline deterministic stand-ins; none read sim_meta | Fine-Tuning Plan |
+| `ingest/extract.py` | ✅ | B | `extract()` is the fail-safe OpenAI-compatible Flash seam with strict `ops_json_schema()` decoding; `FreesoloExtractor` addresses immutable deployed adapters. `FakeExtractor` and `PaperFakeExtractor` are deterministic offline stand-ins; none read `sim_meta` | Fine-Tuning Plan |
+| `ingest/swarm.py` | ✅ | B | Bounded checkpoint ensemble; exact whole-proposal quorum, isolated contexts, timeout, no Frankenproposals, fail-closed disagreement | Fine-Tuning Plan |
 | `sim/world.py` | ✅ | B | `World(seed)` — deterministic latent claim graph (`WorldClaim`: z, true value); guarantees true/false binders + a false efficacy | Fine-Tuning Plan §Stage 0 |
 | `sim/events.py` | ✅ | B | `emit_stream(seed, length)` — balanced 7-class stream (fixture-shaped); `emit_echo_burst` for n_eff | Fine-Tuning Plan §Stage 0 |
 | `sim/gold.py` | ✅ | B | `build_gold()` class→op mapping + `gold_ops(event)→ProposedOps` from `sim_meta` | Fine-Tuning Plan §Stage 0 |
-| `train/environment.py` | ⛔ | B | `BeliefUpdateEnv` GRPO env, Brier terminal reward | Fine-Tuning Plan §Stage 2 |
-| `train/make_sft.py` | ⛔ | B | `build_sft_dataset()` — rejection-sampled SFT JSONL | Fine-Tuning Plan §Stage 1 |
-| `pipeline.py` | ✅ | C | `process_event()`, `replay_stream()` — sequences the 7 steps (quarantine→retrieve→extract→screen→validate→commit+propagate→publish); `ADD_CLAIM`-created ids surfaced in `dirty_claims`. Default extractor is `FakeExtractor`; `CORTESOL_EXTRACTOR=flash` opts into the live model | System Architecture |
+| `train/environment.py` | ✅ | B | Stateless 24-turn `BeliefUpdateEnv`; transcript reconstruction, fixed-universe Brier + exact-action reward, exploit metrics | Fine-Tuning Plan §Stage 2 |
+| `train/datasets.py` | ✅ | B | Deterministic SFT/RL/dev/final/security factory with causal splits, replay validation, hashes, coverage and leakage gates | Fine-Tuning Plan §Stage 1 |
+| `train/coordinator.py` | ✅ | B | Conda/Freesolo preflight, publish/dry-run/cost cap, checkpoint gates, SFT→GRPO→OPD anytime ladder and sealed final selection | Fine-Tuning Plan |
+| `pipeline.py` | ✅ | C | `prepare_event()`, `commit_proposal()`, `process_event()`, and `replay_stream()` sequence the lifecycle. `FakeExtractor` is the default; Flash, Freesolo, and Ollama backends are selectable with `CORTESOL_EXTRACTOR` | System Architecture |
 | `retrieval.py` | ✅ | C | `retrieve(kb, event, evidence, k)→Context` — lexical top-k (peptide/target tokens) + 1-hop edge neighborhood; embeddings-free stand-in | System Architecture step 2 |
 | `adapters/cortex.py` | 🟡 | C | `load_stream()` + `journal_to_tier()` + `seed_kb_from_papers()` ingest real PubMed papers (`data/papers/raw_papers.jsonl`) → `RawEvent`s + seeded KB (binding claim per unique peptide/target, venue-tiered sources, shared-target edges). `load_kb()` (CORTEX KB format) still a kickoff-day stub | — |
 | `eval/metrics.py` | ✅ | C | `brier`, `ece`, `asr`, `fraud_accepted_rate`, `max_confidence_shift` — pure fns over `KB`/`EventResult`s vs sim ground truth | Fine-Tuning Plan §eval |
@@ -93,7 +93,7 @@ network** the moment it's wired — the simulator is not a day-1 blocker.
 - `CONTEXT_TOKEN_BUDGET = 8192`, `RETRIEVE_TOP_K = 8`,
   `MAX_OPS_PER_SOURCE_PER_EVENT = 3`.
 
-## What each stub must implement
+## Implementation notes
 
 **`core/engine.py`** (recipe in docstrings + Confidence Math §engine-pseudocode):
 - `strength_to_loglr(strength)` — lookup into `STRENGTH_TO_LOGLR`.

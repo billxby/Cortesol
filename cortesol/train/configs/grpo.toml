@@ -1,26 +1,22 @@
-# Freesolo Flash — GRPO config (area B). The centerpiece. TODO: fill in at kickoff.
-# Reference: Fine-Tuning Plan §Stage 2. Reward = -Brier of final KB vs ground truth.
-
-[model]
-base = "Qwen/Qwen3.5-4B"
-thinking = true
-
-[train]
+# Primary GRPO. The coordinator pins init_from_adapter to the promoted SFT checkpoint.
+model = "Qwen/Qwen3.5-4B"
 algorithm = "grpo"
-init_from_adapter = ""        # warm-start from the SFT adapter
-# group_size = 8              # 8-16; drop all-same-reward groups (DAPO)
-# kl_penalty_coef = 0.02
-# advantage_clip = 0.2
-# max_completion_tokens = 512 # keep tight (Dr. GRPO length control)
-# max_steps = 400
-# seed = 0
-
-[train.structured_outputs]
-# schema = "path/to/ops_schema.json"   # same op schema, enforced every rollout
+thinking = false
+seed = 0
 
 [environment]
-# module = "cortesol.train.environment:BeliefUpdateEnv"   # imports real core/
-# episode_len = 24            # ~15-30 events per episode
+id = "local/cortesol-belief-update"
+pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
 
-[wandb]
-# project = "cortesol-grpo"   # watch per-class rates for reward hacking
+[environment.params]
+split = "rl_train"
+
+[train]
+init_from_adapter = "cortesol-sft"
+max_context_tokens = 12288
+max_completion_tokens = 256
+group_size = 8
+max_examples = 1024
+max_steps = 400
+save_at_steps = [50, 100, 200, 400]
+structured_outputs = "json_object"

@@ -1,7 +1,6 @@
-# Short disposable OPD challenger warm-started from the promoted GRPO checkpoint.
-# GLM-5.2 credentials are managed by Flash.
+# GRPO continuation from an OPD checkpoint that passed the development gate.
 model = "Qwen/Qwen3.5-4B"
-algorithm = "opd"
+algorithm = "grpo"
 thinking = false
 seed = 0
 
@@ -13,12 +12,11 @@ pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
 split = "rl_train"
 
 [train]
-init_from_adapter = "cortesol-grpo"
-teacher_model = "glm-5.2"
+init_from_adapter = "cortesol-opd"
 max_context_tokens = 12288
 max_completion_tokens = 256
-group_size = 1
+group_size = 8
 max_examples = 1024
-max_steps = 20
-save_at_steps = [5, 10, 20]
+max_steps = 400
+save_at_steps = [50, 100, 200, 400]
 structured_outputs = "json_object"
