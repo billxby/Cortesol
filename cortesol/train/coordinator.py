@@ -408,9 +408,21 @@ def _checkpoint_refs(run_id: str, requested: Sequence[int]) -> list[str]:
     return refs or [run_id]
 
 
+def _deployment_record(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize Flash deploy responses and `/deployments` run wrappers.
+
+    The deploy endpoint returns a deployment record directly, while the list
+    endpoint returns the owning run with that record nested under
+    ``deployment``.  Treating the run's training state (for example
+    ``running``) as the deployment state makes a ready checkpoint time out.
+    """
+    nested = payload.get("deployment")
+    return nested if isinstance(nested, dict) else payload
+
+
 def _deploy_wait(ref: str) -> dict[str, Any]:
     base_run = ref.split("/step-", 1)[0]
-    deployment = _client().deploy(ref)
+    deployment = _deployment_record(_client().deploy(ref))
     deadline = time.monotonic() + 600
     while str(deployment.get("state", "")) not in {"ready", "deployed"}:
         if deployment.get("state") == "failed":
@@ -424,7 +436,7 @@ def _deploy_wait(ref: str) -> dict[str, Any]:
             if str(item.get("run_id") or item.get("id")) == base_run
         ]
         if matches:
-            deployment = matches[0]
+            deployment = _deployment_record(matches[0])
     return deployment
 
 
