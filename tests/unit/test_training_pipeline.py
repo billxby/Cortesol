@@ -4,6 +4,8 @@ import io
 import json
 import subprocess
 import sys
+import threading
+import time
 import tomllib
 
 import pytest
@@ -441,6 +443,47 @@ def test_frozen_evaluator_matches_stateless_production_extractor_calls():
     assert observed == [("system", "user")] * len(events)
     assert metrics["protocol_valid"] == 1.0
     assert metrics["exact_operations"] == 1.0
+
+
+def test_frozen_evaluator_parallelizes_isolated_episodes():
+    rows = [
+        episode_row(
+            seed,
+            split="dev",
+            entity_family="DV",
+            source_family="dev_source",
+            template_family="dev_template_v1",
+        )
+        for seed in (10_002, 10_003)
+    ]
+    gold = {
+        event.id: canonical_ops(ProposedOps(ops=event.sim_meta.gold_ops))
+        for row in rows
+        for event in episode_events_from_metadata(row["metadata"])
+    }
+    lock = threading.Lock()
+    active = max_active = 0
+
+    def responder(messages):
+        nonlocal active, max_active
+        incoming = messages[-1]["content"]
+        evidence_line = next(
+            line for line in incoming.splitlines() if line.startswith("evidence_id=")
+        )
+        evidence_id = evidence_line.split(" ", 1)[0].split("=", 1)[1]
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+        time.sleep(0.005)
+        with lock:
+            active -= 1
+        return gold[evidence_id]
+
+    metrics = evaluate_rows(rows, responder)
+
+    assert metrics["episodes"] == 2
+    assert metrics["exact_operations"] == 1.0
+    assert max_active >= 2
 
 
 def test_flash_responder_retries_direct_socket_timeout(monkeypatch):
