@@ -1,4 +1,7 @@
 # Mechanical smoke SFT. Nothing advances unless this checkpoint can execute.
+# The first live 8-step probe reached only 69.7% completion-token accuracy and
+# learned a constant provenance shortcut. Thirty-two updates remain a cheap
+# smoke test while giving the 0.8B policy enough signal to copy structural IDs.
 model = "Qwen/Qwen3.5-0.8B"
 algorithm = "sft"
 thinking = false
@@ -17,5 +20,5 @@ lora_alpha = 64
 max_context_tokens = 2048
 max_completion_tokens = 256
 max_examples = 64
-max_steps = 8
-save_at_steps = [8]
+max_steps = 32
+save_at_steps = [32]

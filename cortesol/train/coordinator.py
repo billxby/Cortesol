@@ -126,19 +126,47 @@ def _cost_estimates(paths: dict[str, Path]) -> tuple[dict[str, dict[str, Any]], 
     return estimates, round(total, 4)
 
 
-def _evaluation_reserve() -> float:
-    """Worst-case serving charge for every planned checkpoint and sealed evaluation."""
+def _evaluation_reserve(manifest: dict[str, Any]) -> float:
+    """Conservative serving charge for every planned checkpoint evaluation.
+
+    Reserve each turn for all prior user contexts and maximally long model
+    completions. This is stricter than replaying gold-length outputs, while
+    avoiding the old assumption that even the first turn already contained a
+    full 12,288-token transcript.
+    """
     from flash.serve.pricing import serving_price
 
-    # smoke: one 24-turn episode. 4B: all SFT/GRPO/OPD checkpoints,
-    # held-out security checks, and two one-shot sealed-final candidates.
-    calls = {"Qwen/Qwen3.5-0.8B": 24, "Qwen/Qwen3.5-4B": 55_776}
+    files = manifest["files"]
+    max_user_tokens = max(int(item["input_tokens"]["max"]) for item in files.values())
+    contract_tokens = (len((ROOT / "cortesol/train/TRAINING_CONTRACT.md").read_text()) + 3) // 4
+    completion_tokens = 256
+
+    # 4B inventory: every development checkpoint (3 SFT + 4 primary GRPO
+    # + 3 OPD + 4 OPD-child), four security evaluations, and both sealed-final
+    # candidates. Security episodes are charged as 24 turns even though one is
+    # only five turns.
+    development_evaluations = 128 * (3 + 4 + 3 + 4)
+    security_evaluations = 5 * 4
+    final_evaluations = 256 * 2
+    episodes = {
+        "Qwen/Qwen3.5-0.8B": 1,
+        "Qwen/Qwen3.5-4B": (
+            development_evaluations + security_evaluations + final_evaluations
+        ),
+    }
+    input_tokens_per_episode = sum(
+        contract_tokens
+        + turn * max_user_tokens
+        + (turn - 1) * completion_tokens
+        for turn in range(1, 25)
+    )
     reserve = 0.0
-    for model, count in calls.items():
+    for model, episode_count in episodes.items():
         price = serving_price(model)
+        calls = episode_count * 24
         reserve += (
-            count
-            * (12_288 * price.billed_input_usd_per_mtok + 256 * price.billed_output_usd_per_mtok)
+            episode_count * input_tokens_per_episode * price.billed_input_usd_per_mtok
+            + calls * completion_tokens * price.billed_output_usd_per_mtok
             / 1_000_000
         )
     return round(reserve, 4)
@@ -242,7 +270,7 @@ def preflight(*, environment_name: str, fetch: bool, local_only: bool) -> dict[s
     estimates, total = _cost_estimates(placeholder_paths)
     state["cost_estimates"] = estimates
     state["estimated_training_usd"] = total
-    state["evaluation_reserve_usd"] = _evaluation_reserve()
+    state["evaluation_reserve_usd"] = _evaluation_reserve(manifest)
     state["combined_estimated_usd"] = round(
         float(state.get("prior_spend_usd") or 0.0) + total + state["evaluation_reserve_usd"],
         4,
@@ -441,6 +469,8 @@ def run_pipeline(*, from_stage: str | None = None) -> dict[str, Any]:
     smoke_metrics = _deploy_evaluate(smoke_run, dev_rows[:1])
     state["metrics"]["smoke"] = smoke_metrics
     if smoke_metrics["protocol_valid"] < 0.99 or smoke_metrics["validator_acceptance"] <= 0:
+        state["status"] = "smoke_gate_failed"
+        _save_state(state)
         raise RuntimeError("smoke promotion gate failed")
 
     sft_run = _stage_run("production_sft", "sft", paths, state)
