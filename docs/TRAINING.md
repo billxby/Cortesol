@@ -50,11 +50,13 @@ evaluation latch, and deployment state, but never credentials.
 
 Flash 1.0.1 enables contexts up to 32,768 tokens for models at or below 9B. The
 generated 24-turn Cortesol transcripts top out at an estimated 7,497 tokens, so
-the 4B GRPO runs use 8,192 tokens. This retains measured headroom while avoiding
-the Qwen3.5 gated-delta-kernel OOM observed with `group_size=8` at 12,288 tokens
-on an 80 GB H100. OPD keeps 12,288 because it pins `group_size=1`, which Flash
-recommends for distillation and which keeps the resident trainer and rollout
-engine within a validated GPU. Deterministic-gold SFT remains at 2,048.
+the 4B GRPO runs use 8,192 tokens and `group_size=4`. This retains measured
+headroom while avoiding both the Qwen3.5 gated-delta-kernel OOM observed at
+12,288 tokens and the 3,000-second Flash stall boundary observed with
+`group_size=8` on 80 GB GPUs. OPD keeps 12,288 because it pins `group_size=1`,
+which Flash recommends for distillation and which keeps the resident trainer
+and rollout engine within a validated GPU. Deterministic-gold SFT remains at
+2,048.
 
 ## Teacher-filtered SFT lineage
 
