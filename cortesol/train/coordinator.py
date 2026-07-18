@@ -216,6 +216,39 @@ def _quote_usd(payload: Any) -> float | None:
     return None
 
 
+def _run_cost_usd(status: dict[str, Any]) -> float:
+    """Return billed cost or a conservative elapsed-GPU fallback.
+
+    Flash billing can remain pending after a failed worker exits. Retrying while
+    treating that attempt as free would let repeated infrastructure failures
+    evade the approved lineage cap, so reserve elapsed instance time until the
+    control plane reports a realized charge.
+    """
+    reported = max(
+        float(status.get("realized_cost_usd") or 0.0),
+        float(status.get("cost_usd") or 0.0),
+    )
+    remote = status.get("remote") if isinstance(status.get("remote"), dict) else {}
+    started = remote.get("started_ts")
+    hourly = remote.get("hourly_usd")
+    if not isinstance(started, (int, float)) or not isinstance(hourly, (int, float)):
+        return reported
+    finished = status.get("finished_at")
+    stop = float(finished) if isinstance(finished, (int, float)) else time.time()
+    elapsed_estimate = max(0.0, stop - float(started)) * float(hourly) / 3600.0
+    return max(reported, elapsed_estimate)
+
+
+def _recorded_training_spend(state: dict[str, Any]) -> float:
+    current = sum(float(stage.get("cost_usd") or 0.0) for stage in state["stages"].values())
+    attempts = sum(
+        float(attempt.get("cost_usd") or 0.0)
+        for stage_attempts in state.get("stage_attempts", {}).values()
+        for attempt in stage_attempts
+    )
+    return float(state.get("prior_spend_usd") or 0.0) + current + attempts
+
+
 def _load_prepared_manifest() -> dict[str, Any]:
     path = DATA_DIR / "manifest.json"
     if not path.is_file():
@@ -391,9 +424,7 @@ def _submit(name: str, path: Path, state: dict[str, Any]) -> str:
     offline = float(state["cost_estimates"][cost_key]["training_usd"])
     server_quote = _quote_usd(dry_run)
     projected_stage = max(offline, server_quote or 0.0)
-    spent = float(state.get("prior_spend_usd") or 0.0) + sum(
-        float(stage.get("cost_usd") or 0.0) for stage in state["stages"].values()
-    )
+    spent = _recorded_training_spend(state)
     pending = 0.0
     stage_to_cost = {
         "smoke_sft": "smoke_sft",
@@ -426,7 +457,7 @@ def _monitor(name: str, run_id: str, state: dict[str, Any]) -> dict[str, Any]:
         status = _retry_flash(lambda: _client().get_run(run_id), label=f"monitor {run_id}")
         current = str(status.get("state", ""))
         state["stages"][name].update(
-            {"state": current, "cost_usd": float(status.get("cost_usd") or 0.0)}
+            {"state": current, "cost_usd": _run_cost_usd(status)}
         )
         _save_state(state)
         if current in TERMINAL_STATES:

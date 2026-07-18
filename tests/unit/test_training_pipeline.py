@@ -19,7 +19,9 @@ from cortesol.train.coordinator import (
     _best_checkpoint,
     _deployment_record,
     _evaluation_reserve,
+    _recorded_training_spend,
     _retry_flash,
+    _run_cost_usd,
 )
 from cortesol.train.datasets import (
     build_all,
@@ -88,6 +90,22 @@ def test_flash_retry_recovers_only_transient_connectivity(monkeypatch):
     assert _retry_flash(flaky, label="test") == {"state": "done"}
     with pytest.raises(RuntimeError, match="not authorized"):
         _retry_flash(lambda: (_ for _ in ()).throw(RuntimeError("not authorized")), label="test")
+
+
+def test_failed_run_reserves_elapsed_gpu_cost_and_retry_spend():
+    status = {
+        "cost_usd": 0.0,
+        "realized_cost_usd": None,
+        "finished_at": 4600.0,
+        "remote": {"started_ts": 1000.0, "hourly_usd": 3.29},
+    }
+    assert _run_cost_usd(status) == pytest.approx(3.29)
+    state = {
+        "prior_spend_usd": 2.0,
+        "stages": {"production_sft": {"cost_usd": 4.0}},
+        "stage_attempts": {"primary_grpo": [{"cost_usd": 3.29}]},
+    }
+    assert _recorded_training_spend(state) == pytest.approx(9.29)
 
 
 def test_checkpoint_selection_screens_all_and_full_gates_only_winner(monkeypatch):
