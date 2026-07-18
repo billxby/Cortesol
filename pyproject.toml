@@ -1,7 +1,7 @@
 [project]
 name = "cortesol"
 version = "0.1.0"
-description = "Cortesol — agent memory with an epistemic immune system for peptides research. A belief graph whose update policy is a Freesolo-trained small model behind a deterministic validator."
+description = "Cortesol is a neuro-symbolic agent with memory and an epistemic immune system. A belief graph whose update policy is a Freesolo-trained small model behind a deterministic validator."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
