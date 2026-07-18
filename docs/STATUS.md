@@ -5,7 +5,7 @@
 > re-derive it by reading source. When a stub becomes real, flip its row here.
 > The sequenced "what to do next" lives in [`ROADMAP.md`](ROADMAP.md).
 >
-> Last verified against the tree: 2026-07-17. **Update:** `sim/` (world, events,
+> Last verified against the tree: 2026-07-18. **Update:** `sim/` (world, events,
 > gold) is now implemented + unit-tested (`make sim`, `tests/unit/test_sim.py`,
 > 12 tests) — owned by Bill. It's the peptide "data" source; no real-paper fetcher
 > is planned (out of scope).
@@ -17,7 +17,7 @@
 > engine decide what changes, by bounded provenance-carrying arithmetic
 > (`ℓ' = ℓ + logΛ`, capped by `|logΛ| ≤ log(τ/φ)` and `DELTA_MAX`).
 
-**Event lifecycle (7 steps):** `quarantine → retrieve → extract → screen →
+**Event lifecycle (7 steps):** `quarantine → screen → retrieve → extract →
 validate → commit+propagate → publish`.
 
 **Logical areas (see `docs/COMPONENTS.md`):**
@@ -41,22 +41,22 @@ Legend: ✅ done & contract-tested · 🟡 partial · ⛔ TODO stub.
 | `core/context.py` | ✅ | — | `Context` (what the extractor sees) + `serialize_state()` | System Architecture |
 | `core/results.py` | ✅ | — | Return types: `Delta`, `RejectedOp`, `ValidationResult`, `AuditEntry`, `EventResult` | — |
 | `core/kb.py` | ✅ | — | `KB` graph container. `move_belief()` = the ONLY belief mutator; `snapshot/load`, `dirty_neighborhood` | — |
-| `core/engine.py` | ⛔ | A | Belief arithmetic (6 fns below). **Critical path** | Confidence Math §1-3 |
-| `core/validator.py` | ⛔ | A | `validate()` — the sole write-gate, 6 invariant checks | Prompt Injection Defense §Layer-4 |
-| `core/propagate.py` | ⛔ | A | `propagate()` + `discredit_source()` (retraction cascade) | Graph Propagation and GNNs |
-| `ingest/quarantine.py` | ⛔ | A | `quarantine(event)→Evidence`, text kept in data position | Prompt Injection Defense §Layer-1 |
-| `ingest/screen.py` | ⛔ | A | `screen(evidence, kb)→list[str]` red-flag battery | Fraud and Hype Signals |
-| `ingest/extract.py` | ⛔ | B | `extract(ctx, model)→ProposedOps` + `FakeExtractor` (canned, no model) | Fine-Tuning Plan |
+| `core/engine.py` | ✅ | A | Bounded source-capped belief arithmetic | Confidence Math §1-3 |
+| `core/validator.py` | ✅ | A | Sole write-gate, provenance, rate limit, conflict quarantine | Prompt Injection Defense §Layer-4 |
+| `core/propagate.py` | ✅ | A | Typed propagation + source-discredit cascade | Graph Propagation and GNNs |
+| `ingest/quarantine.py` | ✅ | A | Datamarked untrusted evidence | Prompt Injection Defense §Layer-1 |
+| `ingest/screen.py` | ✅ | A | Fraud, quality, injection, and OOD red-flag battery | Fraud and Hype Signals |
+| `ingest/extract.py` | ✅ | B | Freesolo proposal client + deterministic fake | Fine-Tuning Plan |
 | `sim/world.py` | ✅ | B | `World(seed)` — deterministic latent claim graph (`WorldClaim`: z, true value); guarantees true/false binders + a false efficacy | Fine-Tuning Plan §Stage 0 |
 | `sim/events.py` | ✅ | B | `emit_stream(seed, length)` — balanced 7-class stream (fixture-shaped); `emit_echo_burst` for n_eff | Fine-Tuning Plan §Stage 0 |
 | `sim/gold.py` | ✅ | B | `build_gold()` class→op mapping + `gold_ops(event)→ProposedOps` from `sim_meta` | Fine-Tuning Plan §Stage 0 |
-| `train/environment.py` | ⛔ | B | `BeliefUpdateEnv` GRPO env, Brier terminal reward | Fine-Tuning Plan §Stage 2 |
-| `train/make_sft.py` | ⛔ | B | `build_sft_dataset()` — rejection-sampled SFT JSONL | Fine-Tuning Plan §Stage 1 |
-| `pipeline.py` | ⛔ | C | `process_event()`, `replay_stream()` — the 7-step glue | System Architecture |
-| `retrieval.py` | ⛔ | C | `retrieve(kb, event, evidence, k)→Context` (top-k) | System Architecture step 2 |
+| `train/environment.py` | ✅ | B | Stateless 24-turn Flash environment + Brier/action reward | Fine-Tuning Plan §Stage 2 |
+| `train/make_sft.py` | ✅ | B | Deterministic-gold dataset factory | Fine-Tuning Plan §Stage 1 |
+| `pipeline.py` | ✅ | C | Shared prepare/validate/commit/propagate lifecycle | System Architecture |
+| `retrieval.py` | ✅ | C | Deterministic bounded top-k Context | System Architecture step 2 |
 | `adapters/cortex.py` | ⛔ | C | `load_kb()`, `load_stream()` — CORTEX format. **Kickoff-day** | — |
 | `eval/metrics.py` | ✅ | C | `brier`, `ece`, `asr`, `fraud_accepted_rate`, `max_confidence_shift` — pure fns over `KB`/`EventResult`s vs sim ground truth | Fine-Tuning Plan §eval |
-| `eval/replay.py` | 🟡 | C | `main()` runs `make eval` end-to-end (seeds KB from `World`, scores each system, 2 tables). Numbers are prior-only until `engine`+`pipeline` land — harness itself is done | Fine-Tuning Plan |
+| `eval/replay.py` | ✅ | C | `main()` runs the engine-backed held-out and red-team evaluators end-to-end | Fine-Tuning Plan |
 | `eval/baselines.py` | ✅ | C | `GullibleBot` (strong-`+` on top claim), `StubbornBot` (no-op) — drop-in extractors matching `FakeExtractor`'s shape | Fine-Tuning Plan |
 | `eval/redteam.py` | ✅ | C | `attack_stream()` — 5-family injection battery (payloads in `raw_text` only), gold-labelled for ASR | Prompt Injection Defense |
 | `ui/app.py` | 🟡 | C | FastAPI + `/health` done; `/`, `/stream` (SSE), `/event`, `/discredit` TODO | System Architecture |
