@@ -138,7 +138,7 @@ def _evaluation_reserve() -> float:
         price = serving_price(model)
         reserve += (
             count
-            * (8_192 * price.billed_input_usd_per_mtok + 256 * price.billed_output_usd_per_mtok)
+            * (12_288 * price.billed_input_usd_per_mtok + 256 * price.billed_output_usd_per_mtok)
             / 1_000_000
         )
     return round(reserve, 4)

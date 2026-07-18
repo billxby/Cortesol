@@ -15,4 +15,4 @@ dependencies:
       - -e .
       - sse-starlette>=2.1
       - freesolo>=0.2.54,<0.3
-      - freesolo-flash==1.0.0
+      - freesolo-flash==1.0.1
