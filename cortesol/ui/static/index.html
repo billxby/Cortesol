@@ -269,6 +269,14 @@
   .sdet { font-family:ui-monospace, Menlo, monospace; font-size:11.5px; color:var(--blue); }
   .snote { font-size:10.5px; color:var(--faint); line-height:1.45; }
   .snet { font-family:ui-monospace, Menlo, monospace; font-size:11.5px; color:#2b2f36; padding:2px 12px 8px; }
+  details.rawjson { margin-top:6px; }
+  details.rawjson > summary { cursor:pointer; list-style:none; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.5px; color:var(--faint); display:flex; align-items:center; gap:6px; padding:2px 0; }
+  details.rawjson > summary::-webkit-details-marker { display:none; }
+  details.rawjson > summary::before { content:"▸"; font-size:9px; transition:transform .12s; }
+  details.rawjson[open] > summary::before { transform:rotate(90deg); }
+  pre.rawblock { margin:6px 0 2px; padding:10px 12px; background:#1d222b; color:#d6dbe4; border-radius:6px;
+    font-family:ui-monospace, Menlo, monospace; font-size:11px; line-height:1.5; overflow:auto; max-height:260px; }
 
   /* ---------------- modal reader ---------------- */
   #modal { position:fixed; inset:0; background:rgba(15,20,28,.5); display:none; align-items:center;
@@ -716,6 +724,61 @@ function verdictOf(m){
   if (m.accepted.some(a=>a.op==="FLAG_OOD")) return "flag";
   return "commit";
 }
+// ---- Freesolo model output: the "form" it filled + per-op quantization ----
+function fmtVal(v){
+  if (v===null || v===undefined) return "—";
+  if (Array.isArray(v)) return v.length ? v.join(", ") : "[]";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+const OP_CLASS = {APPLY_EVIDENCE:"apply", REJECT:"reject", FLAG_OOD:"flag", ADD_CLAIM:"add", ADD_EDGE:"add", INVALIDATE_EDGE:"reject"};
+function opSummary(op){
+  if (op.op==="APPLY_EVIDENCE") return `${esc(op.direction)}${esc(op.strength)} → ${esc(op.claim_id)}`;
+  if (op.op==="FLAG_OOD") return esc(op.reason||"");
+  if (op.op==="REJECT") return esc(op.reason||"");
+  if (op.op==="ADD_CLAIM") return esc(op.text||"");
+  if (op.op==="ADD_EDGE") return `${esc(op.src)} → ${esc(op.dst)}`;
+  return "";
+}
+function quantSteps(step){
+  const items = step.steps.map(s=>
+    `<li><div class="slab">${esc(s.label)}</div>`
+    +`<div class="sdet">${esc(s.detail)}</div>`
+    +`<div class="snote">${esc(s.note)}</div></li>`).join("");
+  const net = `net Δc ${step.d_c>=0?"+":""}${step.d_c.toFixed(3)}  ·  c ${step.c_before.toFixed(3)} → ${step.c_after.toFixed(3)}`;
+  return `<div class="quant"><div class="k">Quantization — strength label → capped, damped Δconfidence</div>`
+    + `<ol class="steps">${items}</ol><div class="snet">${net}</div></div>`;
+}
+function opForm(op, step){
+  const cls = OP_CLASS[op.op] || "";
+  const fields = Object.entries(op).filter(([k])=>k!=="op")
+    .map(([k,v])=>`<div class="field"><span class="fk">${esc(k)}</span><span class="fv">${esc(fmtVal(v))}</span></div>`).join("");
+  return `<details class="opform"${step?" open":""}>`
+    + `<summary><span class="opname ${cls}">${esc(op.op)}</span><span class="opsum">${opSummary(op)}</span></summary>`
+    + `<div class="fields">${fields}</div>`
+    + (step ? quantSteps(step) : "")
+    + `</details>`;
+}
+function modelSection(m){
+  const r = m.reasoning || {};
+  if (!r.proposed_ops) return "";  // older/no-model messages: skip gracefully
+  const tag = r.live
+    ? `<span class="mtag live">${esc(r.model||"Freesolo")}</span>`
+    : `<span class="mtag off">${esc(r.model||"offline")}</span>`;
+  const think = r.think ? `<div class="think">“${esc(r.think)}”</div>` : "";
+  const stepMap = {};
+  (r.steps||[]).forEach(s=>{ stepMap[`${s.claim_id}|${s.direction}|${s.strength}|${s.evidence_id}`] = s; });
+  const ops = r.proposed_ops.map(op=>{
+    let step = null;
+    if (op.op==="APPLY_EVIDENCE") step = stepMap[`${op.claim_id}|${op.direction}|${op.strength}|${op.evidence_id}`];
+    return opForm(op, step);
+  }).join("");
+  const body = r.proposed_ops.length ? ops : `<div class="think">Model emitted no ops for this event.</div>`;
+  const raw = r.raw_json
+    ? `<details class="rawjson"><summary>Raw JSON (ProposedOps)</summary><pre class="rawblock">${esc(r.raw_json)}</pre></details>`
+    : "";
+  return `<div class="row model"><div class="k">Freesolo output — the form it filled ${tag}</div>${think}${body}${raw}</div>`;
+}
 function eventCard(m){
   const v = verdictOf(m);
   const card = document.createElement("div"); card.className = "card fresh";
@@ -731,7 +794,8 @@ function eventCard(m){
     `<div class="head"><span class="eid">${esc(m.event_id)}</span>`
     + `<span class="pill tier">${esc(m.source_tier)}</span>${vpill}${truth}</div>`
     + `<div class="body"><div class="raw">${esc(m.raw_text)}</div>`
-    + (acc?`<div class="row"><div class="k">Accepted ops</div>${acc}</div>`:"")
+    + modelSection(m)
+    + (acc?`<div class="row"><div class="k">Ledger — accepted ops</div>${acc}</div>`:"")
     + (rej?`<div class="row"><div class="k">Rejected</div>${rej}</div>`:"")
     + flags + deltaRows(m.deltas) + `</div>`;
   return card;

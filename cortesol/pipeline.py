@@ -17,6 +17,7 @@ The lifecycle (System Architecture §update-lifecycle):
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -120,6 +121,8 @@ def commit_proposal(
     if reasoning is not None:
         reasoning["think"] = proposed.think
         reasoning["proposed_ops"] = [op.model_dump(mode="json") for op in proposed.ops]
+        # the verbatim schema-constrained JSON the extractor emitted (ProposedOps)
+        reasoning["raw_json"] = json.dumps(proposed.model_dump(mode="json"), indent=2)
         reasoning["steps"] = []
 
     # 6. commit accepted ops + propagate the ripple over the dirty neighborhood
