@@ -20,6 +20,7 @@ from cortesol.train.datasets import (
     episode_row,
 )
 from cortesol.train.environment import BeliefUpdateEnv, _replay
+from cortesol.train.teacher_filter import build_teacher_filtered_dataset, rejection_sample_rows
 
 pytestmark = pytest.mark.unit
 
@@ -88,6 +89,99 @@ def test_sft_namespaces_are_diverse_without_cross_split_leakage(generated):
     assert len({row["metadata"]["source_family"] for row in train}) >= 9
     assert len({row["metadata"]["template_family"] for row in train}) >= 13
     assert all(not row["metadata"]["entity_family"].startswith("DV") for row in smoke + train)
+
+
+def test_teacher_rejection_sampling_keeps_only_gold_with_short_rationale(generated, tmp_path):
+    path, _ = generated
+    source = [json.loads(line) for line in (path / "sft_train.jsonl").read_text().splitlines()[:3]]
+    gold_by_input = {row["input"]: json.loads(row["output"]) for row in source}
+
+    def teacher(input_text, attempt):
+        payload = dict(gold_by_input[input_text])
+        if attempt == 0:
+            return '{"think":"too short","ops":[]}'
+        payload["think"] = "The measured context supports this bounded operation."
+        return json.dumps(payload)
+
+    accepted, report = rejection_sample_rows(
+        source,
+        generate=teacher,
+        teacher="run@immutable-revision",
+        cache_path=tmp_path / "teacher-cache.jsonl",
+        k=2,
+        workers=2,
+    )
+    assert len(accepted) == len(source)
+    assert report["candidate_verdicts"] == {
+        "accepted": 3,
+        "gold_mismatch": 3,
+    }
+    for original, filtered in zip(source, accepted, strict=True):
+        assert canonical_ops(ProposedOps.model_validate_json(filtered["output"])) == canonical_ops(
+            ProposedOps.model_validate_json(original["output"])
+        )
+        assert filtered["metadata"]["supervision"] == "teacher_rejection_sampling"
+        assert filtered["metadata"]["teacher_chosen_attempt"] == 1
+        assert filtered["metadata"]["teacher_response_sha256"]
+
+
+def test_teacher_rejection_sampling_cache_prevents_repeat_calls(generated, tmp_path):
+    path, _ = generated
+    row = json.loads((path / "sft_train.jsonl").read_text().splitlines()[0])
+    payload = json.loads(row["output"])
+    payload["think"] = "This is the correct bounded evidence operation."
+    calls = 0
+
+    def teacher(_input_text, _attempt):
+        nonlocal calls
+        calls += 1
+        return json.dumps(payload)
+
+    kwargs = {
+        "generate": teacher,
+        "teacher": "run@immutable-revision",
+        "cache_path": tmp_path / "teacher-cache.jsonl",
+        "k": 2,
+        "workers": 1,
+    }
+    first, _ = rejection_sample_rows([row], **kwargs)
+    second, _ = rejection_sample_rows([row], **kwargs)
+    assert first == second
+    assert calls == 2
+
+
+def test_teacher_filtered_dataset_preserves_sealed_splits_and_records_lineage(generated, tmp_path):
+    source, source_manifest = generated
+    output = tmp_path / "teacher-data"
+    gold = {
+        row["input"]: json.loads(row["output"])
+        for split in ("sft_smoke", "sft_train")
+        for row in [
+            json.loads(line) for line in (source / f"{split}.jsonl").read_text().splitlines()
+        ]
+    }
+
+    def teacher(input_text, _attempt):
+        payload = dict(gold[input_text])
+        payload["think"] = "The context warrants exactly this bounded ledger operation."
+        return json.dumps(payload)
+
+    manifest = build_teacher_filtered_dataset(
+        source,
+        output,
+        generate=teacher,
+        teacher="run@immutable-revision",
+        cache_dir=tmp_path / "cache",
+        k=1,
+        workers=4,
+    )
+    assert manifest["supervision"] == "teacher_rejection_sampling"
+    assert manifest["teacher_filter"]["reports"]["sft_train"]["accepted_rows"] == 2800
+    assert manifest["files"]["sft_train"]["rows"] == 2800
+    assert manifest["files"]["final"] == source_manifest["files"]["final"]
+    teacher_row = json.loads((output / "sft_train.jsonl").read_text().splitlines()[0])
+    assert teacher_row["metadata"]["teacher_adapter_revision"] == "run@immutable-revision"
+    assert ProposedOps.model_validate_json(teacher_row["output"]).think
 
 
 def test_bundle_excludes_all_held_out_data(generated, tmp_path):

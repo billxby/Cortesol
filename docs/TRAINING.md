@@ -54,3 +54,27 @@ the 4B GRPO and OPD runs use 12,288 tokens: enough measured headroom without
 paying the GPU-memory cost of an unused 32k allocation. OPD pins `group_size=1`,
 which Flash recommends for distillation and which keeps the resident trainer and
 rollout engine within a validated GPU. Deterministic-gold SFT remains at 2,048.
+
+## Teacher-filtered SFT lineage
+
+Build the deterministic source splits first, then sample candidates from an
+immutable deployed Freesolo adapter. Gold operations are used only by the local
+filter and never appear in the teacher prompt:
+
+```bash
+python -m cortesol.train.make_sft --out runs/training/source
+python -m cortesol.train.teacher_filter \
+  --source runs/training/source \
+  --out runs/training/data \
+  --cache runs/training/teacher-cache \
+  --teacher-revision 'RUN_ID@IMMUTABLE_REVISION' \
+  --k 4
+python -m cortesol.train.coordinator preflight \
+  --environment-name cortesol-teacher-rft \
+  --reuse-prepared-data
+```
+
+The filter requires schema-valid operations that exactly match simulator gold
+and a 3–32 word rationale. Candidate responses are append-only cached so an
+interrupted generation resumes without paying for completed calls. Prepared-data
+preflight re-hashes every split before publishing it to Freesolo.

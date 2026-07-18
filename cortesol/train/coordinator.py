@@ -79,8 +79,11 @@ def _assert_conda() -> None:
 
 def _verify_branch(*, fetch: bool) -> str:
     branch = _run(["git", "branch", "--show-current"]).stdout.strip()
-    if branch != "feature/training":
-        raise RuntimeError(f"training pipeline must run on feature/training, not {branch!r}")
+    if branch not in {"feature/training", "codex/teacher-rft"}:
+        raise RuntimeError(
+            "training pipeline must run on feature/training or codex/teacher-rft, "
+            f"not {branch!r}"
+        )
     if fetch:
         _run(["git", "fetch", "origin", "main", "feature/training"])
     behind = int(_run(["git", "rev-list", "--count", "HEAD..origin/main"]).stdout.strip())
@@ -215,13 +218,39 @@ def _quote_usd(payload: Any) -> float | None:
     return None
 
 
-def preflight(*, environment_name: str, fetch: bool, local_only: bool) -> dict[str, Any]:
+def _load_prepared_manifest() -> dict[str, Any]:
+    path = DATA_DIR / "manifest.json"
+    if not path.is_file():
+        raise RuntimeError(f"prepared-data manifest is missing: {path}")
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if manifest.get("supervision") != "teacher_rejection_sampling":
+        raise RuntimeError("prepared data is not a teacher-rejection-sampling lineage")
+    for name, item in manifest.get("files", {}).items():
+        split_path = DATA_DIR / str(item["path"])
+        if not split_path.is_file():
+            raise RuntimeError(f"prepared split is missing: {split_path}")
+        digest = hashlib.sha256(split_path.read_bytes()).hexdigest()
+        if digest != item["sha256"]:
+            raise RuntimeError(f"prepared split hash mismatch: {name}")
+        rows = sum(1 for line in split_path.read_text(encoding="utf-8").splitlines() if line)
+        if rows != int(item["rows"]):
+            raise RuntimeError(f"prepared split row-count mismatch: {name}")
+    return manifest
+
+
+def preflight(
+    *,
+    environment_name: str,
+    fetch: bool,
+    local_only: bool,
+    reuse_prepared_data: bool = False,
+) -> dict[str, Any]:
     _load_local_credentials()
     _assert_conda()
     commit = _verify_branch(fetch=fetch)
     _run([sys.executable, "-m", "pytest"])
     _run([sys.executable, "-m", "ruff", "check", "cortesol", "tests"])
-    manifest = build_all(DATA_DIR)
+    manifest = _load_prepared_manifest() if reuse_prepared_data else build_all(DATA_DIR)
     bundle = build_bundle(BUNDLE_DIR, data_dir=DATA_DIR, source_root=ROOT)
     state = _load_state()
     lineage_changed = any(
@@ -604,6 +633,7 @@ def main() -> None:
     pre.add_argument("--environment-name", default="cortesol-belief-update")
     pre.add_argument("--no-fetch", action="store_true")
     pre.add_argument("--local-only", action="store_true")
+    pre.add_argument("--reuse-prepared-data", action="store_true")
     approval = sub.add_parser("approve")
     approval.add_argument("--cap-usd", type=float, required=True)
     run = sub.add_parser("run")
@@ -614,6 +644,7 @@ def main() -> None:
             environment_name=args.environment_name,
             fetch=not args.no_fetch,
             local_only=args.local_only,
+            reuse_prepared_data=args.reuse_prepared_data,
         )
         print(json.dumps({"status": result["status"], "state": str(STATE_PATH)}, indent=2))
         if result["status"] == "awaiting_spending_approval":
