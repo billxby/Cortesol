@@ -197,6 +197,36 @@ def preflight(*, environment_name: str, fetch: bool, local_only: bool) -> dict[s
     manifest = build_all(DATA_DIR)
     bundle = build_bundle(BUNDLE_DIR, data_dir=DATA_DIR, source_root=ROOT)
     state = _load_state()
+    lineage_changed = any(
+        (
+            state.get("git_commit") and state.get("git_commit") != commit,
+            state.get("bundle_sha256") and state.get("bundle_sha256") != bundle["sha256"],
+        )
+    )
+    if lineage_changed and state.get("stages"):
+        prior_stages = dict(state["stages"])
+        prior_spend = sum(float(stage.get("cost_usd") or 0.0) for stage in prior_stages.values())
+        state.setdefault("lineage_history", []).append(
+            {
+                "git_commit": state.get("git_commit"),
+                "bundle_sha256": state.get("bundle_sha256"),
+                "stages": prior_stages,
+                "spend_usd": prior_spend,
+            }
+        )
+        state["prior_spend_usd"] = round(
+            float(state.get("prior_spend_usd") or 0.0) + prior_spend, 4
+        )
+        state["stages"] = {}
+        state["deployments"] = {}
+        state["metrics"] = {}
+        for key in (
+            "approval",
+            "approval_fingerprint",
+            "winner",
+            "sealed_final_evaluated",
+        ):
+            state.pop(key, None)
     state.update(
         {
             "git_commit": commit,
@@ -213,7 +243,10 @@ def preflight(*, environment_name: str, fetch: bool, local_only: bool) -> dict[s
     state["cost_estimates"] = estimates
     state["estimated_training_usd"] = total
     state["evaluation_reserve_usd"] = _evaluation_reserve()
-    state["combined_estimated_usd"] = round(total + state["evaluation_reserve_usd"], 4)
+    state["combined_estimated_usd"] = round(
+        float(state.get("prior_spend_usd") or 0.0) + total + state["evaluation_reserve_usd"],
+        4,
+    )
     _save_state(state)
     if local_only:
         return state
@@ -281,7 +314,9 @@ def _submit(name: str, path: Path, state: dict[str, Any]) -> str:
     offline = float(state["cost_estimates"][cost_key]["training_usd"])
     server_quote = _quote_usd(dry_run)
     projected_stage = max(offline, server_quote or 0.0)
-    spent = sum(float(stage.get("cost_usd") or 0.0) for stage in state["stages"].values())
+    spent = float(state.get("prior_spend_usd") or 0.0) + sum(
+        float(stage.get("cost_usd") or 0.0) for stage in state["stages"].values()
+    )
     pending = 0.0
     stage_to_cost = {
         "smoke_sft": "smoke_sft",

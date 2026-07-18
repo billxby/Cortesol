@@ -55,6 +55,11 @@ def build_bundle(
     shutil.copy2(data / "rl_train.jsonl", dataset_out / "train.jsonl")
     shutil.copy2(root / "cortesol" / "train" / "TRAINING_CONTRACT.md", out / "TRAINING_CONTRACT.md")
     (out / "environment.py").write_text(
+        "from pathlib import Path\n"
+        "import sys\n"
+        "_BUNDLE_ROOT = str(Path(__file__).resolve().parent)\n"
+        "if _BUNDLE_ROOT not in sys.path:\n"
+        "    sys.path.insert(0, _BUNDLE_ROOT)\n"
         "from cortesol.train.environment import BeliefUpdateEnv, load_environment\n"
         "__all__ = ['BeliefUpdateEnv', 'load_environment']\n",
         encoding="utf-8",
