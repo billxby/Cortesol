@@ -235,6 +235,41 @@
   .card.cascade { border-color:#e6c3c5; }
   .card.cascade .head { background:var(--bad-soft); }
 
+  /* ---- Freesolo model output: the filled "form" + quantization ---- */
+  .row.model .k { display:flex; align-items:center; gap:8px; }
+  .mtag { font-size:9.5px; text-transform:none; letter-spacing:0; padding:1px 7px; border-radius:999px;
+    border:1px solid var(--line); font-family:ui-monospace, Menlo, monospace; }
+  .mtag.live { background:var(--good-soft); border-color:#bfe0cd; color:var(--good); }
+  .mtag.off  { background:var(--wash2); color:var(--muted); }
+  .think { font-style:italic; color:#5b6470; font-size:12px; line-height:1.5; background:var(--wash);
+    border-left:2px solid var(--line); border-radius:4px; padding:6px 10px; margin:2px 0 8px; }
+  details.opform { border:1px solid var(--line); border-radius:6px; margin-top:6px; background:#fff; }
+  details.opform > summary { cursor:pointer; padding:6px 10px; font-size:12px; list-style:none;
+    display:flex; align-items:center; gap:8px; }
+  details.opform > summary::-webkit-details-marker { display:none; }
+  details.opform > summary::before { content:"▸"; color:var(--faint); font-size:10px; transition:transform .12s; }
+  details.opform[open] > summary::before { transform:rotate(90deg); }
+  .opname { font-family:ui-monospace, Menlo, monospace; font-weight:600; font-size:11.5px; }
+  .opname.apply { color:var(--good); } .opname.reject { color:var(--bad); }
+  .opname.flag { color:var(--warn); } .opname.add { color:var(--blue); }
+  summary .opsum { color:var(--faint); font-family:ui-monospace, Menlo, monospace; font-size:11px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fields { padding:2px 12px 8px; }
+  .field { display:flex; gap:8px; font-family:ui-monospace, Menlo, monospace; font-size:11.5px; padding:1px 0; }
+  .field .fk { color:var(--faint); min-width:104px; } .field .fv { color:#2b2f36; word-break:break-word; }
+  .quant { border-top:1px dashed var(--line); margin-top:4px; }
+  .quant .k { padding:8px 12px 0; }
+  ol.steps { list-style:none; counter-reset:s; margin:6px 0 4px; padding:0 12px; }
+  ol.steps li { counter-increment:s; position:relative; border-left:2px solid var(--line);
+    padding:3px 0 5px 12px; margin-left:6px; }
+  ol.steps li::before { content:counter(s); position:absolute; left:-9px; top:2px; width:15px; height:15px;
+    background:var(--wash2); border:1px solid var(--line); border-radius:50%; font-size:9px; color:var(--muted);
+    display:flex; align-items:center; justify-content:center; }
+  .slab { font-size:11px; font-weight:600; color:var(--ink); }
+  .sdet { font-family:ui-monospace, Menlo, monospace; font-size:11.5px; color:var(--blue); }
+  .snote { font-size:10.5px; color:var(--faint); line-height:1.45; }
+  .snet { font-family:ui-monospace, Menlo, monospace; font-size:11.5px; color:#2b2f36; padding:2px 12px 8px; }
+
   /* ---------------- modal reader ---------------- */
   #modal { position:fixed; inset:0; background:rgba(15,20,28,.5); display:none; align-items:center;
     justify-content:center; z-index:60; padding:30px; backdrop-filter:blur(2px); }
@@ -415,7 +450,12 @@ const GraphStore = {
     for (const id of [...this.byId.keys()]) if (!seen.has(id)) this.byId.delete(id);
     this.data = {
       nodes: [...this.byId.values()],
-      links: gedges.map((e) => ({ id:e.id, source:e.from, target:e.to, type:e.type, weight:e.weight })),
+      // Drop any edge whose endpoints aren't both present. A link that references a
+      // missing node makes d3-force throw ("missing: <id>") mid-tick, which wipes
+      // the whole canvas — this keeps the graph crash-proof no matter the payload.
+      links: gedges
+        .filter((e) => this.byId.has(e.from) && this.byId.has(e.to))
+        .map((e) => ({ id:e.id, source:e.from, target:e.to, type:e.type, weight:e.weight })),
     };
     this.emit();
   },
@@ -443,7 +483,7 @@ function paintPointer(node, color, ctx){
 
 const h = React.createElement;
 function GraphApp(){
-  const fgRef = React.useRef(); const fitted = React.useRef(false);
+  const fgRef = React.useRef(); const fittedCount = React.useRef(0);
   const [, tick] = React.useReducer((x) => x + 1, 0);
   React.useEffect(() => { GraphStore.fg = fgRef; return GraphStore.subscribe(tick); }, []);
   return h(RFG, {
@@ -455,7 +495,16 @@ function GraphApp(){
     linkWidth: (l) => 1 + Math.abs(l.weight || 1) * 1.2,
     linkDirectionalArrowLength: 3.5, linkDirectionalArrowRelPos: 1,
     cooldownTime: 2600, d3AlphaDecay: 0.05, d3VelocityDecay: 0.35,
-    onEngineStop: () => { if (!fitted.current && GraphStore.data.nodes.length){ fitted.current = true; GraphStore.fit(); } },
+    // Re-fit every time the graph GROWS, not just once. Each ingest adds nodes and
+    // reheats the sim, so the layout keeps expanding; without a re-fit the frozen
+    // zoom/pan (framed for the first node or two) leaves the growing graph drifting
+    // off-screen — which is why it "disappeared" after a dozen papers. A cascade
+    // that only recolours existing nodes leaves the count unchanged, so it won't
+    // trigger a jarring re-zoom.
+    onEngineStop: () => {
+      const n = GraphStore.data.nodes.length;
+      if (n && n !== fittedCount.current){ fittedCount.current = n; GraphStore.fit(); }
+    },
   });
 }
 if (RFG) ReactDOM.createRoot($("net")).render(h(GraphApp));

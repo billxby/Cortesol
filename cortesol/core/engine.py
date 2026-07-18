@@ -84,20 +84,59 @@ def neff_factor(kb: KB, claim_id: str, evidence: Evidence) -> float:
     return factor
 
 
-def apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> Delta:
-    """Apply one APPLY_EVIDENCE op to the KB and return the attributed Delta."""
+def _lambda_breakdown(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dict:
+    """Pure, NON-MUTATING computation of the capped/damped Λ and the signed Δℓ for
+    one APPLY_EVIDENCE op, keeping every intermediate quantity. This is the single
+    source of the update arithmetic: `apply_evidence` calls it and then commits the
+    `move_belief` + bookkeeping, while `explain_apply_evidence` calls it read-only to
+    render the step-by-step trace for the audit log / UI. Nothing here writes state
+    (in particular it does NOT bump `correlation_seen` — the caller does)."""
     claim = kb.claims[op.claim_id]
     source = kb.get_source(evidence.source_id)
 
-    lam = strength_to_loglr(op.strength)
-    if source is not None:
-        lam = min(lam, source_cap(source.tau, source.phi))
-    lam *= neff_factor(kb, op.claim_id, evidence)
-    phi = source.phi if source is not None else 0.30
-    lam *= fraud_switch_factor(evidence.red_flags, phi)
+    lam_raw = strength_to_loglr(op.strength)
+    cap = source_cap(source.tau, source.phi) if source is not None else None
+    lam_capped = min(lam_raw, cap) if cap is not None else lam_raw
 
-    delta = clip(lam, -DELTA_MAX, DELTA_MAX)
+    group = evidence.correlation_group or correlation_group(evidence.fields)
+    k_index = claim.correlation_seen.get(group, 0)
+    neff = neff_marginal_factor(k_index, RHO_WITHIN_GROUP)
+    lam_after_neff = lam_capped * neff
+
+    phi = source.phi if source is not None else 0.30
+    fraud = fraud_switch_factor(evidence.red_flags, phi)
+    lam_after_fraud = lam_after_neff * fraud
+
+    delta = clip(lam_after_fraud, -DELTA_MAX, DELTA_MAX)
     signed = delta if op.direction == "+" else -delta
+
+    return {
+        "claim": claim,
+        "source": source,
+        "group": group,
+        "k_index": k_index,
+        "phi": phi,
+        "lam_raw": lam_raw,
+        "cap": cap,
+        "lam_capped": lam_capped,
+        "neff": neff,
+        "lam_after_neff": lam_after_neff,
+        "fraud": fraud,
+        "lam_after_fraud": lam_after_fraud,
+        "delta": delta,
+        "signed": signed,
+    }
+
+
+def apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> Delta:
+    """Apply one APPLY_EVIDENCE op to the KB and return the attributed Delta."""
+    b = _lambda_breakdown(kb, op, evidence)
+    claim = b["claim"]
+    source = b["source"]
+
+    # commit the n_eff bookkeeping the breakdown deliberately left untouched, so the
+    # next correlated echo in this group is damped further.
+    claim.correlation_seen[b["group"]] = b["k_index"] + 1
 
     before = claim.ell
     tier = source.tier if source is not None else "unknown"
@@ -105,7 +144,7 @@ def apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> Delta:
         f"APPLY_EVIDENCE {op.direction}{op.strength} from {evidence.source_id} "
         f"[{tier}] (ev={evidence.id})"
     )
-    kb.move_belief(op.claim_id, signed, cause=cause)
+    kb.move_belief(op.claim_id, b["signed"], cause=cause)
 
     if op.direction == "+":
         claim.r += 1
@@ -119,6 +158,100 @@ def apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> Delta:
         cause=cause,
         op="APPLY_EVIDENCE",
     )
+
+
+def explain_apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dict:
+    """Read-only 'show your work' trace for one APPLY_EVIDENCE op: the ordered
+    quantization from the model's coarse strength label to the committed Δℓ, using
+    the SAME arithmetic as `apply_evidence` (via `_lambda_breakdown`) but WITHOUT
+    moving belief or touching any bookkeeping. Consumed by the UI reasoning log so a
+    judge can expand any action and see every capped/damped step. Call it BEFORE
+    `apply_evidence` commits, so the pre-update ℓ and echo index are the real ones."""
+    from .mathx import sigmoid
+
+    b = _lambda_breakdown(kb, op, evidence)
+    claim = b["claim"]
+    source = b["source"]
+    before_ell = claim.ell
+    after_ell = before_ell + b["signed"]
+
+    steps = [
+        {
+            "label": "strength → logΛ",
+            "detail": f"{op.strength} → {b['lam_raw']:.3f}",
+            "note": "coarse evidence-quality label mapped to a pre-cap log-likelihood ratio",
+        },
+    ]
+    if b["cap"] is not None:
+        tier = source.tier if source is not None else "unknown"
+        capped = "cap binds" if b["lam_capped"] < b["lam_raw"] else "under cap"
+        steps.append(
+            {
+                "label": "source cap",
+                "detail": f"min({b['lam_raw']:.3f}, log(τ/φ)={b['cap']:.3f}) = {b['lam_capped']:.3f}",
+                "note": f"anti-hype ceiling for a '{tier}' source (τ={source.tau}, φ={source.phi}) — {capped}",
+            }
+        )
+    steps.append(
+        {
+            "label": "× n_eff",
+            "detail": f"× {b['neff']:.3f} = {b['lam_after_neff']:.3f}",
+            "note": (
+                "first report in its correlation group — full weight"
+                if b["k_index"] == 0
+                else f"echo #{b['k_index'] + 1} in group '{b['group']}' — correlated, damped"
+            ),
+        }
+    )
+    steps.append(
+        {
+            "label": "× fraud switch",
+            "detail": f"× {b['fraud']:.3f} = {b['lam_after_fraud']:.3f}",
+            "note": (
+                "no red flags — Λ intact"
+                if not evidence.red_flags
+                else f"red flags {list(evidence.red_flags)} raise φ_eff, shrinking Λ"
+            ),
+        }
+    )
+    if abs(b["lam_after_fraud"]) > DELTA_MAX:
+        steps.append(
+            {
+                "label": "clamp ±DELTA_MAX",
+                "detail": f"clip({b['lam_after_fraud']:.3f}, ±{DELTA_MAX}) = {b['delta']:.3f}",
+                "note": "per-event blast-radius bound (PD2)",
+            }
+        )
+    steps.append(
+        {
+            "label": "apply direction",
+            "detail": f"{op.direction} → Δℓ = {b['signed']:+.3f}",
+            "note": "'+' supports the claim, '−' contradicts it",
+        }
+    )
+    steps.append(
+        {
+            "label": "move belief",
+            "detail": (
+                f"ℓ {before_ell:+.3f} → {after_ell:+.3f}  "
+                f"(c {sigmoid(before_ell):.3f} → {sigmoid(after_ell):.3f})"
+            ),
+            "note": "the only belief mutation — through the engine, never set directly",
+        }
+    )
+
+    return {
+        "claim_id": op.claim_id,
+        "direction": op.direction,
+        "strength": op.strength,
+        "evidence_id": op.evidence_id,
+        "before_ell": round(before_ell, 4),
+        "after_ell": round(after_ell, 4),
+        "c_before": round(sigmoid(before_ell), 4),
+        "c_after": round(sigmoid(after_ell), 4),
+        "d_c": round(sigmoid(after_ell) - sigmoid(before_ell), 4),
+        "steps": steps,
+    }
 
 
 def apply(kb: KB, op: Op, evidence: Evidence | None) -> list[Delta]:

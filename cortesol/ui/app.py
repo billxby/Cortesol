@@ -298,7 +298,7 @@ def _delta_view(kb: KB, deltas) -> list[dict]:
     return out
 
 
-def _event_message(event: RawEvent, result: EventResult) -> dict:
+def _event_message(event: RawEvent, result: EventResult, reasoning: dict | None = None) -> dict:
     src = STATE.kb.get_source(event.source_id)
     accepted = [
         {"detail": a.detail, "op": a.op}
@@ -327,6 +327,7 @@ def _event_message(event: RawEvent, result: EventResult) -> dict:
         "accepted": accepted,
         "rejected": rejected,
         "red_flags": red_flags,
+        "reasoning": reasoning or {},
         "deltas": _delta_view(STATE.kb, result.deltas),
         "dirty": result.dirty_claims,
         "truth": (event.sim_meta.event_class.value if event.sim_meta else None),
@@ -411,11 +412,12 @@ async def stream(request: Request) -> EventSourceResponse:
     return EventSourceResponse(gen())
 
 
-def _process_resilient(event: RawEvent) -> tuple[EventResult, bool]:
+def _process_resilient(event: RawEvent) -> tuple[EventResult, bool, dict]:
     """Run one event through the real lifecycle, degrading to the offline proposer
     if the live model call fails (timeout / network / bad gateway). Returns the
-    EventResult and whether the fallback was used. The engine still disposes; only
-    the *proposal* source changes, so this never sets belief directly."""
+    EventResult, whether the fallback was used, and a display-only `reasoning` dict
+    (the model's filled 'form' + per-op quantization steps). The engine still
+    disposes; only the *proposal* source changes, so this never sets belief."""
     ctx = pipeline.prepare_event(STATE.kb, event)
     used_fallback = False
     try:
@@ -423,7 +425,14 @@ def _process_resilient(event: RawEvent) -> tuple[EventResult, bool]:
     except Exception:  # timeout, URLError, gateway error — keep the demo alive
         used_fallback = True
         proposed = STATE.fallback.extract(ctx)
-    return pipeline.commit_proposal(STATE.kb, ctx, proposed), used_fallback
+    reasoning: dict = {}
+    result = pipeline.commit_proposal(STATE.kb, ctx, proposed, reasoning=reasoning)
+    live = isinstance(STATE.extractor, FreesoloExtractor) and not used_fallback
+    reasoning["model"] = (
+        f"Freesolo {STATE.extractor.run_id}" if live else "offline heuristic (fallback)"
+    )
+    reasoning["live"] = live
+    return result, used_fallback, reasoning
 
 
 @app.post("/event")
@@ -434,7 +443,7 @@ async def next_event() -> dict:
         event = STATE.events[STATE.cursor]
         # the live model call is blocking network I/O — run it off the event loop
         # so SSE pings and other requests stay responsive while the model thinks
-        result, used_fallback = await asyncio.to_thread(_process_resilient, event)
+        result, used_fallback, reasoning = await asyncio.to_thread(_process_resilient, event)
         # Reflect per-event reality: only flip to "offline" when THIS event actually
         # fell back. If the live checkpoint answered (e.g. it warmed up), flip back to
         # "freesolo" so the badge stops lying. Purely-offline runs (no creds) keep
@@ -443,7 +452,7 @@ async def next_event() -> dict:
             STATE.extractor_kind = "offline" if used_fallback else "freesolo"
         STATE.cursor += 1
         STATE.reveal(result.dirty_claims)  # committed claims join the graph
-        message = _event_message(event, result)
+        message = _event_message(event, result, reasoning)
         await STATE.broadcast(message, remember=True)
         return {
             "status": "ok",

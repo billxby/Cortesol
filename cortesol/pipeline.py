@@ -100,14 +100,27 @@ def commit_proposal(
     proposed: ProposedOps,
     *,
     snapshot_dir=None,
+    reasoning: dict | None = None,
 ) -> EventResult:
-    """Screen, validate, and commit a proposal through the real ledger."""
+    """Screen, validate, and commit a proposal through the real ledger.
+
+    If a `reasoning` dict is passed, it is filled with a display-only view of the
+    model's output for this event — the verbatim "form" the extractor filled
+    (`think` + the proposed ops) plus, for each accepted APPLY_EVIDENCE, the
+    step-by-step quantization from strength label to committed Δℓ. This is glue
+    for the UI reasoning log; it never influences belief.
+    """
     evidence = ctx.evidence
     event = ctx.event
     # The screen runs after extraction but before validation/commit. This keeps
     # red flags out of the prompt while guaranteeing they affect every update.
     screen(evidence, kb)
     vr = validator.validate(kb, proposed, evidence)
+
+    if reasoning is not None:
+        reasoning["think"] = proposed.think
+        reasoning["proposed_ops"] = [op.model_dump(mode="json") for op in proposed.ops]
+        reasoning["steps"] = []
 
     # 6. commit accepted ops + propagate the ripple over the dirty neighborhood
     deltas = []
@@ -116,6 +129,10 @@ def commit_proposal(
 
     created: set[str] = set()  # claim ids materialised by ADD_CLAIM this event
     for op in vr.accepted:
+        # Capture the read-only 'show your work' trace BEFORE engine.apply commits,
+        # so the pre-update ℓ and echo index are the real ones the engine will use.
+        if reasoning is not None and isinstance(op, ApplyEvidence):
+            reasoning["steps"].append(engine.explain_apply_evidence(kb, op, evidence))
         produced = engine.apply(kb, op, evidence)
         deltas.extend(produced)
         for d in produced:
