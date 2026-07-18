@@ -10,11 +10,32 @@ Reference: Fine-Tuning Plan §Stage 1.
 
 from __future__ import annotations
 
+import argparse
+import json
+from pathlib import Path
 
-def build_sft_dataset(out_path: str, n_events: int) -> None:
-    """Write a balanced-class SFT JSONL from the simulator + a teacher model."""
-    ...  # TODO
+from .datasets import build_all
+
+
+def build_sft_dataset(out_path: str, n_events: int = 2_800) -> None:
+    """Write verified deterministic-gold SFT JSONL.
+
+    ``n_events`` is retained for compatibility and must match the frozen
+    production profile; use :func:`datasets.build_all` for other artifacts.
+    """
+    if n_events != 2_800:
+        raise ValueError("the production profile is frozen at 2,800 examples")
+    out = Path(out_path)
+    manifest = build_all(out.parent)
+    generated = out.parent / manifest["files"]["sft_train"]["path"]
+    if generated != out:
+        out.write_bytes(generated.read_bytes())
 
 
 if __name__ == "__main__":
-    ...  # TODO: default build (see Makefile `train-sft`)
+    parser = argparse.ArgumentParser(description="Build all Cortesol training datasets")
+    parser.add_argument("--out", default="runs/training/data")
+    args = parser.parse_args()
+    result = build_all(args.out)
+    print(Path(args.out) / "manifest.json")
+    print(json.dumps(result["files"], indent=2, sort_keys=True))
