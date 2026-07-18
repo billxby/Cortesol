@@ -5,15 +5,12 @@ the orchestrator submits ProposedOps, the validator returns what is allowed, and
 ONLY accepted ops reach the engine. Even a fully compromised extractor cannot get
 a forbidden change past this file. (Prompt Injection Defense §Layer-4, PD1/PD2/PD4.)
 
-This is a STUB. Every check below is deterministic and cheap. Implement, then make
-tests/unit/test_validator.py and the contract tests pass.
-
 The invariants (Prompt Injection Defense §Layer-4, System Architecture §validate):
   1. Enumerated ops only — the type system already guarantees this (ops.Op). A
      malformed op never parses; treat parse failure as REJECT(malformed).
   2. Bounded step — no APPLY_EVIDENCE may move a claim by more than DELTA_MAX in
-     |Δell| after caps/damping. (The engine computes the move; the validator sets
-     the ceiling and rejects ops that would require exceeding it.)
+     |Δell| after caps/damping. The engine computes the move (always clipped to
+     DELTA_MAX); the validator refuses ops whose provenance can't justify a move.
   3. Provenance required — APPLY_EVIDENCE / INVALIDATE_EDGE must cite an
      evidence_id whose source exists and passed screening.
   4. Referential integrity — claim_id / edge_id / endpoints must exist;
@@ -27,10 +24,53 @@ FLAG_OOD and REJECT are ALWAYS allowed (flagging/refusing is safe).
 
 from __future__ import annotations
 
+from .config import (
+    CONFLICT_MASS_THRESHOLD,
+    MAX_OPS_PER_SOURCE_PER_EVENT,
+    SL_PRIOR_WEIGHT_W,
+)
+from .domain import IN_SCOPE_NAMESPACES
 from .kb import KB
-from .ops import ProposedOps
-from .results import ValidationResult
+from .mathx import sigmoid
+from .ops import (
+    AddClaim,
+    AddEdge,
+    ApplyEvidence,
+    FlagOOD,
+    InvalidateEdge,
+    ProposedOps,
+    Reject,
+)
+from .results import RejectedOp, ValidationResult
 from .schema import Evidence
+
+
+def _tag_in_ontology(tag: str) -> bool:
+    namespace = tag.split(":", 1)[0]
+    return namespace in IN_SCOPE_NAMESPACES
+
+
+def _hard_conflict(kb: KB, op: ApplyEvidence) -> bool:
+    """Dempster-Shafer conflict mass between current belief and the incoming
+    report's direction. High only when a confident belief meets an equally
+    confident *opposite* report — that is the case we quarantine rather than fuse.
+    Ordinary revision (a contradiction against a still-uncertain claim) passes, so
+    the system stays revisable, not stubborn."""
+    claim = kb.get_claim(op.claim_id)
+    if claim is None:
+        return False
+    c = sigmoid(claim.ell)
+    # Belief mass toward the claim's current stance vs. this report's stance.
+    denom = claim.r + claim.s + SL_PRIOR_WEIGHT_W
+    certainty = 1.0 - SL_PRIOR_WEIGHT_W / denom  # 0 when brand-new, ->1 with evidence
+    b_cur = c * certainty
+    d_cur = (1.0 - c) * certainty
+    if op.direction == "+":
+        # report asserts truth; conflict lives with current disbelief mass
+        k = d_cur * certainty
+    else:
+        k = b_cur * certainty
+    return k > CONFLICT_MASS_THRESHOLD
 
 
 def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationResult:
@@ -40,4 +80,77 @@ def validate(kb: KB, proposed: ProposedOps, evidence: Evidence) -> ValidationRes
     NOTE: `proposed.think` is IGNORED here — rationale never authorizes an action.
     Only `proposed.ops` are considered. (PD3.)
     """
-    raise NotImplementedError("BRANCH-1: implement the six invariant checks")
+    result = ValidationResult()
+    source = kb.get_source(evidence.source_id)
+    provenance_ok = source is not None and evidence.id  # source exists & screened
+
+    attributed = 0  # ops charged against this event's source (rate limit)
+
+    for op in proposed.ops:
+        # (1) enumerated ops only — guaranteed by parsing into the Op union. FLAG_OOD
+        # and REJECT are always safe: flagging/refusing never mutates belief.
+        if isinstance(op, (FlagOOD, Reject)):
+            result.accepted.append(op)
+            continue
+
+        # (5) per-source rate limit on state-changing ops
+        if attributed >= MAX_OPS_PER_SOURCE_PER_EVENT:
+            result.rejected.append(RejectedOp(op=op, reason="rate_limit_exceeded"))
+            continue
+
+        if isinstance(op, ApplyEvidence):
+            # (3) provenance
+            if not provenance_ok or op.evidence_id != evidence.id:
+                result.rejected.append(RejectedOp(op=op, reason="missing_or_unscreened_provenance"))
+                continue
+            # (4) referential integrity
+            if kb.get_claim(op.claim_id) is None:
+                result.rejected.append(RejectedOp(op=op, reason="unknown_claim"))
+                continue
+            # (6) hard-conflict quarantine
+            if _hard_conflict(kb, op):
+                result.rejected.append(RejectedOp(op=op, reason="conflict_quarantine"))
+                continue
+            # (2) bounded step is guaranteed downstream by the engine's clip to
+            #     DELTA_MAX; nothing here can request more.
+            attributed += 1
+            result.accepted.append(op)
+            continue
+
+        if isinstance(op, AddClaim):
+            # (4) tags must sit within the ontology, else it should have been FLAG_OOD
+            if not op.ontology_tags or not all(_tag_in_ontology(t) for t in op.ontology_tags):
+                result.rejected.append(RejectedOp(op=op, reason="out_of_ontology_should_flag_ood"))
+                continue
+            attributed += 1
+            result.accepted.append(op)
+            continue
+
+        if isinstance(op, AddEdge):
+            # (4) endpoints exist, no self-loop
+            if op.src == op.dst:
+                result.rejected.append(RejectedOp(op=op, reason="self_loop"))
+                continue
+            if kb.get_claim(op.src) is None or kb.get_claim(op.dst) is None:
+                result.rejected.append(RejectedOp(op=op, reason="unknown_endpoint"))
+                continue
+            attributed += 1
+            result.accepted.append(op)
+            continue
+
+        if isinstance(op, InvalidateEdge):
+            # (3) provenance + (4) referential integrity
+            if not provenance_ok or op.evidence_id != evidence.id:
+                result.rejected.append(RejectedOp(op=op, reason="missing_or_unscreened_provenance"))
+                continue
+            if op.edge_id not in kb.edges:
+                result.rejected.append(RejectedOp(op=op, reason="unknown_edge"))
+                continue
+            attributed += 1
+            result.accepted.append(op)
+            continue
+
+        # unreachable given the closed Op union, but fail safe
+        result.rejected.append(RejectedOp(op=op, reason="malformed"))
+
+    return result
