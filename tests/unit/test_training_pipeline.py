@@ -20,7 +20,11 @@ from cortesol.train.datasets import (
     episode_row,
 )
 from cortesol.train.environment import BeliefUpdateEnv, _replay
-from cortesol.train.teacher_filter import build_teacher_filtered_dataset, rejection_sample_rows
+from cortesol.train.teacher_filter import (
+    build_teacher_filtered_dataset,
+    build_teacher_seed_dataset,
+    rejection_sample_rows,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -182,6 +186,21 @@ def test_teacher_filtered_dataset_preserves_sealed_splits_and_records_lineage(ge
     teacher_row = json.loads((output / "sft_train.jsonl").read_text().splitlines()[0])
     assert teacher_row["metadata"]["teacher_adapter_revision"] == "run@immutable-revision"
     assert ProposedOps.model_validate_json(teacher_row["output"]).think
+
+
+def test_teacher_seed_dataset_adds_bounded_rationales_without_changing_gold(generated, tmp_path):
+    source, _ = generated
+    output = tmp_path / "teacher-seed"
+    manifest = build_teacher_seed_dataset(source, output)
+    source_rows = (source / "sft_train.jsonl").read_text().splitlines()
+    seeded_rows = (output / "sft_train.jsonl").read_text().splitlines()
+    assert manifest["supervision"] == "simulator_gold_teacher_seed"
+    assert len(source_rows) == len(seeded_rows) == 2800
+    for original_text, seeded_text in zip(source_rows[:20], seeded_rows[:20], strict=True):
+        original = ProposedOps.model_validate_json(json.loads(original_text)["output"])
+        seeded = ProposedOps.model_validate_json(json.loads(seeded_text)["output"])
+        assert canonical_ops(original) == canonical_ops(seeded)
+        assert 3 <= len(seeded.think.split()) <= 32
 
 
 def test_bundle_excludes_all_held_out_data(generated, tmp_path):

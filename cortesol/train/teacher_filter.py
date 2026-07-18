@@ -251,6 +251,71 @@ def _load_rows(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
+def _seed_rationale(proposed: ProposedOps) -> str:
+    if not proposed.ops:
+        return "No closed-vocabulary operation is warranted by this context."
+    op = proposed.ops[0]
+    if op.op == "APPLY_EVIDENCE":
+        relation = "supports" if op.direction == "+" else "contradicts"
+        return f"The report {relation} the tracked claim with {op.strength} evidence."
+    if op.op == "REJECT":
+        reasons = {
+            "injection": (
+                "The text attempts an instruction override and must be rejected as injection."
+            ),
+            "malformed": "The evidence is malformed and cannot safely enter the ledger.",
+            "unverifiable": (
+                "The reported measurement is unverifiable and cannot update the ledger."
+            ),
+        }
+        return reasons[op.reason]
+    if op.op == "FLAG_OOD":
+        return "The result is outside the peptide ontology and must be flagged as OOD."
+    if op.op == "ADD_CLAIM":
+        return "The result introduces a new in-scope peptide proposition with evidence provenance."
+    if op.op == "ADD_EDGE":
+        return "The result establishes a typed relationship between existing claims."
+    return "Independent evidence invalidates the existing edge without deleting audit history."
+
+
+def build_teacher_seed_dataset(source_dir: str | Path, out_dir: str | Path) -> dict[str, Any]:
+    """Build rationale-bearing gold SFT used only to train the larger teacher."""
+
+    source = Path(source_dir)
+    out = Path(out_dir)
+    source_manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
+    out.mkdir(parents=True, exist_ok=True)
+    files = dict(source_manifest["files"])
+    for split in ("sft_smoke", "sft_train"):
+        seeded: list[dict[str, Any]] = []
+        for row in _load_rows(source / f"{split}.jsonl"):
+            proposed = parse_ops(str(row["output"]))
+            proposed.think = _seed_rationale(proposed)
+            metadata = dict(row["metadata"])
+            metadata["supervision"] = "simulator_gold_teacher_seed"
+            seeded.append(
+                {"input": row["input"], "output": _completion(proposed), "metadata": metadata}
+            )
+        files[split] = _write_jsonl(out / f"{split}.jsonl", seeded)
+    for split in ("rl_train", "dev", "final", "security"):
+        shutil.copy2(source / f"{split}.jsonl", out / f"{split}.jsonl")
+    manifest = dict(source_manifest)
+    manifest.update(
+        {
+            "dataset_version": f"{source_manifest['dataset_version']}-teacher-seed.1",
+            "files": files,
+            "supervision": "simulator_gold_teacher_seed",
+            "source_manifest_sha256": hashlib.sha256(
+                (source / "manifest.json").read_bytes()
+            ).hexdigest(),
+        }
+    )
+    (out / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return manifest
+
+
 def build_teacher_filtered_dataset(
     source_dir: str | Path,
     out_dir: str | Path,
