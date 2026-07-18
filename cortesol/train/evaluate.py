@@ -97,16 +97,23 @@ def evaluate_rows(
         events = episode_events_from_metadata(metadata)
         prefix = str(metadata["entity_family"])
         kb = initial_kb(int(metadata["seed"]), entity_prefix=prefix)
-        messages: list[dict[str, str]] = [{"role": "system", "content": contract}]
         episode_exact = 0
         for event in events:
             ctx = prepare_event(kb, event)
-            messages.append({"role": "user", "content": serialize_state(ctx)})
+            # Production extraction is one stateless policy call per event.
+            # The evolving ledger is already fully represented in this turn's
+            # serialized Context. Carrying earlier user/assistant turns changes
+            # the runtime, encourages identifier copying from turn one, and can
+            # overflow the 2,048-token SFT context despite each real call being
+            # comfortably in budget.
+            messages = [
+                {"role": "system", "content": contract},
+                {"role": "user", "content": serialize_state(ctx)},
+            ]
             response = responder(messages)
             response_counts[response] += 1
             repeated_responses += int(previous_response == response)
             previous_response = response
-            messages.append({"role": "assistant", "content": response})
             turns += 1
             event_class = event.sim_meta.event_class.value if event.sim_meta else "unknown"
             class_total[event_class] += 1

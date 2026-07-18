@@ -21,6 +21,7 @@ from cortesol.train.datasets import (
     episode_row,
 )
 from cortesol.train.environment import BeliefUpdateEnv, _replay
+from cortesol.train.evaluate import evaluate_rows
 from cortesol.train.teacher_filter import (
     build_teacher_filtered_dataset,
     build_teacher_seed_dataset,
@@ -348,6 +349,30 @@ def test_gold_episode_reconstructs_and_scores_perfect_actions():
     assert metrics["exact_operations"] == 1.0
     assert metrics["parse_validity"] == 1.0
     assert metrics["attack_success"] == 0.0
+
+
+def test_frozen_evaluator_matches_stateless_production_extractor_calls():
+    row = episode_row(
+        10_001,
+        split="dev",
+        entity_family="DV",
+        source_family="dev_source",
+        template_family="dev_template_v1",
+    )
+    events = episode_events_from_metadata(row["metadata"])
+    responses = iter(
+        canonical_ops(ProposedOps(ops=event.sim_meta.gold_ops)) for event in events
+    )
+    observed: list[tuple[str, ...]] = []
+
+    def responder(messages):
+        observed.append(tuple(message["role"] for message in messages))
+        return next(responses)
+
+    metrics = evaluate_rows([row], responder)
+    assert observed == [("system", "user")] * len(events)
+    assert metrics["protocol_valid"] == 1.0
+    assert metrics["exact_operations"] == 1.0
 
 
 def test_malformed_and_forged_injection_actions_never_mutate_and_rollouts_isolate():
