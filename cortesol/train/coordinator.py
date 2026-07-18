@@ -26,6 +26,7 @@ BUNDLE_DIR = RUN_ROOT / "environment"
 RESOLVED_CONFIG_DIR = RUN_ROOT / "configs"
 STAGES = ("smoke_sft", "production_sft", "primary_grpo", "opd", "final")
 TERMINAL_STATES = {"done", "failed", "cancelled", "error", "dry_run"}
+CHECKPOINT_SCREEN_EPISODES = 4
 
 
 def _load_local_credentials() -> None:
@@ -529,13 +530,50 @@ def _deploy_evaluate(
 def _best_checkpoint(
     refs: Sequence[str], rows: Sequence[dict[str, Any]], state: dict[str, Any], label: str
 ) -> tuple[str, dict[str, Any]]:
-    scored: list[tuple[str, dict[str, Any]]] = []
+    if not refs:
+        raise ValueError("checkpoint selection requires at least one reference")
+
+    # Screen every checkpoint on the same small paired slice, then run the full
+    # frozen development set only on the winner. Promotion still depends on the
+    # complete gate; this avoids spending hours fully evaluating checkpoints
+    # that are already clearly collapsed or dominated.
+    screen_rows = rows[: min(CHECKPOINT_SCREEN_EPISODES, len(rows))]
+    screened: list[tuple[str, dict[str, Any]]] = []
     for ref in refs:
-        metrics = _deploy_evaluate(ref, rows)
-        state["metrics"][f"{label}:{ref}"] = metrics
+        key = f"{label}_screen:{ref}"
+        metrics = state["metrics"].get(key)
+        if not isinstance(metrics, dict) or metrics.get("episodes") != len(screen_rows):
+            metrics = _deploy_evaluate(ref, screen_rows)
+            state["metrics"][key] = metrics
+            _save_state(state)
+        screened.append((ref, metrics))
+
+    best_ref, screen_metrics = max(
+        screened,
+        key=lambda item: (
+            item[1]["score"],
+            item[1]["exact_operations"],
+            item[1]["protocol_valid"],
+            -item[1]["attack_success"],
+        ),
+    )
+    full_key = f"{label}:{best_ref}"
+    full_metrics = state["metrics"].get(full_key)
+    if not isinstance(full_metrics, dict) or full_metrics.get("episodes") != len(rows):
+        full_metrics = (
+            screen_metrics
+            if len(screen_rows) == len(rows)
+            else _deploy_evaluate(best_ref, rows)
+        )
+        state["metrics"][full_key] = full_metrics
         _save_state(state)
-        scored.append((ref, metrics))
-    return max(scored, key=lambda item: item[1]["score"])
+    state.setdefault("checkpoint_shortlists", {})[label] = {
+        "screen_episodes": len(screen_rows),
+        "winner": best_ref,
+        "full_gate_episodes": len(rows),
+    }
+    _save_state(state)
+    return best_ref, full_metrics
 
 
 def _bank_checkpoint(

@@ -12,7 +12,12 @@ from freesolo.environments import EnvironmentEpisode
 from cortesol.core.ops import OP_NAMES, ProposedOps, ops_json_schema
 from cortesol.train.bundle import build_bundle
 from cortesol.train.config_artifacts import render_configs
-from cortesol.train.coordinator import _deployment_record, _evaluation_reserve, _retry_flash
+from cortesol.train.coordinator import (
+    _best_checkpoint,
+    _deployment_record,
+    _evaluation_reserve,
+    _retry_flash,
+)
 from cortesol.train.datasets import (
     build_all,
     build_sft_rows,
@@ -80,6 +85,40 @@ def test_flash_retry_recovers_only_transient_connectivity(monkeypatch):
     assert _retry_flash(flaky, label="test") == {"state": "done"}
     with pytest.raises(RuntimeError, match="not authorized"):
         _retry_flash(lambda: (_ for _ in ()).throw(RuntimeError("not authorized")), label="test")
+
+
+def test_checkpoint_selection_screens_all_and_full_gates_only_winner(monkeypatch):
+    calls: list[tuple[str, int]] = []
+
+    def evaluate(ref, rows):
+        calls.append((ref, len(rows)))
+        score = {"run/step-100": 0.2, "run/step-250": 0.9, "run/step-500": 0.8}[ref]
+        return {
+            "episodes": len(rows),
+            "score": score,
+            "exact_operations": score,
+            "protocol_valid": 1.0,
+            "attack_success": 0.0,
+            "adapter_revision": ref + "@immutable",
+        }
+
+    monkeypatch.setattr("cortesol.train.coordinator._deploy_evaluate", evaluate)
+    monkeypatch.setattr("cortesol.train.coordinator._save_state", lambda _: None)
+    state = {"metrics": {}}
+    refs = ["run/step-100", "run/step-250", "run/step-500"]
+    rows = [{"row": index} for index in range(128)]
+
+    winner, metrics = _best_checkpoint(refs, rows, state, "sft")
+
+    assert winner == "run/step-250"
+    assert metrics["episodes"] == 128
+    assert calls == [
+        ("run/step-100", 4),
+        ("run/step-250", 4),
+        ("run/step-500", 4),
+        ("run/step-250", 128),
+    ]
+    assert state["checkpoint_shortlists"]["sft"]["winner"] == winner
 
 
 def test_dataset_profile_is_complete_deterministic_and_sealed(generated, tmp_path):
