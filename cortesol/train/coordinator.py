@@ -604,8 +604,11 @@ def run_pipeline(*, from_stage: str | None = None) -> dict[str, Any]:
 
     paths = render_configs(RESOLVED_CONFIG_DIR, environment_id=environment_id)
     smoke_run = _stage_run("smoke_sft", "smoke_sft", paths, state)
-    smoke_metrics = _deploy_evaluate(smoke_run, dev_rows[:1])
-    state["metrics"]["smoke"] = smoke_metrics
+    smoke_metrics = state["metrics"].get("smoke")
+    if not isinstance(smoke_metrics, dict) or smoke_metrics.get("episodes") != 1:
+        smoke_metrics = _deploy_evaluate(smoke_run, dev_rows[:1])
+        state["metrics"]["smoke"] = smoke_metrics
+        _save_state(state)
     if smoke_metrics["protocol_valid"] < 0.99 or smoke_metrics["validator_acceptance"] <= 0:
         state["status"] = "smoke_gate_failed"
         _save_state(state)

@@ -121,6 +121,34 @@ def test_checkpoint_selection_screens_all_and_full_gates_only_winner(monkeypatch
     assert state["checkpoint_shortlists"]["sft"]["winner"] == winner
 
 
+def test_checkpoint_selection_reuses_completed_screen_and_full_metrics(monkeypatch):
+    ref = "run/step-250"
+    screen = {
+        "episodes": 4,
+        "score": 0.9,
+        "exact_operations": 1.0,
+        "protocol_valid": 1.0,
+        "attack_success": 0.0,
+    }
+    full = {**screen, "episodes": 128}
+    state = {
+        "metrics": {
+            f"sft_screen:{ref}": screen,
+            f"sft:{ref}": full,
+        }
+    }
+    monkeypatch.setattr(
+        "cortesol.train.coordinator._deploy_evaluate",
+        lambda *_: pytest.fail("completed metrics should be reused"),
+    )
+    monkeypatch.setattr("cortesol.train.coordinator._save_state", lambda _: None)
+
+    winner, metrics = _best_checkpoint([ref], [{}] * 128, state, "sft")
+
+    assert winner == ref
+    assert metrics is full
+
+
 def test_dataset_profile_is_complete_deterministic_and_sealed(generated, tmp_path):
     path, manifest = generated
     assert {name: item["rows"] for name, item in manifest["files"].items()} == {
