@@ -30,6 +30,17 @@ from .retrieval import retrieve
 
 
 def _default_extractor():
+    """The offline default is `FakeExtractor` (deterministic, no network), so
+    `make eval` and the contract tests never touch a model. Opt into the real
+    Flash model with `CORTESOL_EXTRACTOR=flash` (uses FLASH_MODEL_TUNED, else
+    FLASH_MODEL_STOCK)."""
+    import os
+
+    if os.environ.get("CORTESOL_EXTRACTOR", "").lower() == "flash":
+        from .eval.baselines import ModelBaseline
+
+        return ModelBaseline("engine+flash")
+
     from .ingest.extract import FakeExtractor
 
     return FakeExtractor()
@@ -73,6 +84,7 @@ def process_event(kb: KB, event: RawEvent, extractor=None, snapshot_dir=None) ->
     seeds: set[str] = set()
     audit: list[AuditEntry] = []
 
+    created: set[str] = set()  # claim ids materialised by ADD_CLAIM this event
     for op in vr.accepted:
         produced = engine.apply(kb, op, evidence)
         deltas.extend(produced)
@@ -83,6 +95,10 @@ def process_event(kb: KB, event: RawEvent, extractor=None, snapshot_dir=None) ->
             kind = "flag_ood"
         elif isinstance(op, Reject):
             kind = "reject"
+        elif isinstance(op, AddClaim):
+            # engine.apply materialised a new node (no delta); surface it so the UI
+            # reveals it and retrieval can find it on later events.
+            created.add(engine.claim_id_for(op.text))
         audit.append(
             AuditEntry(
                 t=event.t,
@@ -120,7 +136,7 @@ def process_event(kb: KB, event: RawEvent, extractor=None, snapshot_dir=None) ->
         validation=vr,
         deltas=deltas,
         audit=audit,
-        dirty_claims=sorted({d.claim_id for d in deltas}),
+        dirty_claims=sorted({d.claim_id for d in deltas} | created),
     )
 
 

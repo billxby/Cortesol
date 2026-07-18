@@ -5,14 +5,16 @@
 > re-derive it by reading source. When a stub becomes real, flip its row here.
 > The sequenced "what to do next" lives in [`ROADMAP.md`](ROADMAP.md).
 >
-> Last verified against the tree: 2026-07-18. **Update:** the full belief path is
-> now live and the demo runs end-to-end — `core/engine`, `core/validator`,
-> `core/propagate`, `ingest/quarantine`, `ingest/screen`, `ingest/extract`
-> (`FakeExtractor`), `pipeline`, `retrieval`, and the `ui/` live graph are all
-> implemented; `make test-contract` stays green (8 tests, 20 total). Belief moves
-> only through the engine; the UI is read-only. Still stubbed: `train/*` and
-> `adapters/cortex.py`, plus the live Flash `extract()` (the `FakeExtractor` seam
-> stands in). Earlier: `sim/` (world, events, gold) implemented + unit-tested.
+> Last verified against the tree: 2026-07-18. **Update:** the workflow now runs on
+> BOTH the simulator stream AND real papers, through BOTH the offline stand-ins
+> AND the live model seam. `ingest/extract.py::extract()` is the real
+> Freesolo Flash client (openai + `ops_json_schema()` constrained decoding,
+> fail-safe); `adapters/cortex.py` ingests `data/papers/raw_papers.jsonl`;
+> `ADD_CLAIM` now materialises nodes; the UI has data-source (sim/papers) and
+> extractor (fake/stock/tuned) toggles. `make test-contract` green (8); full suite
+> 28. The tuned checkpoint is a one-env-var swap (`FLASH_MODEL_TUNED`). Still
+> stubbed: `train/*` (other branch) and `adapters/cortex.py::load_kb`. Belief
+> still moves only through the engine; the UI is read-only.
 
 ## One-idea recap
 
@@ -45,26 +47,27 @@ Legend: ✅ done & contract-tested · 🟡 partial · ⛔ TODO stub.
 | `core/context.py` | ✅ | — | `Context` (what the extractor sees) + `serialize_state()` | System Architecture |
 | `core/results.py` | ✅ | — | Return types: `Delta`, `RejectedOp`, `ValidationResult`, `AuditEntry`, `EventResult` | — |
 | `core/kb.py` | ✅ | — | `KB` graph container. `move_belief()` = the ONLY belief mutator; `snapshot/load`, `dirty_neighborhood` | — |
-| `core/engine.py` | ✅ | A | Belief arithmetic (6 fns): `strength_to_loglr`, `source_cap`, `fraud_switch_factor`, `neff_factor`, `apply_evidence`, `apply`. `|Δℓ|≤DELTA_MAX` after cap+damping | Confidence Math §1-3 |
+| `core/engine.py` | ✅ | A | Belief arithmetic (6 fns): `strength_to_loglr`, `source_cap`, `fraud_switch_factor`, `neff_factor`, `apply_evidence`, `apply`. `|Δℓ|≤DELTA_MAX` after cap+damping. `apply` also materialises `ADD_CLAIM` (new node at prior via `claim_id_for`) + `ADD_EDGE` — structural only, belief still moves only via `move_belief` | Confidence Math §1-3 |
 | `core/validator.py` | ✅ | A | `validate()` — the sole write-gate: provenance, referential integrity, ontology, rate limit, DS conflict-quarantine; `think` ignored (PD3) | Prompt Injection Defense §Layer-4 |
 | `core/propagate.py` | ✅ | A | `propagate()` (attenuated typed ripple over dirty k-hop) + `discredit_source()` (retraction cascade — reconstructs per-source contribution from the trajectory, no schema change) | Graph Propagation and GNNs |
-| `ingest/quarantine.py` | ✅ | A | `quarantine(event)→Evidence` from `untrusted_view()`, raw_text kept as data, correlation_group computed | Prompt Injection Defense §Layer-1 |
-| `ingest/screen.py` | ✅ | A | `screen(evidence, kb)→list[str]` — GRIM, p-hacking, underpowered, no-prereg, predatory, + peptide flags (sub-diffusion Kd, no control, purity, single-replicate) | Fraud and Hype Signals |
-| `ingest/extract.py` | 🟡 | B | `FakeExtractor` — deterministic proposer from the untrusted view (refuses injection/OOS/impossible-Kd, else APPLY_EVIDENCE with dir/strength from fields; never reads sim_meta). Live Flash `extract()` still a seam | Fine-Tuning Plan |
+| `ingest/quarantine.py` | ✅ | A | `quarantine(event)→Evidence` from `untrusted_view()`, raw_text kept as data, correlation_group computed. For prose events with no structured `metric` (real papers), enriches fields via `fieldparse.parse_fields` — existing keys always win, so the sim path is byte-identical | Prompt Injection Defense §Layer-1 |
+| `ingest/fieldparse.py` | ✅ | A | `parse_fields(text)→dict` — deterministic regex extraction from abstract prose: affinity (→nM), sample size, p-value, % effect, and trial design (randomized/blinded/controlled/meta-analysis/case-report/open-label/observational) → `study_type` | Fraud and Hype Signals |
+| `ingest/screen.py` | ✅ | A | `screen(evidence, kb)→list[str]` — GRIM, p-hacking, underpowered, no-prereg, predatory, peptide flags (sub-diffusion Kd, no control, purity binding-assay-gated), + **clinical flags** for real papers (uncontrolled/unblinded/case-report/small-trial, on explicit weakness markers only) | Fraud and Hype Signals |
+| `ingest/extract.py` | ✅ | B | `extract()` = **live Freesolo Flash client** (openai→`FLASH_BASE_URL`, constrained by `ops_json_schema()`, `serialize_state` prompt, fail-safe empty ops); resolves `FLASH_MODEL_TUNED`→`STOCK`; `.env` auto-loaded. `FakeExtractor` (sim) + `PaperFakeExtractor` (real papers) = offline deterministic stand-ins; none read sim_meta | Fine-Tuning Plan |
 | `sim/world.py` | ✅ | B | `World(seed)` — deterministic latent claim graph (`WorldClaim`: z, true value); guarantees true/false binders + a false efficacy | Fine-Tuning Plan §Stage 0 |
 | `sim/events.py` | ✅ | B | `emit_stream(seed, length)` — balanced 7-class stream (fixture-shaped); `emit_echo_burst` for n_eff | Fine-Tuning Plan §Stage 0 |
 | `sim/gold.py` | ✅ | B | `build_gold()` class→op mapping + `gold_ops(event)→ProposedOps` from `sim_meta` | Fine-Tuning Plan §Stage 0 |
 | `train/environment.py` | ⛔ | B | `BeliefUpdateEnv` GRPO env, Brier terminal reward | Fine-Tuning Plan §Stage 2 |
 | `train/make_sft.py` | ⛔ | B | `build_sft_dataset()` — rejection-sampled SFT JSONL | Fine-Tuning Plan §Stage 1 |
-| `pipeline.py` | ✅ | C | `process_event()`, `replay_stream()` — sequences the 7 steps (quarantine→retrieve→extract→screen→validate→commit+propagate→publish), defaults to `FakeExtractor` | System Architecture |
+| `pipeline.py` | ✅ | C | `process_event()`, `replay_stream()` — sequences the 7 steps (quarantine→retrieve→extract→screen→validate→commit+propagate→publish); `ADD_CLAIM`-created ids surfaced in `dirty_claims`. Default extractor is `FakeExtractor`; `CORTESOL_EXTRACTOR=flash` opts into the live model | System Architecture |
 | `retrieval.py` | ✅ | C | `retrieve(kb, event, evidence, k)→Context` — lexical top-k (peptide/target tokens) + 1-hop edge neighborhood; embeddings-free stand-in | System Architecture step 2 |
-| `adapters/cortex.py` | ⛔ | C | `load_kb()`, `load_stream()` — CORTEX format. **Kickoff-day** | — |
+| `adapters/cortex.py` | 🟡 | C | `load_stream()` + `journal_to_tier()` + `seed_kb_from_papers()` ingest real PubMed papers (`data/papers/raw_papers.jsonl`) → `RawEvent`s + seeded KB (binding claim per unique peptide/target, venue-tiered sources, shared-target edges). `load_kb()` (CORTEX KB format) still a kickoff-day stub | — |
 | `eval/metrics.py` | ✅ | C | `brier`, `ece`, `asr`, `fraud_accepted_rate`, `max_confidence_shift` — pure fns over `KB`/`EventResult`s vs sim ground truth | Fine-Tuning Plan §eval |
 | `eval/replay.py` | ✅ | C | `main()` runs `make eval` end-to-end (seeds KB from `World`, scores each system, 2 tables). Belief now moves — `gullible`/`stubborn` differentiate on ASR/fraud/Brier | Fine-Tuning Plan |
-| `eval/baselines.py` | ✅ | C | `GullibleBot` (strong-`+` on top claim), `StubbornBot` (no-op) — drop-in extractors matching `FakeExtractor`'s shape | Fine-Tuning Plan |
+| `eval/baselines.py` | ✅ | C | `GullibleBot` (strong-`+` on top claim), `StubbornBot` (no-op), and `ModelBaseline` (engine+stock/SFT/GRPO) — all drop-in extractors. `ModelBaseline` now goes live: it delegates to the real `ingest.extract.extract` (network-gated, `slow`) | Fine-Tuning Plan |
 | `eval/redteam.py` | ✅ | C | `attack_stream()` — 5-family injection battery (payloads in `raw_text` only), gold-labelled for ASR | Prompt Injection Defense |
-| `ui/app.py` | ✅ | C | FastAPI live demo: `/` (vis-network page), `/stream` (SSE graph/event/cascade), `/event` (step the stream), `/discredit` (retraction cascade), `/reset`. READ-ONLY over belief — drives `pipeline.process_event` + `propagate.discredit_source`, never sets `ell`. Seeds KB via `eval.replay.seed_kb` + demo edge topology from `data/streams/eval_seed42.jsonl` | System Architecture |
-| `ui/static/index.html` | ✅ | C | Self-contained vis-network graph (colour=confidence red→green, size=downstream impact, typed edges, pulse-on-change) + live audit panel + Step/Play/Discredit controls + off-by-default "Reveal ground truth" overlay | Graph Propagation §5 |
+| `ui/app.py` | ✅ | C | FastAPI live demo: `/`, `/stream` (SSE graph/event/cascade), `/event`, `/discredit`, `/reset`, `/source` (sim↔papers), `/extractor` (fake/flash_stock/flash_tuned). READ-ONLY over belief — drives `pipeline.process_event` + `propagate.discredit_source`, never sets `ell`. Sim seeds via `eval.replay.seed_kb`; papers seed via `adapters.cortex` | System Architecture |
+| `ui/static/index.html` | ✅ | C | Self-contained vis-network graph (colour=confidence, size=downstream impact, typed edges, pulse-on-change) + live audit panel + Step/Play/Discredit controls + off-by-default "Reveal ground truth" + **data-source toggle (sim/papers)** + **extractor A/B (fake/stock/tuned)**, Flash options gated on `FLASH_API_KEY` | Graph Propagation §5 |
 
 ## The escape hatch (why work can start today)
 

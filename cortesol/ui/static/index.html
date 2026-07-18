@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Cortesol — watch the KB think</title>
+<title>Cortesol — from raw papers to a belief graph</title>
 <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
 <style>
   :root {
@@ -14,8 +14,10 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
     font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  #app { display: grid; grid-template-columns: 1fr 420px; grid-template-rows: auto 1fr;
+  #app { display: grid; grid-template-columns: 1fr 440px; grid-template-rows: auto auto 1fr;
     height: 100vh; }
+
+  /* ---- header + story arc stepper ---- */
   header { grid-column: 1 / 3; display: flex; align-items: center; gap: 16px;
     padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel2); }
   header h1 { font-size: 15px; margin: 0; letter-spacing: .3px; }
@@ -32,23 +34,64 @@
   button.on { background: #16324f; border-color: var(--accent); color: #cfe6ff; }
   label.toggle { display: flex; align-items: center; gap: 6px; color: var(--muted);
     font-size: 12px; cursor: pointer; user-select: none; }
+
+  /* ---- act stepper + narration bar ---- */
+  #arcbar { grid-column: 1 / 3; display: flex; align-items: stretch; gap: 0;
+    border-bottom: 1px solid var(--line); background: var(--panel); }
+  .arc { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .act { display: flex; align-items: center; gap: 8px; padding: 8px 16px; color: var(--muted);
+    font-size: 12px; border-right: 1px solid var(--line); position: relative; transition: .25s; }
+  .act .n { display: inline-flex; align-items: center; justify-content: center; width: 18px;
+    height: 18px; border-radius: 50%; border: 1px solid var(--line); font-size: 11px; }
+  .act .sub { color: #5b6675; font-size: 10.5px; }
+  .act.active { color: var(--ink); background: #10202f; }
+  .act.active .n { border-color: var(--accent); background: #16324f; color: #cfe6ff; }
+  .act.done { color: #7fa9c9; }
+  .act.done .n { border-color: #1f5c34; background: #12331f; color: #9be7b4; }
+  #narration { min-width: 300px; max-width: 46%; display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px; font-size: 12.5px; color: var(--ink); border-left: 1px solid var(--line);
+    background: var(--panel2); }
+  #narration .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  #narration.mood-good .dot { background: var(--green); }
+  #narration.mood-hold .dot { background: var(--amber); }
+  #narration.mood-refuse .dot { background: var(--red); }
+  #narration.mood-cascade .dot { background: #ff7b7b; box-shadow: 0 0 8px #ff7b7b; }
+
+  /* ---- graph ---- */
   #graph { position: relative; }
   #net { position: absolute; inset: 0; }
+  #stagehint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; }
+  #stagehint .box { text-align: center; color: var(--muted); max-width: 360px; }
+  #stagehint .box b { color: var(--ink); }
+  #stagehint .paper { display: inline-block; margin: 10px 4px 0; width: 46px; height: 60px; border-radius: 4px;
+    background: #141b26; border: 1px solid var(--line); position: relative; opacity: .8; }
+  #stagehint .paper::before, #stagehint .paper::after { content: ""; position: absolute; left: 8px; right: 8px;
+    height: 3px; background: #2a3648; border-radius: 2px; }
+  #stagehint .paper::before { top: 12px; } #stagehint .paper::after { top: 20px; }
   #legend { position: absolute; left: 12px; bottom: 12px; background: rgba(15,20,29,.85);
     border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 11px;
     color: var(--muted); max-width: 260px; }
   #legend b { color: var(--ink); }
+  #counter { position: absolute; right: 12px; top: 12px; background: rgba(15,20,29,.85);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 11px; color: var(--muted); }
+  #counter b { color: var(--ink); font-size: 14px; }
   .bar { height: 8px; border-radius: 4px; margin: 6px 0 4px;
     background: linear-gradient(90deg,#e74c3c,#f1c40f,#2ecc71); }
   .etypes span { display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; }
   .swatch { width: 18px; height: 0; border-top-width: 3px; border-top-style: solid; }
+
+  /* ---- right rail ---- */
   aside { border-left: 1px solid var(--line); background: var(--panel2); display: flex;
     flex-direction: column; min-height: 0; }
   aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px;
-    color: var(--muted); margin: 0; padding: 12px 14px 8px; }
+    color: var(--muted); margin: 0; padding: 12px 14px 8px; display: flex; align-items: center; gap: 8px; }
+  aside h2 .count { color: #5b6675; font-weight: 400; letter-spacing: 0; text-transform: none; }
   #log { overflow-y: auto; padding: 0 12px 16px; flex: 1; }
   .card { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px;
     background: var(--panel); overflow: hidden; }
+  .card.fresh { border-color: #24567f; box-shadow: 0 0 0 1px #16324f inset; animation: pop .5s ease; }
+  @keyframes pop { from { transform: translateY(-4px); opacity: 0; } to { transform: none; opacity: 1; } }
   .card .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px;
     border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   .card .head .eid { font-weight: 600; }
@@ -60,6 +103,7 @@
   .pill.verdict-flag { background: #332a12; border-color: #6b552a; color: #ffdd9b; }
   .pill.truth { background: #1a2233; border-color: #35507a; color: #bcd4ff; }
   .card .body { padding: 8px 10px; }
+  .paperlabel { color: #5b6675; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
   .raw { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
     padding: 6px 8px; color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11.5px; white-space: pre-wrap; word-break: break-word; }
@@ -86,9 +130,18 @@
     <span class="tag">the LLM proposes · the ledger disposes</span>
     <span class="spacer"></span>
     <div class="ctrl">
+      <select id="source-sel" title="Data source">
+        <option value="sim">Simulator stream</option>
+        <option value="papers">Real papers</option>
+      </select>
+      <select id="extractor-sel" title="Extractor (the proposing model)">
+        <option value="fake">Fake extractor (offline)</option>
+        <option value="flash_stock">Flash · stock 4B</option>
+        <option value="flash_tuned">Flash · tuned</option>
+      </select>
       <span class="status" id="progress">0 / 0</span>
-      <button id="step" class="primary">Step &#9656;</button>
-      <button id="play">Play &#9654;</button>
+      <button id="step" class="primary">Ingest next &#9656;</button>
+      <button id="play">Auto-play &#9654;</button>
       <select id="discredit-src" title="Discredit a source"></select>
       <button id="discredit" class="danger">Discredit source</button>
       <label class="toggle"><input type="checkbox" id="reveal" /> Reveal ground truth</label>
@@ -96,8 +149,22 @@
     </div>
   </header>
 
+  <div id="arcbar">
+    <div class="arc">
+      <div class="act" data-act="0"><span class="n">1</span><span>Raw results stream in<br/><span class="sub">untrusted text, quarantined</span></span></div>
+      <div class="act" data-act="1"><span class="n">2</span><span>Belief graph forms<br/><span class="sub">evidence → capped log-odds</span></span></div>
+      <div class="act" data-act="2"><span class="n">3</span><span>Epistemic immune system<br/><span class="sub">hype held · fraud refused · cascade</span></span></div>
+    </div>
+    <div id="narration"><span class="dot"></span><span id="narration-text">Raw results are queued. Press <b>Ingest next paper &#9656;</b> to stream the first one into the empty graph.</span></div>
+  </div>
+
   <div id="graph">
     <div id="net"></div>
+    <div id="stagehint"><div class="box">
+      <b>The graph is empty.</b><br/>Every belief here must be <i>earned</i> from incoming results — nothing is pre-loaded.
+      <div><span class="paper"></span><span class="paper"></span><span class="paper"></span></div>
+    </div></div>
+    <div id="counter"><b id="counter-n">0</b> claims believed</div>
     <div id="legend">
       <b>Node colour</b> = confidence (<span id="prior-note">prior</span> marked)
       <div class="bar"></div>
@@ -113,8 +180,8 @@
   </div>
 
   <aside>
-    <h2>Audit log — “it refused, and here’s why”</h2>
-    <div id="log"><div class="empty">Press <b>Step &#9656;</b> to stream the first result into the graph.</div></div>
+    <h2>Audit log <span class="count" id="log-count"></span></h2>
+    <div id="log"><div class="empty">Each result becomes a card here: the raw paper, the op the model proposed, the validator's verdict, and every &Delta; confidence — so you can always see <b>why</b> a belief moved (or didn't).</div></div>
   </aside>
 </div>
 
@@ -153,6 +220,8 @@ const network = new vis.Network($("net"), { nodes, edges }, {
 
 let PRIOR = 0.45;
 let REVEAL = false;
+let PHASE = 0;              // 0 ingest · 1 build · 2 immune  (never regresses)
+let LOGN = 0;
 const truthByEvent = {};   // event_id -> event_class
 
 function nodeTitle(n) {
@@ -161,6 +230,61 @@ function nodeTitle(n) {
   if (REVEAL && n.truth) t += `\n[ground truth: ${n.truth}]`;
   return t;
 }
+
+// ---- story arc: acts + narration ----
+function setPhase(p) {
+  if (p > PHASE) PHASE = p;
+  document.querySelectorAll(".act").forEach((el) => {
+    const a = +el.dataset.act;
+    el.classList.toggle("active", a === PHASE);
+    el.classList.toggle("done", a < PHASE);
+  });
+}
+
+function narrate(text, mood) {
+  const bar = $("narration");
+  bar.className = ""; if (mood) bar.classList.add("mood-" + mood);
+  $("narration-text").innerHTML = text;
+}
+
+// derive the beat from PUBLIC fields only (verdict / tier / deltas); truth stays hidden unless revealed
+function narrateEvent(m) {
+  const moved = (m.deltas || []).filter((d) => Math.abs(d.d_c) > 1e-4);
+  const ups = moved.filter((d) => d.d_c > 0), downs = moved.filter((d) => d.d_c < 0);
+  const biggest = moved.reduce((a, d) => Math.abs(d.d_c) > Math.abs(a) ? d.d_c : a, 0);
+  const tier = m.source_tier || "unknown";
+  const weakish = tier === "weak" || tier === "predatory" || tier === "preprint" || tier === "unknown";
+  const isReject = m.rejected.length && !m.accepted.length;
+  const isFlag = m.accepted.some((a) => a.op === "FLAG_OOD");
+
+  if (isReject) {
+    const inj = m.rejected.some((a) => /inject/i.test(a.detail));
+    setPhase(2);
+    return inj
+      ? narrate(`<b>Injection refused.</b> The text tried to issue a command — but text is <i>data</i>, and there is no op that sets confidence. Nothing moved.`, "refuse")
+      : narrate(`<b>Refused as unverifiable.</b> A physically impossible result never reaches the ledger.`, "refuse");
+  }
+  if (isFlag) {
+    setPhase(2);
+    return narrate(`<b>Flagged out-of-scope.</b> No peptide entity — the system flags it instead of forcing it into a belief.`, "hold");
+  }
+  if (downs.length) {
+    setPhase(2);
+    return narrate(`<b>Contradiction absorbed.</b> An independent replication disagrees — belief revised <b>down</b> ${fmt(biggest)}, not ignored.`, "hold");
+  }
+  if (ups.length && weakish && Math.abs(biggest) < 0.06) {
+    setPhase(2);
+    return narrate(`<b>Hype held in check.</b> A ${tier} source made a bold claim — the source cap let it move belief only ${fmt(biggest)}.`, "hold");
+  }
+  if (ups.length) {
+    setPhase(1);
+    const verb = m.red_flags && m.red_flags.length ? "committed (with red flags noted)" : "committed";
+    return narrate(`Result ${verb}: ${ups.length} claim(s) gained confidence (best ${fmt(biggest)}). The graph grows only as evidence earns it.`, "good");
+  }
+  setPhase(1);
+  return narrate(`Result processed — no belief crossed threshold this round.`, null);
+}
+function fmt(x) { return (x >= 0 ? "+" : "") + x.toFixed(2); }
 
 function applyGraph(g) {
   PRIOR = g.prior ?? PRIOR;
@@ -191,8 +315,13 @@ function applyGraph(g) {
   edges.getIds().forEach((id) => { if (!eseen.has(id)) edges.remove(id); });
 
   populateSources(g.sources);
+  syncToggles(g);
   $("progress").textContent = `${g.cursor} / ${g.total}`;
   $("step").disabled = g.cursor >= g.total;
+  const believed = g.nodes.length;
+  $("counter-n").textContent = believed;
+  $("stagehint").style.display = believed ? "none" : "flex";
+  if (believed && PHASE < 1) setPhase(1);
   if (g.cursor >= g.total) stopPlay();
 }
 
@@ -208,6 +337,26 @@ function populateSources(sources) {
     sel.appendChild(o);
   });
   if (cur) sel.value = cur;
+}
+
+let SUPPRESS_TOGGLE = false;  // avoid re-posting while syncing from server state
+function syncToggles(g) {
+  if (g.data_source === undefined) return;
+  SUPPRESS_TOGGLE = true;
+  $("source-sel").value = g.data_source;
+  $("extractor-sel").value = g.extractor_kind;
+  // step button label matches the source
+  $("step").textContent = g.data_source === "papers" ? "Ingest next paper ▸" : "Ingest next ▸";
+  // Flash options need a key; tuned also needs a checkpoint
+  const opts = $("extractor-sel").options;
+  for (const o of opts) {
+    if (o.value === "flash_stock") o.disabled = !g.flash_available;
+    if (o.value === "flash_tuned") o.disabled = !g.flash_available || !g.flash_tuned_available;
+  }
+  $("extractor-sel").title = g.flash_available
+    ? "Extractor (the proposing model)"
+    : "Set FLASH_API_KEY in .env to enable the live model";
+  SUPPRESS_TOGGLE = false;
 }
 
 function pulse(ids) {
@@ -235,7 +384,7 @@ function deltaRows(deltas) {
 function eventCard(m) {
   truthByEvent[m.event_id] = m.truth;
   const card = document.createElement("div");
-  card.className = "card";
+  card.className = "card fresh";
   const verdict = m.rejected.length && !m.accepted.length ? "reject"
                 : m.accepted.some(a => (a.op === "FLAG_OOD")) ? "flag" : "accept";
   const vpill = verdict === "reject" ? '<span class="pill verdict-reject">REFUSED</span>'
@@ -252,9 +401,10 @@ function eventCard(m) {
     `<div class="head"><span class="eid">${esc(m.event_id)}</span>`
     + `<span class="pill tier">${esc(m.source_id)} · ${esc(m.source_tier)}</span>${vpill}${truthPill}</div>`
     + `<div class="body">`
+    + `<div class="paperlabel">incoming result — raw text</div>`
     + `<div class="raw">${esc(m.raw_text)}</div>`
-    + (accepted ? `<div class="row"><div class="k">Accepted</div>${accepted}</div>` : "")
-    + (rejected ? `<div class="row"><div class="k">Rejected</div>${rejected}</div>` : "")
+    + (accepted ? `<div class="row"><div class="k">Model proposed → accepted</div>${accepted}</div>` : "")
+    + (rejected ? `<div class="row"><div class="k">Rejected by validator</div>${rejected}</div>` : "")
     + flags
     + deltaRows(m.deltas)
     + `</div>`;
@@ -263,7 +413,7 @@ function eventCard(m) {
 
 function cascadeCard(m) {
   const card = document.createElement("div");
-  card.className = "card cascade";
+  card.className = "card cascade fresh";
   card.innerHTML =
     `<div class="head"><span class="eid">⚡ discredit</span>`
     + `<span class="pill verdict-reject">${esc(m.source_id)}</span></div>`
@@ -276,7 +426,9 @@ function prepend(card) {
   const log = $("log");
   const empty = log.querySelector(".empty");
   if (empty) empty.remove();
+  document.querySelectorAll(".card.fresh").forEach((c) => c.classList.remove("fresh"));
   log.insertBefore(card, log.firstChild);
+  LOGN += 1; $("log-count").textContent = `${LOGN} event${LOGN === 1 ? "" : "s"}`;
   applyReveal();
 }
 
@@ -290,8 +442,12 @@ function connect() {
   es.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === "graph") { applyGraph(m); return; }
-    if (m.type === "event") { applyGraph(m.graph); prepend(eventCard(m)); pulse(m.dirty); return; }
-    if (m.type === "cascade") { applyGraph(m.graph); prepend(cascadeCard(m)); pulse(m.dirty); return; }
+    if (m.type === "event") { applyGraph(m.graph); prepend(eventCard(m)); narrateEvent(m); pulse(m.dirty); return; }
+    if (m.type === "cascade") {
+      applyGraph(m.graph); prepend(cascadeCard(m)); pulse(m.dirty); setPhase(2);
+      narrate(`<b>Retraction cascade.</b> Source <code>${esc(m.source_id)}</code> was discredited — un-belief drained from ${m.deltas.length} dependent claim(s). This is what add-only memory cannot do.`, "cascade");
+      return;
+    }
   };
   es.onerror = () => { /* EventSource auto-reconnects */ };
 }
@@ -304,7 +460,7 @@ async function post(url, body) {
 }
 
 let playTimer = null;
-function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; $("play").textContent = "Play ▶"; $("play").classList.remove("on"); } }
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; $("play").textContent = "Auto-play ▶"; $("play").classList.remove("on"); } }
 function startPlay() {
   $("play").textContent = "Pause ⏸"; $("play").classList.add("on");
   playTimer = setInterval(async () => {
@@ -316,10 +472,37 @@ function startPlay() {
 $("step").onclick = () => post("/event");
 $("play").onclick = () => (playTimer ? stopPlay() : startPlay());
 $("discredit").onclick = () => { const sid = $("discredit-src").value; if (sid) post("/discredit", { source_id: sid }); };
-$("reset").onclick = async () => { stopPlay(); $("log").innerHTML = '<div class="empty">Reset. Press Step ▸ to begin again.</div>'; await post("/reset"); };
+$("reset").onclick = async () => {
+  stopPlay();
+  $("log").innerHTML = '<div class="empty">Reset. Press <b>Ingest next paper ▸</b> to begin the arc again.</div>';
+  LOGN = 0; $("log-count").textContent = ""; PHASE = 0; setPhase(0);
+  narrate("Raw results are queued. Press <b>Ingest next paper &#9656;</b> to stream the first one into the empty graph.", null);
+  await post("/reset");
+};
 $("reveal").onclick = (e) => { REVEAL = e.target.checked; applyReveal();
   nodes.getIds().forEach((id) => { const n = nodes.get(id); if (n) nodes.update({ id, title: nodeTitle(n) }); }); };
 
+function resetLog(msg) {
+  stopPlay();
+  $("log").innerHTML = `<div class="empty">${msg}</div>`;
+  LOGN = 0; $("log-count").textContent = ""; PHASE = 0; setPhase(0);
+}
+$("source-sel").onchange = async (e) => {
+  if (SUPPRESS_TOGGLE) return;
+  resetLog("Switching data source…");
+  const res = await post("/source", { mode: e.target.value });
+  narrate(e.target.value === "papers"
+    ? "Real PubMed abstracts queued. Press <b>Ingest next paper &#9656;</b>."
+    : "Simulator stream queued. Press <b>Ingest next &#9656;</b>.", null);
+};
+$("extractor-sel").onchange = async (e) => {
+  if (SUPPRESS_TOGGLE) return;
+  const res = await post("/extractor", { kind: e.target.value });
+  if (res.status !== "ok") { alert(res.reason || "could not switch extractor"); return; }
+  resetLog(`Extractor → ${e.target.value}. Press Ingest next ▸ to begin.`);
+};
+
+setPhase(0);
 connect();
 </script>
 </body>

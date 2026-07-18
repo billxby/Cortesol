@@ -17,6 +17,16 @@ from ..core.kb import KB
 from ..core.schema import Evidence
 
 
+_BINDING_METRICS = frozenset({"Kd", "Ki", "IC50", "EC50"})
+_BINDING_ASSAYS = frozenset({"SPR", "ITC", "BLI", "FP", "binding"})
+
+
+def _is_binding_assay(fields: dict) -> bool:
+    """A binding/affinity measurement (vs. a clinical or in-vivo efficacy claim).
+    Purity / control-peptide expectations apply only to these."""
+    return fields.get("metric") in _BINDING_METRICS or fields.get("assay") in _BINDING_ASSAYS
+
+
 def _grim_fails(mean: float, n: int, scale_max: int) -> bool:
     """GRIM: a mean of n integer ratings on a 1..scale_max scale must equal some
     integer total / n. If no integer total rounds to the reported mean, it's
@@ -71,10 +81,27 @@ def screen(evidence: Evidence, kb: KB) -> list[str]:
         flags.append("no_control_peptide")
 
     purity = f.get("purity_pct")
-    if purity is None:
+    if isinstance(purity, (int, float)):
+        if purity < MIN_ACCEPTABLE_PURITY_PCT:
+            flags.append("low_purity")
+    elif _is_binding_assay(f):
+        # Purity is only expected for a binding assay — don't penalise a clinical
+        # efficacy paper for omitting a peptide-synthesis field it never has.
         flags.append("purity_not_reported")
-    elif isinstance(purity, (int, float)) and purity < MIN_ACCEPTABLE_PURITY_PCT:
-        flags.append("low_purity")
+
+    # --- clinical-evidence flags (real papers; parsed from abstract prose) ---
+    # Fire only on EXPLICIT weakness signals — a strong RCT / meta-analysis trips
+    # none of these and keeps full weight; a narrative review that merely omits
+    # "placebo" is not penalised.
+    if f.get("study_type") == "clinical":
+        if f.get("uncontrolled_design") and not f.get("controlled"):
+            flags.append("uncontrolled")  # open-label / single-arm / observational
+        elif f.get("open_label") is True:
+            flags.append("unblinded")  # controlled but open-label
+        if isinstance(n, int) and n < 10:
+            flags.append("underpowered")  # small trial for an efficacy claim
+    if f.get("case_report") is True:
+        flags.append("case_report")
 
     evidence.red_flags = flags
     return flags

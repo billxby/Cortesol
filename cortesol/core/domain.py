@@ -116,6 +116,13 @@ PEPTIDE_RED_FLAG_PHI_BUMP: dict[str, float] = {
     "low_purity": 0.15,  # crude peptide (<95%) claimed as pure result
     "single_replicate": 0.15,  # n == 1
     "aggregation_ignored": 0.05,  # solubility claimed for aggregation-prone seq
+    # --- clinical-evidence flags (real papers; parsed from abstract prose) ---
+    # Additive extension of the screen for clinical efficacy claims. A strong RCT /
+    # meta-analysis fires none of these (full weight); a weak observational report
+    # or case study fires several and self-discounts. (Fraud and Hype Signals.)
+    "uncontrolled": 0.15,  # no placebo / comparator arm
+    "unblinded": 0.10,  # open-label where blinding was feasible
+    "case_report": 0.12,  # anecdotal (case report / series)
 }
 
 # Physical sanity bounds for the deterministic screen.

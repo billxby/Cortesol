@@ -27,13 +27,16 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
+from ..adapters import cortex
 from ..core import propagate
 from ..core.config import EDGE_INFLUENCE, PRIOR_C_0
 from ..core.kb import KB
 from ..core.mathx import sigmoid
 from ..core.results import EventResult
 from ..core.schema import Edge, EdgeType, RawEvent
+from ..eval.baselines import ModelBaseline
 from ..eval.replay import seed_kb
+from ..ingest.extract import FakeExtractor, PaperFakeExtractor, _env, flash_available
 from ..sim.world import World
 from .. import pipeline
 
@@ -41,7 +44,8 @@ app = FastAPI(title="Cortesol")
 
 _HERE = Path(__file__).parent
 _STATIC = _HERE / "static"
-_STREAM_PATH = _HERE.parents[1] / "data" / "streams" / "eval_seed42.jsonl"
+_SIM_STREAM_PATH = _HERE.parents[1] / "data" / "streams" / "eval_seed42.jsonl"
+_PAPERS_PATH = _HERE.parents[1] / "data" / "papers" / "raw_papers.jsonl"
 _DEMO_SEED = 42
 
 
@@ -85,22 +89,63 @@ def _seed_demo_edges(kb: KB) -> None:
         add(binder["P4"], binder["P5"], "contradicts", 1.0)
 
 
+def _node_label(claim_id: str) -> str:
+    """Short node label. Sim ids are `c_bind_P1_MC4R`; real-paper ids are longer
+    slugs — trim both to something legible."""
+    lbl = claim_id
+    if lbl.startswith("c_bind_"):
+        lbl = lbl[len("c_bind_"):]
+    elif lbl.startswith("c_efficacy_"):
+        lbl = "~" + lbl[len("c_efficacy_"):]
+    elif lbl.startswith("c_"):
+        lbl = "~" + lbl[2:]
+    lbl = lbl.replace("_", " ")
+    return lbl if len(lbl) <= 26 else lbl[:24] + "…"
+
+
 class DemoState:
+    """One running KB, parameterised by two independent switches:
+      * data_source ∈ {sim, papers} — the simulator stream vs. real PubMed papers.
+      * extractor_kind ∈ {fake, flash_stock, flash_tuned} — deterministic stand-in
+        vs. the live Freesolo model (stock or tuned). Belief still moves ONLY
+        through the engine regardless of which extractor proposes the ops."""
+
     def __init__(self) -> None:
-        self.events: list[RawEvent] = [
-            RawEvent(**json.loads(line))
-            for line in _STREAM_PATH.read_text().splitlines()
-            if line.strip()
-        ]
-        self.extractor = pipeline._default_extractor()
+        self.data_source = "sim"
+        self.extractor_kind = "fake"
         self.lock = asyncio.Lock()
         self.subscribers: set[asyncio.Queue] = set()
         self.reset()
 
+    def _build_extractor(self):
+        if self.extractor_kind == "flash_stock":
+            return ModelBaseline("engine+stock", _env("FLASH_MODEL_STOCK"))
+        if self.extractor_kind == "flash_tuned":
+            return ModelBaseline("engine+tuned", _env("FLASH_MODEL_TUNED"))
+        # fake: pick the stand-in matching the data source
+        return PaperFakeExtractor() if self.data_source == "papers" else FakeExtractor()
+
     def reset(self) -> None:
-        self.kb = seed_kb(World(_DEMO_SEED), self.events)
-        _seed_demo_edges(self.kb)
+        if self.data_source == "papers":
+            self.events = cortex.load_stream(_PAPERS_PATH)
+            self.kb = cortex.seed_kb_from_papers(self.events)
+        else:
+            self.events = [
+                RawEvent(**json.loads(line))
+                for line in _SIM_STREAM_PATH.read_text().splitlines()
+                if line.strip()
+            ]
+            self.kb = seed_kb(World(_DEMO_SEED), self.events)
+            _seed_demo_edges(self.kb)
+        self.extractor = self._build_extractor()
         self.cursor = 0
+        # Story arc: the graph starts EMPTY and builds up. A claim node is
+        # "revealed" only once a committed result has touched it — so Act 1 is raw
+        # results arriving into a blank canvas, Act 2 is the graph forming.
+        self.revealed: set[str] = set()
+
+    def reveal(self, claim_ids) -> None:
+        self.revealed.update(cid for cid in claim_ids if cid in self.kb.claims)
 
     # -- graph serialization (read-only view of the KB) --
 
@@ -113,12 +158,15 @@ class DemoState:
 
     def graph_payload(self, moved: list[str] | None = None) -> dict:
         moved_set = set(moved or [])
+        # Only revealed claims are drawn — the graph grows as results land.
         nodes = []
         for c in self.kb.claims.values():
+            if c.id not in self.revealed:
+                continue
             nodes.append(
                 {
                     "id": c.id,
-                    "label": c.id.replace("c_bind_", "").replace("c_efficacy_", "~"),
+                    "label": _node_label(c.id),
                     "text": c.text,
                     "c": round(c.c, 4),
                     "u": round(c.u, 4),
@@ -138,6 +186,7 @@ class DemoState:
                 "weight": e.weight,
             }
             for e in self.kb.live_edges()
+            if e.src in self.revealed and e.dst in self.revealed
         ]
         sources = [
             {"id": s.id, "tier": s.tier, "discredited": s.discredited}
@@ -150,7 +199,13 @@ class DemoState:
             "sources": sources,
             "cursor": self.cursor,
             "total": len(self.events),
+            "revealed": len(self.revealed),
+            "claims_total": len(self.kb.claims),
             "prior": PRIOR_C_0,
+            "data_source": self.data_source,
+            "extractor_kind": self.extractor_kind,
+            "flash_available": flash_available(),
+            "flash_tuned_available": bool(_env("FLASH_MODEL_TUNED")),
         }
 
     async def broadcast(self, message: dict) -> None:
@@ -263,6 +318,7 @@ async def next_event() -> dict:
         event = STATE.events[STATE.cursor]
         result = pipeline.process_event(STATE.kb, event, STATE.extractor)
         STATE.cursor += 1
+        STATE.reveal(result.dirty_claims)  # committed claims join the graph
         message = _event_message(event, result)
         await STATE.broadcast(message)
         return {"status": "ok", "cursor": STATE.cursor, "event_id": event.id}
@@ -276,6 +332,7 @@ async def discredit(payload: dict) -> dict:
     async with STATE.lock:
         deltas = propagate.discredit_source(STATE.kb, source_id)
         moved = sorted({d.claim_id for d in deltas})
+        STATE.reveal(moved)
         message = {
             "type": "cascade",
             "source_id": source_id,
@@ -285,6 +342,38 @@ async def discredit(payload: dict) -> dict:
         }
         await STATE.broadcast(message)
         return {"status": "ok", "source_id": source_id, "claims_moved": len(moved)}
+
+
+@app.post("/source")
+async def set_source(payload: dict) -> dict:
+    """Switch the data source (sim | papers) and rebuild the KB from scratch."""
+    mode = (payload or {}).get("mode")
+    if mode not in ("sim", "papers"):
+        return {"status": "error", "reason": "mode must be 'sim' or 'papers'"}
+    async with STATE.lock:
+        STATE.data_source = mode
+        STATE.reset()
+        await STATE.broadcast(STATE.graph_payload())
+        return {"status": "ok", "data_source": mode, "total": len(STATE.events)}
+
+
+@app.post("/extractor")
+async def set_extractor(payload: dict) -> dict:
+    """Switch the extractor (fake | flash_stock | flash_tuned). Flash options need
+    FLASH_API_KEY (and flash_tuned needs FLASH_MODEL_TUNED). Rebuilds the KB so the
+    run is clean from event 0."""
+    kind = (payload or {}).get("kind")
+    if kind not in ("fake", "flash_stock", "flash_tuned"):
+        return {"status": "error", "reason": "unknown extractor kind"}
+    if kind.startswith("flash") and not flash_available():
+        return {"status": "error", "reason": "FLASH_API_KEY not set"}
+    if kind == "flash_tuned" and not _env("FLASH_MODEL_TUNED"):
+        return {"status": "error", "reason": "FLASH_MODEL_TUNED not set"}
+    async with STATE.lock:
+        STATE.extractor_kind = kind
+        STATE.reset()
+        await STATE.broadcast(STATE.graph_payload())
+        return {"status": "ok", "extractor_kind": kind}
 
 
 @app.post("/reset")

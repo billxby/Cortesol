@@ -19,6 +19,7 @@ DELTA_MAX in |Δell|, AFTER the source cap and n_eff damping. (PD2.)
 from __future__ import annotations
 
 import math
+import re
 
 from .config import (
     DELTA_MAX,
@@ -32,7 +33,16 @@ from .kb import KB
 from .mathx import clip, neff_marginal_factor
 from .ops import AddClaim, AddEdge, ApplyEvidence, FlagOOD, InvalidateEdge, Op, Reject
 from .results import Delta
-from .schema import Edge, EdgeType, Evidence
+from .schema import Claim, Edge, EdgeType, Evidence
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def claim_id_for(text: str) -> str:
+    """Deterministic claim id from proposition text, so the same ADD_CLAIM never
+    creates a duplicate node. Pure function — no randomness (core stays reproducible)."""
+    slug = _SLUG_RE.sub("_", text.strip().lower()).strip("_")
+    return f"c_{slug[:64]}" if slug else "c_unnamed"
 
 
 def strength_to_loglr(strength: str) -> float:
@@ -139,9 +149,17 @@ def apply(kb: KB, op: Op, evidence: Evidence | None) -> list[Delta]:
             kb.invalidate_edge(op.edge_id)
         return []
 
-    if isinstance(op, (AddClaim, FlagOOD, Reject)):
-        # Structural add is handled by the pipeline/validator seeding; FLAG_OOD and
-        # REJECT are record-only refusals — no belief moves. (PD2/PD7.)
+    if isinstance(op, AddClaim):
+        # Materialise a new proposition at the skeptical prior with high u. This is
+        # a STRUCTURAL add (like ADD_EDGE) — it introduces a node, it never *sets*
+        # belief. Movement still only ever happens via kb.move_belief. (PD2.)
+        cid = claim_id_for(op.text)
+        if cid not in kb.claims:
+            kb.add_claim(Claim(id=cid, text=op.text, ontology_tags=list(op.ontology_tags)))
+        return []
+
+    if isinstance(op, (FlagOOD, Reject)):
+        # FLAG_OOD and REJECT are record-only refusals — no belief moves. (PD2/PD7.)
         return []
 
     return []
