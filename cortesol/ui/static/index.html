@@ -4,9 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Cortesol — a belief graph for peptide research</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-force-graph-2d"></script>
+<script src="https://unpkg.com/3d-force-graph"></script>
 <style>
   :root {
     --ink:#0b1020; --body:#3a4051; --muted:#6b7280; --faint:#9aa3af;
@@ -438,15 +436,55 @@ const EDGE_STYLE = {
   depends_on:{color:"#9a6a00",dash:[6,4]}, contradicts:{color:"#b3131b",dash:[2,4]},
 };
 
-// ---------- react-force-graph engine (unchanged: read-only view of the ledger) ----------
-const RFG = window.ForceGraph2D && (window.ForceGraph2D.default || window.ForceGraph2D);
+// ---------- 3d-force-graph engine (vanilla library; read-only view of the ledger) ----------
+// node size by downstream impact (swells when it just moved); colour by confidence
+function nodeVal(n){ return 2.4 + Math.sqrt(Math.max(0, n.impact || 0)) * 3.2 + (n.moved ? 1.6 : 0); }
+function nodeColor(n){ return confColor(n.c == null ? PRIOR : n.c); }
+// typed link colour (translucent via linkOpacity); particles stream along any edge
+// touching a claim that just moved.
+function linkColor(l){ return (EDGE_STYLE[l.type] || {}).color || "#98a2b3"; }
+function linkParticles(l){ return ((l.source && l.source.moved) || (l.target && l.target.moved)) ? 3 : 0; }
+
+let GRAPH = null, GRAPH_FITTED = false;
+function sizeGraph(){
+  const el = $("net");
+  if (GRAPH && el && el.clientWidth){
+    GRAPH.width(el.clientWidth).height(el.clientHeight);
+    // Controls that cache the element rect at init (TrackballControls) were built while
+    // #net was hidden (0x0) -> recompute now that the canvas has real dimensions.
+    try { const c = GRAPH.controls(); if (c && c.handleResize) c.handleResize(); } catch (e) {}
+  }
+}
+function initGraph(){
+  if (GRAPH) return GRAPH;
+  if (!window.ForceGraph3D) { console.error("3d-force-graph failed to load"); return null; }
+  // controlType is a CONSTRUCTOR option in 3d-force-graph (not a chainable method).
+  // orbit: left-drag rotate, wheel zoom, right-drag pan; robust to hidden-init resize.
+  GRAPH = window.ForceGraph3D({ controlType: "orbit" })($("net"))
+    .backgroundColor("rgba(0,0,0,0)")
+    .showNavInfo(false)
+    .nodeRelSize(4).nodeVal(nodeVal).nodeColor(nodeColor).nodeOpacity(0.95).nodeResolution(14)
+    .nodeLabel(htmlLabel)
+    .linkColor(linkColor).linkWidth((l) => 2.2 + Math.abs(l.weight || 1) * 2.6).linkOpacity(0.55)
+    .linkDirectionalParticles(linkParticles).linkDirectionalParticleWidth(1.8)
+    .linkDirectionalParticleSpeed(0.006)
+    .linkDirectionalArrowLength(2.6).linkDirectionalArrowRelPos(1)
+    .d3AlphaDecay(0.032).d3VelocityDecay(0.32).cooldownTicks(120)
+    .onEngineStop(() => { if (!GRAPH_FITTED && GRAPH.graphData().nodes.length){ GRAPH_FITTED = true; try { GRAPH.zoomToFit(600, 80); } catch (e) {} } });
+  // Bound the inverse-square charge so distant nodes stop repelling across the whole
+  // graph, and give links a real rest length -> stable, legible spacing.
+  try {
+    GRAPH.d3Force("charge").strength(-95).distanceMax(240);
+    GRAPH.d3Force("link").distance((l) => 30 + Math.abs(l.weight || 1) * 12);
+  } catch (e) {}
+  sizeGraph();
+  return GRAPH;
+}
+
+// Data bridge: reconcile the payload into PERSISTENT node objects (positions survive
+// incremental updates), then hand the graph a fresh {nodes, links}.
 const GraphStore = {
   byId: new Map(), data: { nodes: [], links: [] },
-  width: 320, height: 320, fg: null, listeners: new Set(),
-  subscribe(fn){ this.listeners.add(fn); return () => this.listeners.delete(fn); },
-  emit(){ this.listeners.forEach((fn) => fn()); },
-  setSize(w, h){ if (w === this.width && h === this.height) return; this.width = w; this.height = h; this.emit(); },
-  fit(){ try { this.fg && this.fg.current && this.fg.current.zoomToFit(450, 60); } catch (e) {} },
   apply(gnodes, gedges){
     const seen = new Set();
     gnodes.forEach((n) => { seen.add(n.id);
@@ -465,62 +503,15 @@ const GraphStore = {
         .filter((e) => this.byId.has(e.from) && this.byId.has(e.to))
         .map((e) => ({ id:e.id, source:e.from, target:e.to, type:e.type, weight:e.weight })),
     };
-    this.emit();
+    const g = initGraph();
+    if (g) g.graphData(this.data);
   },
+  setSize(){ sizeGraph(); },
+  fit(){ try { GRAPH && GRAPH.zoomToFit(600, 80); } catch (e) {} },
 };
 
-function paintNode(node, ctx, scale){
-  const r = 4 + Math.sqrt(Math.max(0, node.impact || 0)) * 5;
-  node.__r = r;
-  ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-  ctx.fillStyle = confColor(node.c == null ? PRIOR : node.c); ctx.fill();
-  ctx.lineWidth = node.moved ? 2.2 : 1;
-  ctx.strokeStyle = node.moved ? "#1a1a1a" : "#b9c0c9"; ctx.stroke();
-  if (node.moved){ ctx.beginPath(); ctx.arc(node.x, node.y, r + 3.5, 0, 2 * Math.PI);
-    ctx.strokeStyle = "rgba(26,26,26,.4)"; ctx.lineWidth = 1.4; ctx.stroke(); }
-  if (scale > 0.45){
-    ctx.font = `${Math.max(3, 12 / scale)}px Georgia, serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#1a1a1a";
-    ctx.fillText(node.label || node.id, node.x, node.y + r + 1.5);
-  }
-}
-function paintPointer(node, color, ctx){
-  ctx.fillStyle = color; const r = (node.__r || 5) + 2;
-  ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI); ctx.fill();
-}
-
-const h = React.createElement;
-function GraphApp(){
-  const fgRef = React.useRef(); const fittedCount = React.useRef(0);
-  const [, tick] = React.useReducer((x) => x + 1, 0);
-  React.useEffect(() => { GraphStore.fg = fgRef; return GraphStore.subscribe(tick); }, []);
-  return h(RFG, {
-    ref: fgRef, width: GraphStore.width, height: GraphStore.height,
-    graphData: GraphStore.data, backgroundColor: "rgba(0,0,0,0)",
-    nodeLabel: htmlLabel, nodeCanvasObject: paintNode, nodePointerAreaPaint: paintPointer,
-    linkColor: (l) => (EDGE_STYLE[l.type] || {}).color || "#98a2b3",
-    linkLineDash: (l) => (EDGE_STYLE[l.type] || {}).dash || null,
-    linkWidth: (l) => 1 + Math.abs(l.weight || 1) * 1.2,
-    linkDirectionalArrowLength: 3.5, linkDirectionalArrowRelPos: 1,
-    cooldownTime: 2600, d3AlphaDecay: 0.05, d3VelocityDecay: 0.35,
-    // Re-fit every time the graph GROWS, not just once. Each ingest adds nodes and
-    // reheats the sim, so the layout keeps expanding; without a re-fit the frozen
-    // zoom/pan (framed for the first node or two) leaves the growing graph drifting
-    // off-screen — which is why it "disappeared" after a dozen papers. A cascade
-    // that only recolours existing nodes leaves the count unchanged, so it won't
-    // trigger a jarring re-zoom.
-    onEngineStop: () => {
-      const n = GraphStore.data.nodes.length;
-      if (n && n !== fittedCount.current){ fittedCount.current = n; GraphStore.fit(); }
-    },
-  });
-}
-if (RFG) ReactDOM.createRoot($("net")).render(h(GraphApp));
-
-const _ro = new ResizeObserver((entries) => {
-  for (const e of entries){ const { width, height } = e.contentRect;
-    if (width > 0 && height > 0) GraphStore.setSize(Math.round(width), Math.round(height)); }
-});
+initGraph();
+const _ro = new ResizeObserver(() => sizeGraph());
 _ro.observe($("net"));
 
 let PRIOR = 0.45, REVEAL = false, LOGN = 0, WARMING = false;
