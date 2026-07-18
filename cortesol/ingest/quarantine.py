@@ -13,16 +13,18 @@ from ..core.schema import Evidence, RawEvent
 
 
 def quarantine(event: RawEvent) -> Evidence:
-    """Wrap/clean the untrusted event and parse it into a structured Evidence."""
-    if event.sim_meta is not None:
-        raise ValueError("quarantine accepts only RawEvent.untrusted_view()")
-    text = event.raw_text.replace("\x00", "").replace("</UNTRUSTED_DATA>", "[end marker removed]")
-    marked = f"<UNTRUSTED_DATA>\n{text}\n</UNTRUSTED_DATA>"
-    fields = dict(event.fields)
+    """Wrap/clean the untrusted event and parse it into a structured Evidence.
+
+    The raw text is preserved verbatim as DATA (the screen and UI display it; it is
+    never re-executed or placed in an instruction position). Structured `fields`
+    are copied as-is — they are what the engine actually reads — and the n_eff
+    correlation group (lab x method x dataset) is computed up front.
+    """
+    uv = event.untrusted_view()
     return Evidence(
-        id=event.id,
-        source_id=event.source_id,
-        raw_text=marked,
-        fields=fields,
-        correlation_group=correlation_group(fields),
+        id=uv.id,
+        source_id=uv.source_id,
+        raw_text=uv.raw_text,
+        fields=dict(uv.fields),
+        correlation_group=correlation_group(uv.fields),
     )

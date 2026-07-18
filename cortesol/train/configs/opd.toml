@@ -1,4 +1,5 @@
-# Short disposable OPD branch. GLM-5.2 credentials are managed by Flash.
+# Short disposable OPD challenger warm-started from the promoted GRPO checkpoint.
+# GLM-5.2 credentials are managed by Flash.
 model = "Qwen/Qwen3.5-4B"
 algorithm = "opd"
 thinking = false
@@ -12,7 +13,7 @@ pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
 split = "rl_train"
 
 [train]
-init_from_adapter = "cortesol-sft"
+init_from_adapter = "cortesol-grpo"
 teacher_model = "glm-5.2"
 max_context_tokens = 12288
 max_completion_tokens = 256

@@ -48,6 +48,7 @@ def render_configs(
     *,
     environment_id: str,
     sft_adapter: str = "cortesol-sft",
+    grpo_adapter: str | None = None,
     opd_adapter: str = "cortesol-opd",
 ) -> dict[str, Path]:
     out = Path(out_dir)
@@ -55,7 +56,11 @@ def render_configs(
     schema = ops_json_schema()
     schema_path = out / "ops.schema.json"
     schema_path.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    adapters = {"grpo": sft_adapter, "opd": sft_adapter, "grpo_opd": opd_adapter}
+    adapters = {
+        "grpo": sft_adapter,
+        "opd": grpo_adapter or sft_adapter,
+        "grpo_opd": opd_adapter,
+    }
     structured_outputs = json.dumps({"json": schema}, sort_keys=True, separators=(",", ":"))
     rendered: dict[str, Path] = {}
     for name in TEMPLATES:

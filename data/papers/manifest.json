@@ -1,0 +1,32 @@
+{
+  "total_events": 149,
+  "unique_pmids": 149,
+  "by_source_tier": {
+    "reputable": 147,
+    "top_journal": 2
+  },
+  "by_peptide": {
+    "semaglutide": 7,
+    "tirzepatide": 8,
+    "retatrutide": 8,
+    "liraglutide": 7,
+    "exenatide": 5,
+    "cagrilintide": 8,
+    "setmelanotide": 8,
+    "bremelanotide": 6,
+    "melanotan-II": 8,
+    "teriparatide": 7,
+    "octreotide": 7,
+    "linaclotide": 8,
+    "ziconotide": 6,
+    "icatibant": 7,
+    "degarelix": 8,
+    "enfuvirtide": 6,
+    "elamipretide": 8,
+    "bpc-157": 8,
+    "thymosin-beta-4": 6,
+    "ghk-cu": 6,
+    "selank": 7
+  },
+  "note": "real-paper evidence; sim_meta is null (no ground-truth oracle)"
+}

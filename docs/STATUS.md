@@ -5,10 +5,16 @@
 > re-derive it by reading source. When a stub becomes real, flip its row here.
 > The sequenced "what to do next" lives in [`ROADMAP.md`](ROADMAP.md).
 >
-> Last verified against the tree: 2026-07-18. **Update:** `sim/` (world, events,
-> gold) is now implemented + unit-tested (`make sim`, `tests/unit/test_sim.py`,
-> 12 tests) — owned by Bill. It's the peptide "data" source; no real-paper fetcher
-> is planned (out of scope).
+> Last verified against the tree: 2026-07-18. **Update:** the full belief path is
+> now live and the demo runs end-to-end — `core/engine`, `core/validator`,
+> `core/propagate`, `ingest/quarantine`, `ingest/screen`, `ingest/extract`
+> (`FakeExtractor`), `pipeline`, `retrieval`, and the `ui/` live graph are all
+> implemented; `make test-contract` stays green (8 tests, 20 total). Belief moves
+> only through the engine; the UI is read-only. The Conda/Freesolo training
+> pipeline, live Flash extractor, deterministic datasets, stateless GRPO env,
+> gated evaluator/coordinator, and checkpoint swarm are implemented. Still
+> stubbed: `adapters/cortex.py`. Earlier: `sim/` (world, events, gold) implemented
+> + unit-tested.
 
 ## One-idea recap
 
@@ -17,7 +23,7 @@
 > engine decide what changes, by bounded provenance-carrying arithmetic
 > (`ℓ' = ℓ + logΛ`, capped by `|logΛ| ≤ log(τ/φ)` and `DELTA_MAX`).
 
-**Event lifecycle (7 steps):** `quarantine → screen → retrieve → extract →
+**Event lifecycle (7 steps):** `quarantine → retrieve → extract → screen →
 validate → commit+propagate → publish`.
 
 **Logical areas (see `docs/COMPONENTS.md`):**
@@ -41,25 +47,28 @@ Legend: ✅ done & contract-tested · 🟡 partial · ⛔ TODO stub.
 | `core/context.py` | ✅ | — | `Context` (what the extractor sees) + `serialize_state()` | System Architecture |
 | `core/results.py` | ✅ | — | Return types: `Delta`, `RejectedOp`, `ValidationResult`, `AuditEntry`, `EventResult` | — |
 | `core/kb.py` | ✅ | — | `KB` graph container. `move_belief()` = the ONLY belief mutator; `snapshot/load`, `dirty_neighborhood` | — |
-| `core/engine.py` | ✅ | A | Bounded source-capped belief arithmetic | Confidence Math §1-3 |
-| `core/validator.py` | ✅ | A | Sole write-gate, provenance, rate limit, conflict quarantine | Prompt Injection Defense §Layer-4 |
-| `core/propagate.py` | ✅ | A | Typed propagation + source-discredit cascade | Graph Propagation and GNNs |
-| `ingest/quarantine.py` | ✅ | A | Datamarked untrusted evidence | Prompt Injection Defense §Layer-1 |
-| `ingest/screen.py` | ✅ | A | Fraud, quality, injection, and OOD red-flag battery | Fraud and Hype Signals |
-| `ingest/extract.py` | ✅ | B | Freesolo proposal client + deterministic fake | Fine-Tuning Plan |
+| `core/engine.py` | ✅ | A | Belief arithmetic (6 fns): `strength_to_loglr`, `source_cap`, `fraud_switch_factor`, `neff_factor`, `apply_evidence`, `apply`. `|Δℓ|≤DELTA_MAX` after cap+damping | Confidence Math §1-3 |
+| `core/validator.py` | ✅ | A | `validate()` — the sole write-gate: provenance, referential integrity, ontology, rate limit, DS conflict-quarantine; `think` ignored (PD3) | Prompt Injection Defense §Layer-4 |
+| `core/propagate.py` | ✅ | A | `propagate()` (attenuated typed ripple over dirty k-hop) + `discredit_source()` (retraction cascade — reconstructs per-source contribution from the trajectory, no schema change) | Graph Propagation and GNNs |
+| `ingest/quarantine.py` | ✅ | A | `quarantine(event)→Evidence` from `untrusted_view()`, raw_text kept as data, correlation_group computed | Prompt Injection Defense §Layer-1 |
+| `ingest/screen.py` | ✅ | A | `screen(evidence, kb)→list[str]` — GRIM, p-hacking, underpowered, no-prereg, predatory, + peptide flags (sub-diffusion Kd, no control, purity, single-replicate) | Fraud and Hype Signals |
+| `ingest/extract.py` | ✅ | B | `FakeExtractor` plus authenticated `FreesoloExtractor`; immutable checkpoint routing, strict proposal parsing, malformed output fails closed | Fine-Tuning Plan |
+| `ingest/swarm.py` | ✅ | B | Bounded checkpoint ensemble; exact whole-proposal quorum, isolated contexts, timeout, no Frankenproposals, fail-closed disagreement | Fine-Tuning Plan |
 | `sim/world.py` | ✅ | B | `World(seed)` — deterministic latent claim graph (`WorldClaim`: z, true value); guarantees true/false binders + a false efficacy | Fine-Tuning Plan §Stage 0 |
 | `sim/events.py` | ✅ | B | `emit_stream(seed, length)` — balanced 7-class stream (fixture-shaped); `emit_echo_burst` for n_eff | Fine-Tuning Plan §Stage 0 |
 | `sim/gold.py` | ✅ | B | `build_gold()` class→op mapping + `gold_ops(event)→ProposedOps` from `sim_meta` | Fine-Tuning Plan §Stage 0 |
-| `train/environment.py` | ✅ | B | Stateless 24-turn Flash environment + Brier/action reward | Fine-Tuning Plan §Stage 2 |
-| `train/make_sft.py` | ✅ | B | Deterministic-gold dataset factory | Fine-Tuning Plan §Stage 1 |
-| `pipeline.py` | ✅ | C | Shared prepare/validate/commit/propagate lifecycle | System Architecture |
-| `retrieval.py` | ✅ | C | Deterministic bounded top-k Context | System Architecture step 2 |
+| `train/environment.py` | ✅ | B | Stateless 24-turn `BeliefUpdateEnv`; transcript reconstruction, fixed-universe Brier + exact-action reward, exploit metrics | Fine-Tuning Plan §Stage 2 |
+| `train/datasets.py` | ✅ | B | Deterministic SFT/RL/dev/final/security factory with causal splits, replay validation, hashes, coverage and leakage gates | Fine-Tuning Plan §Stage 1 |
+| `train/coordinator.py` | ✅ | B | Conda/Freesolo preflight, publish/dry-run/cost cap, checkpoint gates, SFT→GRPO→OPD anytime ladder and sealed final selection | Fine-Tuning Plan |
+| `pipeline.py` | ✅ | C | `process_event()`, `replay_stream()` — sequences the 7 steps (quarantine→retrieve→extract→screen→validate→commit+propagate→publish), defaults to `FakeExtractor` | System Architecture |
+| `retrieval.py` | ✅ | C | `retrieve(kb, event, evidence, k)→Context` — lexical top-k (peptide/target tokens) + 1-hop edge neighborhood; embeddings-free stand-in | System Architecture step 2 |
 | `adapters/cortex.py` | ⛔ | C | `load_kb()`, `load_stream()` — CORTEX format. **Kickoff-day** | — |
 | `eval/metrics.py` | ✅ | C | `brier`, `ece`, `asr`, `fraud_accepted_rate`, `max_confidence_shift` — pure fns over `KB`/`EventResult`s vs sim ground truth | Fine-Tuning Plan §eval |
-| `eval/replay.py` | ✅ | C | `main()` runs the engine-backed held-out and red-team evaluators end-to-end | Fine-Tuning Plan |
+| `eval/replay.py` | ✅ | C | `main()` runs `make eval` end-to-end (seeds KB from `World`, scores each system, 2 tables). Belief now moves — `gullible`/`stubborn` differentiate on ASR/fraud/Brier | Fine-Tuning Plan |
 | `eval/baselines.py` | ✅ | C | `GullibleBot` (strong-`+` on top claim), `StubbornBot` (no-op) — drop-in extractors matching `FakeExtractor`'s shape | Fine-Tuning Plan |
 | `eval/redteam.py` | ✅ | C | `attack_stream()` — 5-family injection battery (payloads in `raw_text` only), gold-labelled for ASR | Prompt Injection Defense |
-| `ui/app.py` | 🟡 | C | FastAPI + `/health` done; `/`, `/stream` (SSE), `/event`, `/discredit` TODO | System Architecture |
+| `ui/app.py` | ✅ | C | FastAPI live demo: `/` (vis-network page), `/stream` (SSE graph/event/cascade), `/event` (step the stream), `/discredit` (retraction cascade), `/reset`. READ-ONLY over belief — drives `pipeline.process_event` + `propagate.discredit_source`, never sets `ell`. Seeds KB via `eval.replay.seed_kb` + demo edge topology from `data/streams/eval_seed42.jsonl` | System Architecture |
+| `ui/static/index.html` | ✅ | C | Self-contained vis-network graph (colour=confidence red→green, size=downstream impact, typed edges, pulse-on-change) + live audit panel + Step/Play/Discredit controls + off-by-default "Reveal ground truth" overlay | Graph Propagation §5 |
 
 ## The escape hatch (why work can start today)
 
@@ -85,7 +94,7 @@ network** the moment it's wired — the simulator is not a day-1 blocker.
 - `CONTEXT_TOKEN_BUDGET = 8192`, `RETRIEVE_TOP_K = 8`,
   `MAX_OPS_PER_SOURCE_PER_EVENT = 3`.
 
-## What each stub must implement
+## Implementation notes
 
 **`core/engine.py`** (recipe in docstrings + Confidence Math §engine-pseudocode):
 - `strength_to_loglr(strength)` — lookup into `STRENGTH_TO_LOGLR`.
@@ -117,6 +126,17 @@ p-hacking, underpowered, no-prereg, predatory-venue + peptide flags; attach to
 
 **`ingest/quarantine.py::quarantine(event)→Evidence`** — wrap/clean untrusted
 text (already `untrusted_view`), parse into structured `Evidence`.
+
+**`ingest/extract.py::extract(ctx, model)→ProposedOps`** (Area B, the Freesolo
+model) — the only learned step. Reads the serialized `Context` under
+`ops_json_schema()`-constrained decoding; emits ops + advisory `think`; NEVER
+writes state or reads `sim_meta`. Post-trained Qwen3.5-4B (SFT→GRPO→OPD) via
+`train/*`; reward = −Brier vs ground truth. `FakeExtractor` is the no-model
+stand-in. **Real-paper caveat:** PubMed abstracts (`ingest/fetch_papers.py`,
+`data/papers/`) carry no structured `fields` and name peptides in prose, so the
+real extractor must also parse fields; `FakeExtractor` FLAG_OODs them. See
+ROADMAP Track B (routes B-real-1/2). Real events are `sim_meta=null` → demo only,
+not scored. Ref: Fine-Tuning Plan.
 
 **Area C:** `retrieval.py::retrieve()` (trivial tag/recency top-k is fine before
 embeddings); `pipeline.py::process_event/replay_stream` (sequence the 7 steps,

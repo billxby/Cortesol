@@ -1,14 +1,326 @@
-<!doctype html>
-<!-- Cortesol live belief graph (area C). TODO: wire vis-network + EventSource('/stream').
-     node color = confidence (red->green), size = downstream impact, pulse on update.
-     Reference: Research/"Graph Propagation and GNNs" §5. -->
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Cortesol — live belief graph</title>
-  </head>
-  <body>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cortesol — watch the KB think</title>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #121722; --panel2: #0f141d; --ink: #e6edf3;
+    --muted: #8b98a9; --line: #222c3a; --accent: #4da3ff;
+    --green: #2ecc71; --red: #e74c3c; --amber: #f39c12;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  #app { display: grid; grid-template-columns: 1fr 420px; grid-template-rows: auto 1fr;
+    height: 100vh; }
+  header { grid-column: 1 / 3; display: flex; align-items: center; gap: 16px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel2); }
+  header h1 { font-size: 15px; margin: 0; letter-spacing: .3px; }
+  header .tag { color: var(--muted); font-size: 12px; }
+  header .spacer { flex: 1; }
+  .ctrl { display: flex; align-items: center; gap: 8px; }
+  button, select {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: #16324f; border-color: #24567f; }
+  button.danger { background: #3a1618; border-color: #6b2a2c; color: #ffb4b4; }
+  button.on { background: #16324f; border-color: var(--accent); color: #cfe6ff; }
+  label.toggle { display: flex; align-items: center; gap: 6px; color: var(--muted);
+    font-size: 12px; cursor: pointer; user-select: none; }
+  #graph { position: relative; }
+  #net { position: absolute; inset: 0; }
+  #legend { position: absolute; left: 12px; bottom: 12px; background: rgba(15,20,29,.85);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 11px;
+    color: var(--muted); max-width: 260px; }
+  #legend b { color: var(--ink); }
+  .bar { height: 8px; border-radius: 4px; margin: 6px 0 4px;
+    background: linear-gradient(90deg,#e74c3c,#f1c40f,#2ecc71); }
+  .etypes span { display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; }
+  .swatch { width: 18px; height: 0; border-top-width: 3px; border-top-style: solid; }
+  aside { border-left: 1px solid var(--line); background: var(--panel2); display: flex;
+    flex-direction: column; min-height: 0; }
+  aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted); margin: 0; padding: 12px 14px 8px; }
+  #log { overflow-y: auto; padding: 0 12px 16px; flex: 1; }
+  .card { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px;
+    background: var(--panel); overflow: hidden; }
+  .card .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .card .head .eid { font-weight: 600; }
+  .pill { font-size: 10px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line);
+    color: var(--muted); white-space: nowrap; }
+  .pill.tier { background: #10202f; }
+  .pill.verdict-accept { background: #12331f; border-color: #1f5c34; color: #9be7b4; }
+  .pill.verdict-reject { background: #331414; border-color: #6b2a2c; color: #ffb4b4; }
+  .pill.verdict-flag { background: #332a12; border-color: #6b552a; color: #ffdd9b; }
+  .pill.truth { background: #1a2233; border-color: #35507a; color: #bcd4ff; }
+  .card .body { padding: 8px 10px; }
+  .raw { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 8px; color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px; white-space: pre-wrap; word-break: break-word; }
+  .row { margin-top: 7px; }
+  .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  .op { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+  .op.accept { color: #9be7b4; } .op.reject { color: #ff9b9b; } .op.flag { color: #ffdd9b; }
+  .flags span { display: inline-block; background: #332a12; border: 1px solid #6b552a;
+    color: #ffdd9b; border-radius: 999px; padding: 1px 7px; margin: 2px 4px 0 0; font-size: 10.5px; }
+  .delta { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; padding: 2px 0; }
+  .delta .cid { color: #cbd5e1; } .delta .up { color: var(--green); } .delta .down { color: var(--red); }
+  .delta .rip { color: var(--muted); }
+  .card.cascade { border-color: #6b2a2c; }
+  .card.cascade .head { background: #2a1214; }
+  .empty { color: var(--muted); padding: 20px 14px; }
+  .status { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
     <h1>Cortesol</h1>
-    <p>TODO: vis-network graph + audit log panel, fed by SSE from <code>/stream</code>.</p>
-  </body>
+    <span class="tag">the LLM proposes · the ledger disposes</span>
+    <span class="spacer"></span>
+    <div class="ctrl">
+      <span class="status" id="progress">0 / 0</span>
+      <button id="step" class="primary">Step &#9656;</button>
+      <button id="play">Play &#9654;</button>
+      <select id="discredit-src" title="Discredit a source"></select>
+      <button id="discredit" class="danger">Discredit source</button>
+      <label class="toggle"><input type="checkbox" id="reveal" /> Reveal ground truth</label>
+      <button id="reset">Reset</button>
+    </div>
+  </header>
+
+  <div id="graph">
+    <div id="net"></div>
+    <div id="legend">
+      <b>Node colour</b> = confidence (<span id="prior-note">prior</span> marked)
+      <div class="bar"></div>
+      <div><span style="color:var(--red)">refuted</span> · uncertain · <span style="color:var(--green)">believed</span></div>
+      <div style="margin-top:8px"><b>Node size</b> = downstream impact</div>
+      <div style="margin-top:8px" class="etypes"><b>Edges</b><br/>
+        <span><i class="swatch" style="border-color:#2ecc71"></i>supports</span>
+        <span><i class="swatch" style="border-color:#4da3ff"></i>replicates</span>
+        <span><i class="swatch" style="border-color:#c8a24a"></i>depends_on</span>
+        <span><i class="swatch" style="border-color:#e74c3c;border-top-style:dashed"></i>contradicts</span>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <h2>Audit log — “it refused, and here’s why”</h2>
+    <div id="log"><div class="empty">Press <b>Step &#9656;</b> to stream the first result into the graph.</div></div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+// red -> amber -> green by confidence in [0,1]
+function confColor(c) {
+  const stops = [[0.0,[231,76,60]],[0.5,[241,196,15]],[1.0,[46,204,113]]];
+  let a = stops[0], b = stops[stops.length-1];
+  for (let i=0;i<stops.length-1;i++){ if (c>=stops[i][0] && c<=stops[i+1][0]){ a=stops[i]; b=stops[i+1]; break; } }
+  const t = (c - a[0]) / Math.max(1e-6, b[0]-a[0]);
+  const mix = a[1].map((v,i)=>Math.round(v + (b[1][i]-v)*t));
+  return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
+}
+
+const EDGE_STYLE = {
+  supports:    { color: "#2ecc71", dashes: false },
+  replicates:  { color: "#4da3ff", dashes: false },
+  depends_on:  { color: "#c8a24a", dashes: [4,4] },
+  contradicts: { color: "#e74c3c", dashes: [2,4] },
+};
+
+const nodes = new vis.DataSet([]);
+const edges = new vis.DataSet([]);
+const network = new vis.Network($("net"), { nodes, edges }, {
+  physics: { solver: "forceAtlas2Based", stabilization: { iterations: 150 },
+    forceAtlas2Based: { gravitationalConstant: -45, springLength: 120, springConstant: 0.05 } },
+  interaction: { hover: true, tooltipDelay: 120 },
+  nodes: { shape: "dot", font: { color: "#e6edf3", size: 13, face: "monospace" },
+    borderWidth: 2, scaling: { min: 10, max: 44 } },
+  edges: { arrows: { to: { enabled: true, scaleFactor: 0.5 } }, smooth: { type: "dynamic" },
+    color: { inherit: false }, width: 1.5 },
+});
+
+let PRIOR = 0.45;
+let REVEAL = false;
+const truthByEvent = {};   // event_id -> event_class
+
+function nodeTitle(n) {
+  let t = `${n.id}\n${n.text}\nconfidence c = ${n.c.toFixed(3)}   uncertainty u = ${n.u.toFixed(2)}`
+        + `\nevidence  r/s = ${n.r}/${n.s}   status = ${n.status}   impact = ${n.impact}`;
+  if (REVEAL && n.truth) t += `\n[ground truth: ${n.truth}]`;
+  return t;
+}
+
+function applyGraph(g) {
+  PRIOR = g.prior ?? PRIOR;
+  $("prior-note").textContent = `prior c=${PRIOR.toFixed(2)}`;
+  const seen = new Set();
+  g.nodes.forEach((n) => {
+    seen.add(n.id);
+    const size = 12 + (n.impact || 0) * 10;
+    nodes.update({
+      id: n.id, label: n.label, value: size, c: n.c, u: n.u, r: n.r, s: n.s,
+      text: n.text, impact: n.impact, status: n.status, truth: n.truth,
+      color: { background: confColor(n.c), border: n.moved ? "#ffffff" : "#2a3648",
+               highlight: { background: confColor(n.c), border: "#ffffff" } },
+      borderWidth: n.moved ? 4 : 2,
+      title: nodeTitle({ ...n }),
+    });
+  });
+  nodes.getIds().forEach((id) => { if (!seen.has(id)) nodes.remove(id); });
+
+  const eseen = new Set();
+  g.edges.forEach((e) => {
+    eseen.add(e.id);
+    const st = EDGE_STYLE[e.type] || { color: "#556", dashes: false };
+    edges.update({ id: e.id, from: e.from, to: e.to,
+      color: { color: st.color, highlight: st.color }, dashes: st.dashes,
+      width: 1 + Math.abs(e.weight) * 1.5, title: `${e.type} (w=${e.weight})` });
+  });
+  edges.getIds().forEach((id) => { if (!eseen.has(id)) edges.remove(id); });
+
+  populateSources(g.sources);
+  $("progress").textContent = `${g.cursor} / ${g.total}`;
+  $("step").disabled = g.cursor >= g.total;
+  if (g.cursor >= g.total) stopPlay();
+}
+
+function populateSources(sources) {
+  if (!sources) return;
+  const sel = $("discredit-src");
+  const cur = sel.value;
+  sel.innerHTML = "";
+  sources.forEach((s) => {
+    const o = document.createElement("option");
+    o.value = s.id;
+    o.textContent = `${s.id} [${s.tier}]${s.discredited ? " ✗" : ""}`;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+}
+
+function pulse(ids) {
+  if (!ids || !ids.length) return;
+  ids.forEach((id) => { const n = nodes.get(id); if (n) nodes.update({ id, borderWidth: 6, color: { ...n.color, border: "#ffffff" } }); });
+  setTimeout(() => {
+    ids.forEach((id) => { const n = nodes.get(id); if (n) nodes.update({ id, borderWidth: 2, color: { ...n.color, border: "#2a3648" } }); });
+  }, 900);
+}
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; }
+
+function deltaRows(deltas) {
+  if (!deltas.length) return "";
+  const rows = deltas.map((d) => {
+    const dir = d.d_c > 0 ? "up" : (d.d_c < 0 ? "down" : "rip");
+    const arrow = d.d_c > 0 ? "▲" : (d.d_c < 0 ? "▼" : "•");
+    const ripple = d.op ? "" : ' <span class="rip">(ripple)</span>';
+    return `<div class="delta"><span class="cid">${esc(d.claim_id)}${ripple}</span>`
+      + `<span class="${dir}">${arrow} ${d.c_before.toFixed(2)}→${d.c_after.toFixed(2)} (${d.d_c>=0?"+":""}${d.d_c.toFixed(2)})</span></div>`;
+  }).join("");
+  return `<div class="row"><div class="k">Δ confidence</div>${rows}</div>`;
+}
+
+function eventCard(m) {
+  truthByEvent[m.event_id] = m.truth;
+  const card = document.createElement("div");
+  card.className = "card";
+  const verdict = m.rejected.length && !m.accepted.length ? "reject"
+                : m.accepted.some(a => (a.op === "FLAG_OOD")) ? "flag" : "accept";
+  const vpill = verdict === "reject" ? '<span class="pill verdict-reject">REFUSED</span>'
+              : verdict === "flag" ? '<span class="pill verdict-flag">FLAGGED OOD</span>'
+              : '<span class="pill verdict-accept">COMMITTED</span>';
+  const truthPill = `<span class="pill truth reveal-only" style="display:none">truth: ${esc(m.truth)}</span>`;
+  const accepted = m.accepted.map(a =>
+    `<div class="op ${a.op==="FLAG_OOD"?"flag":"accept"}">${esc(a.detail)}</div>`).join("");
+  const rejected = m.rejected.map(a =>
+    `<div class="op reject">${esc(a.detail)}</div>`).join("");
+  const flags = m.red_flags.length
+    ? `<div class="row"><div class="k">Red flags (screen)</div><div class="flags">${m.red_flags.map(f=>`<span>${esc(f)}</span>`).join("")}</div></div>` : "";
+  card.innerHTML =
+    `<div class="head"><span class="eid">${esc(m.event_id)}</span>`
+    + `<span class="pill tier">${esc(m.source_id)} · ${esc(m.source_tier)}</span>${vpill}${truthPill}</div>`
+    + `<div class="body">`
+    + `<div class="raw">${esc(m.raw_text)}</div>`
+    + (accepted ? `<div class="row"><div class="k">Accepted</div>${accepted}</div>` : "")
+    + (rejected ? `<div class="row"><div class="k">Rejected</div>${rejected}</div>` : "")
+    + flags
+    + deltaRows(m.deltas)
+    + `</div>`;
+  return card;
+}
+
+function cascadeCard(m) {
+  const card = document.createElement("div");
+  card.className = "card cascade";
+  card.innerHTML =
+    `<div class="head"><span class="eid">⚡ discredit</span>`
+    + `<span class="pill verdict-reject">${esc(m.source_id)}</span></div>`
+    + `<div class="body"><div class="k">Un-belief drained from ${m.deltas.length} claim(s)</div>`
+    + deltaRows(m.deltas) + `</div>`;
+  return card;
+}
+
+function prepend(card) {
+  const log = $("log");
+  const empty = log.querySelector(".empty");
+  if (empty) empty.remove();
+  log.insertBefore(card, log.firstChild);
+  applyReveal();
+}
+
+function applyReveal() {
+  document.querySelectorAll(".reveal-only").forEach((el) => { el.style.display = REVEAL ? "inline-block" : "none"; });
+}
+
+// ---- SSE ----
+function connect() {
+  const es = new EventSource("/stream");
+  es.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "graph") { applyGraph(m); return; }
+    if (m.type === "event") { applyGraph(m.graph); prepend(eventCard(m)); pulse(m.dirty); return; }
+    if (m.type === "cascade") { applyGraph(m.graph); prepend(cascadeCard(m)); pulse(m.dirty); return; }
+  };
+  es.onerror = () => { /* EventSource auto-reconnects */ };
+}
+
+// ---- controls ----
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : "{}" });
+  return r.json();
+}
+
+let playTimer = null;
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; $("play").textContent = "Play ▶"; $("play").classList.remove("on"); } }
+function startPlay() {
+  $("play").textContent = "Pause ⏸"; $("play").classList.add("on");
+  playTimer = setInterval(async () => {
+    const res = await post("/event");
+    if (res.status === "done") stopPlay();
+  }, 1100);
+}
+
+$("step").onclick = () => post("/event");
+$("play").onclick = () => (playTimer ? stopPlay() : startPlay());
+$("discredit").onclick = () => { const sid = $("discredit-src").value; if (sid) post("/discredit", { source_id: sid }); };
+$("reset").onclick = async () => { stopPlay(); $("log").innerHTML = '<div class="empty">Reset. Press Step ▸ to begin again.</div>'; await post("/reset"); };
+$("reveal").onclick = (e) => { REVEAL = e.target.checked; applyReveal();
+  nodes.getIds().forEach((id) => { const n = nodes.get(id); if (n) nodes.update({ id, title: nodeTitle(n) }); }); };
+
+connect();
+</script>
+</body>
 </html>

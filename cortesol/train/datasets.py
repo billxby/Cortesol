@@ -22,7 +22,7 @@ from ..pipeline import commit_proposal, prepare_event
 from ..sim.events import emit_echo_burst, emit_stream
 from ..sim.world import World
 
-DATASET_VERSION = "1.1.0"
+DATASET_VERSION = "1.2.0"
 DEFAULT_SFT_COUNT = 2_800
 DEFAULT_RL_EPISODES = 1_024
 DEFAULT_DEV_EPISODES = 128
