@@ -76,6 +76,19 @@ def test_sft_covers_every_class_and_operation(generated):
     assert names == set(OP_NAMES)
 
 
+def test_sft_namespaces_are_diverse_without_cross_split_leakage(generated):
+    path, _ = generated
+    smoke = [json.loads(line) for line in (path / "sft_smoke.jsonl").read_text().splitlines()]
+    train = [json.loads(line) for line in (path / "sft_train.jsonl").read_text().splitlines()]
+    assert len({row["metadata"]["entity_family"] for row in smoke}) == 8
+    assert len({row["metadata"]["source_family"] for row in smoke}) == 7
+    assert len({row["metadata"]["template_family"] for row in smoke}) == 5
+    assert len({row["metadata"]["entity_family"] for row in train}) >= 16
+    assert len({row["metadata"]["source_family"] for row in train}) >= 9
+    assert len({row["metadata"]["template_family"] for row in train}) >= 13
+    assert all(not row["metadata"]["entity_family"].startswith("DV") for row in smoke + train)
+
+
 def test_bundle_excludes_all_held_out_data(generated, tmp_path):
     path, _ = generated
     bundle = tmp_path / "bundle"

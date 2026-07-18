@@ -22,7 +22,7 @@ from ..pipeline import commit_proposal, prepare_event
 from ..sim.events import emit_echo_burst, emit_stream
 from ..sim.world import World
 
-DATASET_VERSION = "1.0.0"
+DATASET_VERSION = "1.1.0"
 DEFAULT_SFT_COUNT = 2_800
 DEFAULT_RL_EPISODES = 1_024
 DEFAULT_DEV_EPISODES = 128
@@ -209,6 +209,34 @@ def _stateful_rows(
     return rows
 
 
+def _diverse_stateful_rows(
+    seeds: Iterable[int],
+    *,
+    events_per_seed: int,
+    split: str,
+    entity_prefix: str,
+    source_prefix: str,
+    template_prefix: str,
+    entity_families: int,
+    source_families: int,
+    template_families: int,
+) -> list[dict[str, Any]]:
+    """Build causal streams without making any namespace a label shortcut."""
+    rows: list[dict[str, Any]] = []
+    for index, seed in enumerate(seeds):
+        rows.extend(
+            _stateful_rows(
+                [seed],
+                events_per_seed=events_per_seed,
+                split=split,
+                entity_family=f"{entity_prefix}{index % entity_families}",
+                source_family=f"{source_prefix}_{index % source_families}",
+                template_family=f"{template_prefix}_{index % template_families}_v1",
+            )
+        )
+    return rows
+
+
 def _structural_suite() -> list[dict[str, Any]]:
     """Seven deterministic rows: one per event class, covering all six op types."""
     seed = 9_999
@@ -344,13 +372,16 @@ def _structural_suite() -> list[dict[str, Any]]:
 def build_sft_rows() -> list[dict[str, Any]]:
     # 57 streams × 49 events = 2,793 (399 of each class), plus the seven-row
     # structural suite = exactly 2,800 and 400 of each event class.
-    rows = _stateful_rows(
+    rows = _diverse_stateful_rows(
         range(57),
         events_per_seed=49,
         split="sft_train",
-        entity_family="TR",
-        source_family="train_source",
-        template_family="train_template_v1",
+        entity_prefix="TR",
+        source_prefix="train_source",
+        template_prefix="train_template",
+        entity_families=16,
+        source_families=9,
+        template_families=13,
     )
     rows.extend(_structural_suite())
     if len(rows) != DEFAULT_SFT_COUNT:
@@ -458,13 +489,16 @@ def _assert_disjoint(*row_groups: Sequence[dict[str, Any]]) -> None:
 def build_all(out_dir: str | Path) -> dict[str, Any]:
     out = Path(out_dir)
     sft = build_sft_rows()
-    smoke = _stateful_rows(
+    smoke = _diverse_stateful_rows(
         range(100, 108),
         events_per_seed=8,
         split="sft_smoke",
-        entity_family="SM",
-        source_family="smoke_source",
-        template_family="smoke_template_v1",
+        entity_prefix="SM",
+        source_prefix="smoke_source",
+        template_prefix="smoke_template",
+        entity_families=8,
+        source_families=7,
+        template_families=5,
     )
     rl = build_episode_rows(
         range(10_000, 10_000 + DEFAULT_RL_EPISODES),
@@ -526,8 +560,18 @@ def build_all(out_dir: str | Path) -> dict[str, Any]:
             "flash_row_schema": hashlib.sha256(row_schema_text.encode()).hexdigest(),
         },
         "split_lineage": {
-            "sft_smoke": ["seed", "entity_family=SM", "source_family=smoke_source"],
-            "sft_train": ["seed", "entity_family=TR", "source_family=train_source"],
+            "sft_smoke": [
+                "seed",
+                "entity_family=SM{0..7}",
+                "source_family=smoke_source_{0..6}",
+                "template_family=smoke_template_{0..4}_v1",
+            ],
+            "sft_train": [
+                "seed",
+                "entity_family=TR{0..15}",
+                "source_family=train_source_{0..8}",
+                "template_family=train_template_{0..12}_v1",
+            ],
             "rl_train": ["seed", "entity_family=RL", "temporal_pattern=balanced24"],
             "dev": ["seed", "entity_family=DV", "template_family=dev_template_v1"],
             "final": ["seed", "entity_family=FN", "template_family=final_template_v1"],
