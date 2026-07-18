@@ -388,7 +388,8 @@ def test_every_generated_toml_parses_in_flash_1_0_and_uses_exact_schema(tmp_path
         if name in {"grpo", "opd", "grpo_opd"}:
             assert json.loads(spec.train.structured_outputs)["json"] == schema
             assert "lora_rank" not in spec.to_dict()["train"]
-            assert spec.train.max_context_tokens == 12_288
+            expected_context = 12_288 if name == "opd" else 8_192
+            assert spec.train.max_context_tokens == expected_context
             if name == "opd":
                 assert spec.train.group_size == 1
                 assert spec.train.init_from_adapter == "grpo-run/step-400"
