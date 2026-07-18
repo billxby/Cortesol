@@ -411,6 +411,8 @@ def test_every_generated_toml_parses_in_flash_1_0_and_uses_exact_schema(tmp_path
             if name == "opd":
                 assert spec.train.group_size == 1
                 assert spec.train.init_from_adapter == "grpo-run/step-400"
+            else:
+                assert spec.train.group_size == 4
 
 
 def test_gold_episode_reconstructs_and_scores_perfect_actions():
