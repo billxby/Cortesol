@@ -28,6 +28,26 @@ STAGES = ("smoke_sft", "production_sft", "primary_grpo", "opd", "grpo_opd", "fin
 TERMINAL_STATES = {"done", "failed", "cancelled", "error", "dry_run"}
 
 
+def _load_local_credentials() -> None:
+    """Load only the Freesolo key from ignored dotenv files without executing them."""
+    if os.environ.get("FREESOLO_API_KEY"):
+        return
+    for path in (ROOT / ".env.local", ROOT / ".env"):
+        if not path.is_file():
+            continue
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, value = line.split("=", 1)
+            if name.strip() != "FREESOLO_API_KEY":
+                continue
+            value = value.strip().strip('"').strip("'")
+            if value:
+                os.environ["FREESOLO_API_KEY"] = value
+                return
+
+
 def _run(command: Sequence[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
     if check and result.returncode:
@@ -169,6 +189,7 @@ def _quote_usd(payload: Any) -> float | None:
 
 
 def preflight(*, environment_name: str, fetch: bool, local_only: bool) -> dict[str, Any]:
+    _load_local_credentials()
     _assert_conda()
     commit = _verify_branch(fetch=fetch)
     _run([sys.executable, "-m", "pytest"])
@@ -370,6 +391,7 @@ def _best_checkpoint(
 
 
 def run_pipeline(*, from_stage: str | None = None) -> dict[str, Any]:
+    _load_local_credentials()
     _assert_conda()
     state = _load_state()
     _require_approval(state)
