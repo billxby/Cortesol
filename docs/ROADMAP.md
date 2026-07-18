@@ -61,10 +61,12 @@ strength, not about magnitude.
 1. ✅ **`extract.py::extract()`** — authenticated Freesolo-only client with strict
    `ProposedOps` parsing and fail-closed malformed handling. `FakeExtractor`
    remains the deterministic local seam.
-2. ✅ **Deterministic dataset factory** — 64 smoke + 2,800 production SFT rows,
-   1,024 RL episodes, isolated development/final/security splits, manifest and
-   replay/hash/leakage gates. Gold comes from the simulator and must replay
-   through the real ledger; no teacher credential is required for SFT.
+2. ✅ **Teacher-filtered SFT factory** — rejection-sample `K` completions from an
+   immutable deployed Freesolo teacher for each simulator event, retain only
+   schema-valid, exact gold-matching operations with short rationales, and cache
+   every candidate for resumability and audit. The simulator oracle is never in
+   the teacher prompt. The 1,024 RL episodes and isolated development/final/
+   security splits retain their replay/hash/leakage gates.
 3. ✅ **`train/environment.py::BeliefUpdateEnv`** — GRPO env: one episode = a stream
    applied through the REAL validator + engine; terminal reward = −Brier of final
    KB vs ground truth + capped shaping (schema-valid, provenance, correct
