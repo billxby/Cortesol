@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import time
 import urllib.error
 import urllib.request
 from collections import Counter
@@ -59,12 +60,19 @@ def flash_responder(adapter_ref: str) -> Callable[[list[dict[str, str]]], str]:
                 "Content-Type": "application/json",
             },
         )
-        try:
-            with urllib.request.urlopen(request, timeout=180) as response:
-                payload = json.load(response)
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode(errors="replace")
-            raise RuntimeError(f"Flash chat failed ({exc.code}): {detail}") from exc
+        for attempt in range(5):
+            try:
+                with urllib.request.urlopen(request, timeout=180) as response:
+                    payload = json.load(response)
+                break
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode(errors="replace")
+                if exc.code not in {429, 502, 503, 504} or attempt == 4:
+                    raise RuntimeError(f"Flash chat failed ({exc.code}): {detail}") from exc
+            except urllib.error.URLError as exc:
+                if attempt == 4:
+                    raise RuntimeError(f"Flash chat transport failed: {exc}") from exc
+            time.sleep(min(2**attempt, 8))
         return str(payload["choices"][0]["message"]["content"])
 
     return respond

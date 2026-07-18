@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections import Counter
@@ -118,12 +119,19 @@ def freesolo_teacher(
                 "Content-Type": "application/json",
             },
         )
-        try:
-            with urllib.request.urlopen(request, timeout=180) as response:
-                body = json.load(response)
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode(errors="replace")
-            raise RuntimeError(f"Freesolo teacher failed ({exc.code}): {detail}") from exc
+        for retry in range(5):
+            try:
+                with urllib.request.urlopen(request, timeout=180) as response:
+                    body = json.load(response)
+                break
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode(errors="replace")
+                if exc.code not in {429, 502, 503, 504} or retry == 4:
+                    raise RuntimeError(f"Freesolo teacher failed ({exc.code}): {detail}") from exc
+            except urllib.error.URLError as exc:
+                if retry == 4:
+                    raise RuntimeError(f"Freesolo teacher transport failed: {exc}") from exc
+            time.sleep(min(2**retry, 8))
         return str(body["choices"][0]["message"]["content"])
 
     return generate
