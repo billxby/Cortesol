@@ -124,14 +124,18 @@ class BeliefUpdateEnv(EnvironmentMultiTurn):
     dataset = load_jsonl(DEFAULT_DATASET_PATH) if DEFAULT_DATASET_PATH.exists() else []
 
     def start_episode(self, example: TaskExample, prompt_text: str):
-        metadata = _metadata(example)
-        events = episode_events_from_metadata(metadata)
-        kb = initial_kb(int(metadata["seed"]), entity_prefix=str(metadata["entity_family"]))
-        context = prepare_event(kb, events[0])
         messages = []
         if prompt_text:
             messages.append({"role": "system", "content": prompt_text})
-        messages.append({"role": "user", "content": serialize_state(context)})
+        # SFT invokes this hook once for every labeled JSONL row. Each row's
+        # input is its exact stateful event context. Rebuilding events[0] from
+        # only the seed would pair every row in a seed with one repeated prompt
+        # and many mutually conflicting gold completions.
+        #
+        # RL episode rows already contain the deterministically reconstructed
+        # first context here; later turns are still reconstructed from the seed
+        # and transcript in step_episode/score_episode.
+        messages.append({"role": "user", "content": example.input})
         return messages
 
     def max_episode_turns(self, example: TaskExample) -> int:
