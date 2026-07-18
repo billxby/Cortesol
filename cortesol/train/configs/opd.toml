@@ -14,8 +14,9 @@ split = "rl_train"
 [train]
 init_from_adapter = "cortesol-sft"
 teacher_model = "glm-5.2"
-max_context_tokens = 8192
+max_context_tokens = 12288
 max_completion_tokens = 256
+group_size = 1
 max_examples = 1024
 max_steps = 20
 save_at_steps = [5, 10, 20]

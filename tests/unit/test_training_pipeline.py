@@ -100,6 +100,9 @@ def test_every_generated_toml_parses_in_flash_1_0_and_uses_exact_schema(tmp_path
         if name in {"grpo", "opd", "grpo_opd"}:
             assert json.loads(spec.train.structured_outputs)["json"] == schema
             assert "lora_rank" not in spec.to_dict()["train"]
+            assert spec.train.max_context_tokens == 12_288
+            if name == "opd":
+                assert spec.train.group_size == 1
 
 
 def test_gold_episode_reconstructs_and_scores_perfect_actions():

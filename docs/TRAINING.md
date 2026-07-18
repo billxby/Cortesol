@@ -29,7 +29,7 @@ make training-preflight
 Preflight fetches `origin/main` and `feature/training`, verifies the branch,
 runs the full test/lint suite, regenerates and hashes all datasets, builds the
 publishable bundle without development/final/security data, publishes the
-environment, parses every config with Flash 1.0.0, performs the immediately
+environment, parses every config with Flash 1.0.1, performs the immediately
 resolvable server dry-runs, and writes the combined training plus worst-case
 evaluation-token estimate to `runs/training/state.json`.
 
@@ -47,3 +47,10 @@ above the approved cap, the coordinator stops without submitting that run.
 The coordinator is resumable: rerun the last command after an interruption. It
 records environment/run/checkpoint IDs, costs, metrics, gate failures, the sealed
 evaluation latch, and deployment state, but never credentials.
+
+Flash 1.0.1 enables contexts up to 32,768 tokens for models at or below 9B. The
+generated 24-turn Cortesol transcripts top out at an estimated 7,497 tokens, so
+the 4B GRPO and OPD runs use 12,288 tokens: enough measured headroom without
+paying the GPU-memory cost of an unused 32k allocation. OPD pins `group_size=1`,
+which Flash recommends for distillation and which keeps the resident trainer and
+rollout engine within a validated GPU. Deterministic-gold SFT remains at 2,048.
