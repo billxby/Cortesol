@@ -167,8 +167,7 @@ def _evaluation_reserve(manifest: dict[str, Any]) -> float:
         reserve += (
             episode_count * input_tokens_per_episode * price.billed_input_usd_per_mtok
             + calls * completion_tokens * price.billed_output_usd_per_mtok
-            / 1_000_000
-        )
+        ) / 1_000_000
     return round(reserve, 4)
 
 

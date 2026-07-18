@@ -12,6 +12,7 @@ from freesolo.environments import EnvironmentEpisode
 from cortesol.core.ops import OP_NAMES, ProposedOps, ops_json_schema
 from cortesol.train.bundle import build_bundle
 from cortesol.train.config_artifacts import render_configs
+from cortesol.train.coordinator import _evaluation_reserve
 from cortesol.train.datasets import (
     build_all,
     canonical_ops,
@@ -61,6 +62,9 @@ def test_dataset_profile_is_complete_deterministic_and_sealed(generated, tmp_pat
             payload = json.loads(row)
             assert set(payload) == {"input", "output", "metadata"}
             assert "sim_meta" not in payload["input"]
+
+    reserve = _evaluation_reserve(manifest)
+    assert 0 < reserve < 27.2476
 
 
 def test_sft_covers_every_class_and_operation(generated):
