@@ -26,14 +26,19 @@ env.*
 .coverage
 htmlcov/
 
-# Cortesol runtime artifacts
+# Cortesol runtime artifacts (comments on their own lines — gitignore has no inline comments)
+# KB JSON snapshots written after each event
+snapshots/
+# eval outputs, wandb-ish local logs
 runs/
-snapshots/          # KB JSON snapshots written after each event
-runs/               # eval outputs, wandb-ish local logs
-data/sft/*.jsonl    # generated SFT datasets (regenerable from the sim)
-data/episodes/      # generated GRPO episode seeds
-data/streams/       # generated event streams (regenerable: emit_stream(seed, n))
-*.gif               # demo recordings live in docs/media/ only when intentional
+# generated SFT datasets (regenerable from the sim)
+data/sft/*.jsonl
+# generated GRPO episode seeds
+data/episodes/
+# generated event streams (regenerable: emit_stream(seed, n))
+data/streams/
+# demo recordings live in docs/media/ only when intentional
+*.gif
 !docs/media/*.gif
 
 # OS / editor
