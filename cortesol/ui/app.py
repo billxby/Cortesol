@@ -233,6 +233,18 @@ def index() -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 
+@app.get("/training")
+def training_dashboard() -> FileResponse:
+    return FileResponse(_STATIC / "training.html")
+
+
+@app.get("/api/training")
+async def training_metrics() -> dict:
+    from ..train.tracker import training_snapshot
+
+    return await asyncio.to_thread(training_snapshot)
+
+
 @app.get("/stream")
 async def stream(request: Request) -> EventSourceResponse:
     queue: asyncio.Queue = asyncio.Queue()
