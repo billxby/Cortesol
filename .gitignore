@@ -16,6 +16,7 @@ uv.lock
 .env
 .env.local
 .env.*
+env.*          # teammate env files, e.g. env.teammate (holds live FLASH/FREESOLO keys)
 *.key
 
 # Test / tooling
