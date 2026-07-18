@@ -15,6 +15,7 @@ from cortesol.train.config_artifacts import render_configs
 from cortesol.train.coordinator import _deployment_record, _evaluation_reserve
 from cortesol.train.datasets import (
     build_all,
+    build_sft_rows,
     canonical_ops,
     episode_events_from_metadata,
     episode_row,
@@ -102,6 +103,20 @@ def test_sft_namespaces_are_diverse_without_cross_split_leakage(generated):
     assert len({row["metadata"]["source_family"] for row in train}) >= 9
     assert len({row["metadata"]["template_family"] for row in train}) >= 13
     assert all(not row["metadata"]["entity_family"].startswith("DV") for row in smoke + train)
+
+
+def test_sft_start_episode_uses_each_rows_exact_stateful_input():
+    first, later = build_sft_rows()[:2]
+    assert first["metadata"]["seed"] == later["metadata"]["seed"]
+    assert first["input"] != later["input"]
+
+    env = BeliefUpdateEnv()
+    first_messages = env.start_episode(_example(first), "contract")
+    later_messages = env.start_episode(_example(later), "contract")
+
+    assert first_messages[-1]["content"] == first["input"]
+    assert later_messages[-1]["content"] == later["input"]
+    assert first_messages[-1]["content"] != later_messages[-1]["content"]
 
 
 def test_bundle_excludes_all_held_out_data(generated, tmp_path):
