@@ -67,6 +67,7 @@ def load_stream(path: str | Path) -> list[RawEvent]:
         rec = json.loads(line)
         title = rec.get("title", "") or ""
         abstract = rec.get("abstract", "") or ""
+        authors = rec.get("authors") or []
         events.append(
             RawEvent(
                 id=f"pmid_{rec.get('pmid', i)}",
@@ -78,6 +79,10 @@ def load_stream(path: str | Path) -> list[RawEvent]:
                     "primary_target": rec.get("primary_target"),
                     "journal": rec.get("journal"),
                     "year": rec.get("year"),
+                    # display metadata (data, not instructions) for the browse view
+                    "title": title,
+                    "authors": authors[:6],
+                    "pmid": rec.get("pmid"),
                 },
                 sim_meta=None,
             )

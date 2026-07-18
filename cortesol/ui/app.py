@@ -111,7 +111,7 @@ class DemoState:
         through the engine regardless of which extractor proposes the ops."""
 
     def __init__(self) -> None:
-        self.data_source = "sim"
+        self.data_source = "papers"  # landing view = the real papers database
         self.extractor_kind = "fake"
         self.lock = asyncio.Lock()
         self.subscribers: set[asyncio.Queue] = set()
@@ -139,6 +139,7 @@ class DemoState:
             _seed_demo_edges(self.kb)
         self.extractor = self._build_extractor()
         self.cursor = 0
+        self.history: list[dict] = []  # recent event/cascade messages, replayed on connect
         # Story arc: the graph starts EMPTY and builds up. A claim node is
         # "revealed" only once a committed result has touched it — so Act 1 is raw
         # results arriving into a blank canvas, Act 2 is the graph forming.
@@ -156,7 +157,38 @@ class DemoState:
                 score += abs(EDGE_INFLUENCE.get(e.type.value, 0.0)) * e.weight
         return score
 
-    def graph_payload(self, moved: list[str] | None = None) -> dict:
+    # -- the browse list (the "papers database" view) --
+
+    def _document(self, idx: int, ev: RawEvent) -> dict:
+        f = ev.fields
+        if self.data_source == "papers":
+            title = f.get("title") or ev.raw_text.split("\n", 1)[0]
+            journal = f.get("journal") or ev.source_id
+            year = str(f.get("year") or "")
+            authors = f.get("authors") or []
+            tags = [t for t in (f.get("peptide"), f.get("primary_target")) if t]
+        else:
+            title = ev.raw_text
+            journal = ev.source_id
+            year = ""
+            authors = []
+            tags = [t for t in (f.get("metric"), f.get("assay")) if t]
+        authors_str = ", ".join(authors[:3]) + (" et al." if len(authors) > 3 else "")
+        status = "done" if idx < self.cursor else ("active" if idx == self.cursor else "pending")
+        return {
+            "idx": idx,
+            "title": title,
+            "journal": journal,
+            "year": year,
+            "authors": authors_str,
+            "tags": tags,
+            "status": status,
+        }
+
+    def documents(self) -> list[dict]:
+        return [self._document(i, e) for i, e in enumerate(self.events)]
+
+    def graph_payload(self, moved: list[str] | None = None, include_documents: bool = True) -> dict:
         moved_set = set(moved or [])
         # Only revealed claims are drawn — the graph grows as results land.
         nodes = []
@@ -206,9 +238,13 @@ class DemoState:
             "extractor_kind": self.extractor_kind,
             "flash_available": flash_available(),
             "flash_tuned_available": bool(_env("FLASH_MODEL_TUNED")),
+            "documents": self.documents() if include_documents else None,
         }
 
-    async def broadcast(self, message: dict) -> None:
+    async def broadcast(self, message: dict, remember: bool = False) -> None:
+        if remember:
+            self.history.append(message)
+            del self.history[:-60]  # keep the last 60 steps for late joiners
         for q in list(self.subscribers):
             await q.put(message)
 
@@ -269,7 +305,7 @@ def _event_message(event: RawEvent, result: EventResult) -> dict:
         "deltas": _delta_view(STATE.kb, result.deltas),
         "dirty": result.dirty_claims,
         "truth": (event.sim_meta.event_class.value if event.sim_meta else None),
-        "graph": STATE.graph_payload(moved=result.dirty_claims),
+        "graph": STATE.graph_payload(moved=result.dirty_claims, include_documents=False),
     }
 
 
@@ -288,11 +324,37 @@ def index() -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 
+@app.get("/paper/{idx}")
+def paper(idx: int) -> dict:
+    """Full metadata + abstract for one document, for the browse-view reader."""
+    if not (0 <= idx < len(STATE.events)):
+        return {"error": "out of range"}
+    e = STATE.events[idx]
+    f = e.fields
+    parts = e.raw_text.split("\n\n", 1)
+    title = f.get("title") or parts[0]
+    abstract = parts[1] if len(parts) > 1 else ("" if f.get("title") else parts[0])
+    return {
+        "idx": idx,
+        "title": title,
+        "abstract": abstract,
+        "journal": f.get("journal") or e.source_id,
+        "year": str(f.get("year") or ""),
+        "authors": f.get("authors") or [],
+        "peptide": f.get("peptide"),
+        "target": f.get("primary_target"),
+        "pmid": (f.get("pmid") or e.id.replace("pmid_", "")),
+        "status": "done" if idx < STATE.cursor else ("active" if idx == STATE.cursor else "pending"),
+    }
+
+
 @app.get("/stream")
 async def stream(request: Request) -> EventSourceResponse:
     queue: asyncio.Queue = asyncio.Queue()
     STATE.subscribers.add(queue)
     await queue.put(STATE.graph_payload())  # initial snapshot on connect
+    for msg in STATE.history:  # replay recent steps so a (re)load rebuilds the log
+        await queue.put(msg)
 
     async def gen():
         try:
@@ -320,7 +382,7 @@ async def next_event() -> dict:
         STATE.cursor += 1
         STATE.reveal(result.dirty_claims)  # committed claims join the graph
         message = _event_message(event, result)
-        await STATE.broadcast(message)
+        await STATE.broadcast(message, remember=True)
         return {"status": "ok", "cursor": STATE.cursor, "event_id": event.id}
 
 
@@ -338,9 +400,9 @@ async def discredit(payload: dict) -> dict:
             "source_id": source_id,
             "deltas": _delta_view(STATE.kb, deltas),
             "dirty": moved,
-            "graph": STATE.graph_payload(moved=moved),
+            "graph": STATE.graph_payload(moved=moved, include_documents=False),
         }
-        await STATE.broadcast(message)
+        await STATE.broadcast(message, remember=True)
         return {"status": "ok", "source_id": source_id, "claims_moved": len(moved)}
 
 
