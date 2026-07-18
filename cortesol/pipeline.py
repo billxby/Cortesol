@@ -17,6 +17,7 @@ The lifecycle (System Architecture §update-lifecycle):
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from .core import config, engine, propagate, validator
@@ -39,6 +40,18 @@ from .retrieval import retrieve
 
 
 def _default_extractor():
+    backend = os.environ.get("CORTESOL_EXTRACTOR", "fake").lower()
+    if backend == "ollama":
+        from .serve.ollama import OllamaExtractor
+
+        return OllamaExtractor()
+    if backend in {"freesolo", "remote"}:
+        from .ingest.extract import FreesoloExtractor
+
+        run_id = os.environ.get("FREESOLO_RUN_ID")
+        if not run_id:
+            raise RuntimeError("FREESOLO_RUN_ID is required for the remote extractor")
+        return FreesoloExtractor(run_id)
     from .ingest.extract import FakeExtractor
 
     return FakeExtractor()
