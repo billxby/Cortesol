@@ -69,7 +69,7 @@ def flash_responder(adapter_ref: str) -> Callable[[list[dict[str, str]]], str]:
                 detail = exc.read().decode(errors="replace")
                 if exc.code not in {429, 502, 503, 504} or attempt == 4:
                     raise RuntimeError(f"Flash chat failed ({exc.code}): {detail}") from exc
-            except urllib.error.URLError as exc:
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
                 if attempt == 4:
                     raise RuntimeError(f"Flash chat transport failed: {exc}") from exc
             time.sleep(min(2**attempt, 8))

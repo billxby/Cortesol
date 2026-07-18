@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
@@ -26,7 +27,7 @@ from cortesol.train.datasets import (
     episode_row,
 )
 from cortesol.train.environment import BeliefUpdateEnv, _replay
-from cortesol.train.evaluate import evaluate_rows
+from cortesol.train.evaluate import evaluate_rows, flash_responder
 from cortesol.train.teacher_filter import (
     build_teacher_filtered_dataset,
     build_teacher_seed_dataset,
@@ -440,6 +441,26 @@ def test_frozen_evaluator_matches_stateless_production_extractor_calls():
     assert observed == [("system", "user")] * len(events)
     assert metrics["protocol_valid"] == 1.0
     assert metrics["exact_operations"] == 1.0
+
+
+def test_flash_responder_retries_direct_socket_timeout(monkeypatch):
+    monkeypatch.setenv("FREESOLO_API_KEY", "test-key")
+    monkeypatch.setattr("cortesol.train.evaluate.time.sleep", lambda _: None)
+    attempts = 0
+
+    def urlopen(_request, timeout):
+        nonlocal attempts
+        attempts += 1
+        assert timeout == 180
+        if attempts == 1:
+            raise TimeoutError("read operation timed out")
+        return io.BytesIO(b'{"choices":[{"message":{"content":"{\\"ops\\":[]}"}}]}')
+
+    monkeypatch.setattr("cortesol.train.evaluate.urllib.request.urlopen", urlopen)
+    respond = flash_responder("run@immutable")
+
+    assert respond([{"role": "user", "content": "event"}]) == '{"ops":[]}'
+    assert attempts == 2
 
 
 def test_malformed_and_forged_injection_actions_never_mutate_and_rollouts_isolate():
