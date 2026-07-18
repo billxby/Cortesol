@@ -41,13 +41,18 @@ Goal: belief moves correctly, or refuses to. All TDD against `tests/unit/`.
 4. **`ingest/screen.py::screen()`** — deterministic red-flag battery, no LLM.
 5. **`ingest/quarantine.py::quarantine()`** — `RawEvent → Evidence`.
 
-## Shared — the simulator (`sim/`, Area B)  ·  owner: TBD
+## The simulator (`sim/`, Area B)  ·  owner: Bill  ·  ✅ DONE
 
-Not blocking day 1 (the fixture covers early pipeline + engine work) but needed
-before training/eval/demo have real volume. `world.py` (seeded latent truth),
-`events.py::emit_stream` (7 balanced classes), `gold.py::gold_ops` (labels into
-`sim_meta`). Ref: Fine-Tuning Plan §Stage 0. **Decide owner once the engine +
-pipeline skeletons land.**
+This is the peptide **data lane** — no real papers are fetched (out of scope).
+Implemented + unit-tested (`tests/unit/test_sim.py`, 12 tests; `make sim` prints a
+stream): `world.py` (seeded latent claim graph), `events.py::emit_stream` (balanced
+7-class stream, fixture-shaped) + `emit_echo_burst` (n_eff), `gold.py` (the single
+`build_gold` class→op mapping + `gold_ops(event)`). Ref: Fine-Tuning Plan §Stage 0.
+
+**Next consumers of the simulator** (unblocked now):
+- `train/make_sft.py` — SFT rows from `emit_stream` + `gold_ops`.
+- `eval/` — ground truth via `sim_meta.world_truth` (Brier/ECE).
+- `pipeline.py` — real volume beyond the 6-event fixture.
 
 ## Handoff contract between tracks
 

@@ -5,7 +5,10 @@
 > re-derive it by reading source. When a stub becomes real, flip its row here.
 > The sequenced "what to do next" lives in [`ROADMAP.md`](ROADMAP.md).
 >
-> Last verified against the tree: 2026-07-17.
+> Last verified against the tree: 2026-07-17. **Update:** `sim/` (world, events,
+> gold) is now implemented + unit-tested (`make sim`, `tests/unit/test_sim.py`,
+> 12 tests) — owned by Bill. It's the peptide "data" source; no real-paper fetcher
+> is planned (out of scope).
 
 ## One-idea recap
 
@@ -44,9 +47,9 @@ Legend: ✅ done & contract-tested · 🟡 partial · ⛔ TODO stub.
 | `ingest/quarantine.py` | ⛔ | A | `quarantine(event)→Evidence`, text kept in data position | Prompt Injection Defense §Layer-1 |
 | `ingest/screen.py` | ⛔ | A | `screen(evidence, kb)→list[str]` red-flag battery | Fraud and Hype Signals |
 | `ingest/extract.py` | ⛔ | B | `extract(ctx, model)→ProposedOps` + `FakeExtractor` (canned, no model) | Fine-Tuning Plan |
-| `sim/world.py` | ⛔ | B | `World(seed)` — latent truth graph + effect sizes | Fine-Tuning Plan §Stage 0 |
-| `sim/events.py` | ⛔ | B | `emit_stream(seed, length)` — 7 balanced event classes | Fine-Tuning Plan §Stage 0 |
-| `sim/gold.py` | ⛔ | B | `gold_ops(event)→ProposedOps` — deterministic labels into `sim_meta` | Fine-Tuning Plan §Stage 0 |
+| `sim/world.py` | ✅ | B | `World(seed)` — deterministic latent claim graph (`WorldClaim`: z, true value); guarantees true/false binders + a false efficacy | Fine-Tuning Plan §Stage 0 |
+| `sim/events.py` | ✅ | B | `emit_stream(seed, length)` — balanced 7-class stream (fixture-shaped); `emit_echo_burst` for n_eff | Fine-Tuning Plan §Stage 0 |
+| `sim/gold.py` | ✅ | B | `build_gold()` class→op mapping + `gold_ops(event)→ProposedOps` from `sim_meta` | Fine-Tuning Plan §Stage 0 |
 | `train/environment.py` | ⛔ | B | `BeliefUpdateEnv` GRPO env, Brier terminal reward | Fine-Tuning Plan §Stage 2 |
 | `train/make_sft.py` | ⛔ | B | `build_sft_dataset()` — rejection-sampled SFT JSONL | Fine-Tuning Plan §Stage 1 |
 | `pipeline.py` | ⛔ | C | `process_event()`, `replay_stream()` — the 7-step glue | System Architecture |
