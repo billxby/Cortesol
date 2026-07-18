@@ -26,7 +26,7 @@ put it in a TOML file or coordinator state.
 make training-preflight
 ```
 
-Preflight fetches `origin/main` and `feature/training`, verifies the branch,
+Preflight fetches `origin/main`, verifies the checkout is on the shared `main` branch,
 runs the full test/lint suite, regenerates and hashes all datasets, builds the
 publishable bundle without development/final/security data, publishes the
 environment, parses every config with Flash 1.0.1, performs the immediately

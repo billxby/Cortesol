@@ -79,16 +79,13 @@ def _assert_conda() -> None:
 
 def _verify_branch(*, fetch: bool) -> str:
     branch = _run(["git", "branch", "--show-current"]).stdout.strip()
-    if branch not in {"feature/training", "codex/teacher-rft"}:
-        raise RuntimeError(
-            "training pipeline must run on feature/training or codex/teacher-rft, "
-            f"not {branch!r}"
-        )
+    if branch != "main":
+        raise RuntimeError(f"training pipeline must run on main, not {branch!r}")
     if fetch:
-        _run(["git", "fetch", "origin", "main", "feature/training"])
+        _run(["git", "fetch", "origin", "main"])
     behind = int(_run(["git", "rev-list", "--count", "HEAD..origin/main"]).stdout.strip())
     if behind:
-        raise RuntimeError(f"feature/training is behind current origin/main by {behind} commit(s)")
+        raise RuntimeError(f"main is behind current origin/main by {behind} commit(s)")
     return _run(["git", "rev-parse", "HEAD"]).stdout.strip()
 
 
