@@ -13,7 +13,7 @@ split = "rl_train"
 
 [train]
 init_from_adapter = "cortesol-opd"
-max_context_tokens = 12288
+max_context_tokens = 8192
 max_completion_tokens = 256
 group_size = 8
 max_examples = 1024
