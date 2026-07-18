@@ -35,9 +35,15 @@ from ..core.kb import KB
 from ..core.mathx import sigmoid
 from ..core.results import EventResult
 from ..core.schema import Edge, EdgeType, RawEvent
-from ..eval.baselines import ModelBaseline
 from ..eval.replay import seed_kb
-from ..ingest.extract import FakeExtractor, PaperFakeExtractor, _env, flash_available
+from ..ingest.extract import (
+    FakeExtractor,
+    FreesoloExtractor,
+    PaperFakeExtractor,
+    _env,
+    _load_dotenv,
+    flash_available,
+)
 from ..sim.world import World
 
 app = FastAPI(title="Cortesol")
@@ -112,17 +118,29 @@ class DemoState:
 
     def __init__(self) -> None:
         self.data_source = "papers"  # landing view = the real papers database
-        self.extractor_kind = "fake"
+        self.extractor_kind = "freesolo"
         self.lock = asyncio.Lock()
         self.subscribers: set[asyncio.Queue] = set()
         self.reset()
 
     def _build_extractor(self):
-        if self.extractor_kind == "flash_stock":
-            return ModelBaseline("engine+stock", _env("FLASH_MODEL_STOCK"))
-        if self.extractor_kind == "flash_tuned":
-            return ModelBaseline("engine+tuned", _env("FLASH_MODEL_TUNED"))
-        # fake: pick the stand-in matching the data source
+        """THE extractor is the live Freesolo checkpoint — the model proposes ops,
+        the engine disposes. Reads FREESOLO_RUN_ID / FREESOLO_API_KEY / FLASH_API_URL
+        from .env. Falls back to the offline heuristic only if creds are absent, so
+        the demo never hard-crashes."""
+        _load_dotenv()
+        run_id = _env("FREESOLO_RUN_ID")
+        api_key = _env("FREESOLO_API_KEY")
+        if run_id and api_key:
+            try:
+                self.extractor_kind = "freesolo"
+                return FreesoloExtractor(
+                    run_id, api_key=api_key, api_url=_env("FLASH_API_URL"), timeout=60
+                )
+            except Exception:
+                pass
+        # creds missing/invalid — keep the UI alive with the offline stand-in
+        self.extractor_kind = "offline"
         return PaperFakeExtractor() if self.data_source == "papers" else FakeExtractor()
 
     def reset(self) -> None:
@@ -392,7 +410,11 @@ async def next_event() -> dict:
         if STATE.cursor >= len(STATE.events):
             return {"status": "done", "cursor": STATE.cursor}
         event = STATE.events[STATE.cursor]
-        result = pipeline.process_event(STATE.kb, event, STATE.extractor)
+        # the live model call is blocking network I/O — run it off the event loop
+        # so SSE pings and other requests stay responsive while the model thinks
+        result = await asyncio.to_thread(
+            pipeline.process_event, STATE.kb, event, STATE.extractor
+        )
         STATE.cursor += 1
         STATE.reveal(result.dirty_claims)  # committed claims join the graph
         message = _event_message(event, result)

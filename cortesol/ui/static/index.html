@@ -54,7 +54,14 @@
   .progress { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
   .progress b { color: var(--ink); }
   #discredit-src { max-width: 190px; }
-  #source-sel, #extractor-sel { min-width: 150px; }
+  #source-sel { min-width: 150px; }
+  .model-badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--rule);
+    display: inline-flex; align-items: center; gap: 6px; }
+  .model-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .model-badge.live { background: var(--good-soft); border-color: #bfe0cd; color: var(--good); }
+  .model-badge.live::before { background: var(--good); box-shadow: 0 0 5px var(--good); }
+  .model-badge.offline { background: var(--warn-soft); border-color: #e6d5a8; color: var(--warn); }
+  .model-badge.offline::before { background: var(--warn); }
 
   /* ---------- layout ---------- */
   main { flex: 1; min-height: 0; display: grid; }
@@ -193,11 +200,7 @@
     </div>
     <div class="group">
       <span class="lbl">Model</span>
-      <select id="extractor-sel" title="Extractor (the proposing model)">
-        <option value="fake">Heuristic (offline)</option>
-        <option value="flash_stock">Flash · stock 4B</option>
-        <option value="flash_tuned">Flash · tuned</option>
-      </select>
+      <span id="model-badge" class="model-badge" title="The proposing model">Freesolo · live</span>
     </div>
     <div class="spacer"></div>
     <span class="progress" id="progress"><b>0</b> / 0 ingested</span>
@@ -406,14 +409,11 @@ function syncToggles(g){
   if (g.data_source === undefined) return;
   SUPPRESS = true;
   $("source-sel").value = g.data_source;
-  $("extractor-sel").value = g.extractor_kind;
   $("step").textContent = g.data_source === "papers" ? "Ingest next paper ▸" : "Ingest next ▸";
-  for (const o of $("extractor-sel").options){
-    if (o.value==="flash_stock") o.disabled = !g.flash_available;
-    if (o.value==="flash_tuned") o.disabled = !g.flash_available || !g.flash_tuned_available;
-  }
-  $("extractor-sel").title = g.flash_available ? "Extractor (the proposing model)"
-    : "Set FLASH_API_KEY in .env to enable the live model";
+  const badge = $("model-badge");
+  if (g.extractor_kind === "freesolo") { badge.textContent = "Freesolo · live"; badge.className = "model-badge live"; }
+  else { badge.textContent = "offline fallback"; badge.className = "model-badge offline";
+    badge.title = "FREESOLO_API_KEY / FREESOLO_RUN_ID missing in .env — using the offline heuristic"; }
   SUPPRESS = false;
 }
 function populateSources(sources){
@@ -516,9 +516,6 @@ $("reset").onclick = async () => { resetLog("Reset. Ingest a paper to begin agai
 $("reveal").onclick = (e) => { REVEAL=e.target.checked; applyReveal();
   nodes.getIds().forEach((id)=>{ const n=nodes.get(id); if(n) nodes.update({ id, title:nodeTitle(n) }); }); };
 $("source-sel").onchange = async (e) => { if(SUPPRESS) return; resetLog("Loading source…"); await post("/source",{mode:e.target.value}); };
-$("extractor-sel").onchange = async (e) => { if(SUPPRESS) return;
-  const r=await post("/extractor",{kind:e.target.value}); if(r.status!=="ok"){ alert(r.reason||"could not switch"); return; }
-  resetLog(`Model → ${e.target.value.replace("_"," ")}. Ingest to begin.`); };
 
 connect();
 </script>
