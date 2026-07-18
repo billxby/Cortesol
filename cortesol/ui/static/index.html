@@ -4,7 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Cortesol — a belief graph for peptide research</title>
-<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-force-graph-2d"></script>
 <style>
   :root {
     --ink: #1a1a1a; --body: #33373d; --muted: #6b7280; --faint: #9aa3af;
@@ -274,60 +276,117 @@ function confColor(c) {
   return `rgb(${m[0]},${m[1]},${m[2]})`;
 }
 const EDGE_STYLE = {
-  supports:{color:"#1a7f4b",dashes:false}, replicates:{color:"#0b5cad",dashes:false},
-  depends_on:{color:"#9a6a00",dashes:[5,4]}, contradicts:{color:"#b3131b",dashes:[2,4]},
+  supports:{color:"#1a7f4b",dash:null}, replicates:{color:"#0b5cad",dash:null},
+  depends_on:{color:"#9a6a00",dash:[6,4]}, contradicts:{color:"#b3131b",dash:[2,4]},
 };
 
-const nodes = new vis.DataSet([]);
-const edges = new vis.DataSet([]);
-const network = new vis.Network($("net"), { nodes, edges }, {
-  physics:{ solver:"forceAtlas2Based", stabilization:{iterations:150},
-    forceAtlas2Based:{ gravitationalConstant:-42, springLength:130, springConstant:.05 } },
-  interaction:{ hover:true, tooltipDelay:120 },
-  nodes:{ shape:"dot", borderWidth:2, font:{ color:"#1a1a1a", size:13, face:"Georgia, serif" },
-    scaling:{ min:9, max:42 } },
-  edges:{ arrows:{ to:{ enabled:true, scaleFactor:.5 } }, smooth:{ type:"dynamic" },
-    color:{ inherit:false }, width:1.5 },
+// ---------- react-force-graph engine ----------
+// The KB view is rendered by react-force-graph-2d. Belief still lives in the
+// backend ledger; this is a pure read-only visualization fed by /stream.
+const RFG = window.ForceGraph2D && (window.ForceGraph2D.default || window.ForceGraph2D);
+
+// A tiny store bridges the vanilla SSE code to the React graph: `apply()`
+// reconciles the payload into PERSISTENT node objects (so force-layout positions
+// survive incremental updates and the graph grows smoothly), then notifies React.
+const GraphStore = {
+  byId: new Map(), data: { nodes: [], links: [] },
+  width: 320, height: 320, fg: null, listeners: new Set(),
+  subscribe(fn){ this.listeners.add(fn); return () => this.listeners.delete(fn); },
+  emit(){ this.listeners.forEach((fn) => fn()); },
+  setSize(w, h){ if (w === this.width && h === this.height) return; this.width = w; this.height = h; this.emit(); },
+  fit(){ try { this.fg && this.fg.current && this.fg.current.zoomToFit(450, 60); } catch (e) {} },
+  apply(gnodes, gedges){
+    const seen = new Set();
+    gnodes.forEach((n) => { seen.add(n.id);
+      let node = this.byId.get(n.id);
+      if (!node) { node = { id: n.id }; this.byId.set(n.id, node); }  // new -> laid out fresh
+      Object.assign(node, { label:n.label, text:n.text, c:n.c, u:n.u, r:n.r, s:n.s,
+        status:n.status, impact:n.impact, moved:n.moved, truth:n.truth });  // x/y preserved
+    });
+    for (const id of [...this.byId.keys()]) if (!seen.has(id)) this.byId.delete(id);
+    this.data = {
+      nodes: [...this.byId.values()],
+      links: gedges.map((e) => ({ id:e.id, source:e.from, target:e.to, type:e.type, weight:e.weight })),
+    };
+    this.emit();
+  },
+};
+
+// node = confidence-coloured disc, radius by downstream impact, dark ring if it just moved
+function paintNode(node, ctx, scale){
+  const r = 4 + Math.sqrt(Math.max(0, node.impact || 0)) * 5;
+  node.__r = r;
+  ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+  ctx.fillStyle = confColor(node.c == null ? PRIOR : node.c); ctx.fill();
+  ctx.lineWidth = node.moved ? 2.2 : 1;
+  ctx.strokeStyle = node.moved ? "#1a1a1a" : "#b9c0c9"; ctx.stroke();
+  if (node.moved){ ctx.beginPath(); ctx.arc(node.x, node.y, r + 3.5, 0, 2 * Math.PI);
+    ctx.strokeStyle = "rgba(26,26,26,.4)"; ctx.lineWidth = 1.4; ctx.stroke(); }
+  if (scale > 0.45){
+    ctx.font = `${Math.max(3, 12 / scale)}px Georgia, serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#1a1a1a";
+    ctx.fillText(node.label || node.id, node.x, node.y + r + 1.5);
+  }
+}
+function paintPointer(node, color, ctx){
+  ctx.fillStyle = color; const r = (node.__r || 5) + 2;
+  ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI); ctx.fill();
+}
+
+const h = React.createElement;
+function GraphApp(){
+  const fgRef = React.useRef(); const fitted = React.useRef(false);
+  const [, tick] = React.useReducer((x) => x + 1, 0);
+  React.useEffect(() => { GraphStore.fg = fgRef; return GraphStore.subscribe(tick); }, []);
+  return h(RFG, {
+    ref: fgRef, width: GraphStore.width, height: GraphStore.height,
+    graphData: GraphStore.data, backgroundColor: "rgba(0,0,0,0)",
+    nodeLabel: htmlLabel, nodeCanvasObject: paintNode, nodePointerAreaPaint: paintPointer,
+    linkColor: (l) => (EDGE_STYLE[l.type] || {}).color || "#98a2b3",
+    linkLineDash: (l) => (EDGE_STYLE[l.type] || {}).dash || null,
+    linkWidth: (l) => 1 + Math.abs(l.weight || 1) * 1.2,
+    linkDirectionalArrowLength: 3.5, linkDirectionalArrowRelPos: 1,
+    cooldownTime: 4000, d3VelocityDecay: 0.3,
+    onEngineStop: () => { if (!fitted.current && GraphStore.data.nodes.length){ fitted.current = true; GraphStore.fit(); } },
+  });
+}
+if (RFG) ReactDOM.createRoot($("net")).render(h(GraphApp));
+
+// keep the canvas sized to the stage (it is display:none in browse mode -> 0)
+const _ro = new ResizeObserver((entries) => {
+  for (const e of entries){ const { width, height } = e.contentRect;
+    if (width > 0 && height > 0) GraphStore.setSize(Math.round(width), Math.round(height)); }
 });
+_ro.observe($("net"));
 
 let PRIOR = 0.45, REVEAL = false, LOGN = 0, DOCS = [];
 
-function nodeTitle(n){
-  let t=`${n.id}\n${n.text}\nconfidence c = ${n.c.toFixed(3)}   uncertainty u = ${n.u.toFixed(2)}`
-      +`\nevidence r/s = ${n.r}/${n.s}   status = ${n.status}`;
-  if (REVEAL && n.truth) t+=`\n[ground truth: ${n.truth}]`;
-  return t;
+function htmlLabel(n){
+  let t = `<div style="font:12px Georgia,serif;max-width:250px;padding:3px 5px;line-height:1.45">`
+    + `<b>${esc(n.text || n.id)}</b><br/>`
+    + `confidence c = ${(n.c == null ? 0 : n.c).toFixed(3)} &middot; uncertainty u = ${(n.u == null ? 1 : n.u).toFixed(2)}<br/>`
+    + `evidence r/s = ${n.r || 0}/${n.s || 0} &middot; ${esc(n.status || "")}`;
+  if (REVEAL && n.truth) t += `<br/><span style="color:#0b5cad">[ground truth: ${esc(n.truth)}]</span>`;
+  return t + `</div>`;
 }
 
 function setMode(analysis){
-  const was = document.body.classList.contains("mode-analysis");
   document.body.classList.toggle("mode-analysis", analysis);
   document.body.classList.toggle("mode-browse", !analysis);
-  if (analysis && !was) {
-    // stage was display:none in browse mode — give vis-network its real size
-    setTimeout(() => { network.redraw(); network.fit({ animation: false }); }, 60);
+  if (analysis) {
+    // stage was display:none in browse mode — give the canvas its real size, then fit
+    requestAnimationFrame(() => {
+      const el = $("net");
+      if (el && el.clientWidth) GraphStore.setSize(el.clientWidth, el.clientHeight);
+      setTimeout(() => GraphStore.fit(), 350);
+    });
   }
 }
 
 function applyGraph(g){
   PRIOR = g.prior ?? PRIOR;
   $("prior-note").textContent = `prior c=${PRIOR.toFixed(2)}`;
-  const seen=new Set();
-  g.nodes.forEach((n)=>{ seen.add(n.id);
-    nodes.update({ id:n.id, label:n.label, value:12+(n.impact||0)*10, c:n.c, u:n.u, r:n.r, s:n.s,
-      text:n.text, status:n.status, truth:n.truth,
-      color:{ background:confColor(n.c), border:n.moved?"#1a1a1a":"#b9c0c9",
-        highlight:{ background:confColor(n.c), border:"#1a1a1a" } },
-      borderWidth:n.moved?4:2, title:nodeTitle({...n}) });
-  });
-  nodes.getIds().forEach((id)=>{ if(!seen.has(id)) nodes.remove(id); });
-  const es=new Set();
-  g.edges.forEach((e)=>{ es.add(e.id); const st=EDGE_STYLE[e.type]||{color:"#98a2b3",dashes:false};
-    edges.update({ id:e.id, from:e.from, to:e.to, dashes:st.dashes,
-      color:{ color:st.color, highlight:st.color }, width:1+Math.abs(e.weight)*1.4,
-      title:`${e.type} (w=${e.weight})` });
-  });
-  edges.getIds().forEach((id)=>{ if(!es.has(id)) edges.remove(id); });
+  GraphStore.apply(g.nodes, g.edges);
 
   if (g.documents) renderDocs(g.documents);
   syncToggles(g);
@@ -424,13 +483,9 @@ function populateSources(sources){
   if (cur) sel.value=cur;
 }
 
-function pulse(ids){
-  if(!ids||!ids.length) return;
-  ids.forEach((id)=>{ const n=nodes.get(id); if(n) nodes.update({ id, borderWidth:6,
-    color:{...n.color, border:"#1a1a1a"} }); });
-  setTimeout(()=>{ ids.forEach((id)=>{ const n=nodes.get(id); if(n) nodes.update({ id, borderWidth:2,
-    color:{...n.color, border:"#b9c0c9"} }); }); }, 850);
-}
+// Moved-node highlighting is driven declaratively by the payload `moved` flag
+// (see paintNode's dark ring) — no imperative pulse needed.
+function pulse(ids){ /* no-op: retained so the SSE handler call sites are unchanged */ }
 
 // ---------- reasoning log ----------
 function deltaRows(deltas){
@@ -513,8 +568,7 @@ $("step").onclick = () => post("/event");
 $("play").onclick = () => (playTimer?stopPlay():startPlay());
 $("discredit").onclick = () => { const s=$("discredit-src").value; if(s) post("/discredit",{source_id:s}); };
 $("reset").onclick = async () => { resetLog("Reset. Ingest a paper to begin again."); await post("/reset"); };
-$("reveal").onclick = (e) => { REVEAL=e.target.checked; applyReveal();
-  nodes.getIds().forEach((id)=>{ const n=nodes.get(id); if(n) nodes.update({ id, title:nodeTitle(n) }); }); };
+$("reveal").onclick = (e) => { REVEAL = e.target.checked; applyReveal(); };
 $("source-sel").onchange = async (e) => { if(SUPPRESS) return; resetLog("Loading source…"); await post("/source",{mode:e.target.value}); };
 $("extractor-sel").onchange = async (e) => { if(SUPPRESS) return;
   const r=await post("/extractor",{kind:e.target.value}); if(r.status!=="ok"){ alert(r.reason||"could not switch"); return; }
