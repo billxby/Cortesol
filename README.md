@@ -34,6 +34,7 @@ same thing.
 Early scaffold. The shared contracts under `cortesol/core/` are written (data
 model, op vocabulary, peptide domain, constants); the logic (engine, simulator,
 training, eval, UI) is stubbed with `# TODO`s that each point to a design note.
+See `docs/STATUS.md` (build-state map) and `docs/ROADMAP.md` (next steps).
 
 ## Quickstart
 
@@ -47,6 +48,7 @@ make help           # everything else
 ## Docs
 
 - `CLAUDE.md` — orientation + the rules that matter
+- `docs/STATUS.md` — cached build-state map (what's done vs stubbed) · `docs/ROADMAP.md` — next steps
 - `docs/ARCHITECTURE.md` — how an event flows, the data model, the op vocabulary
 - `docs/ONTOLOGY.md` — what "truth", "evidence", "belief" mean here (read this)
 - `docs/COMPONENTS.md` — how the code splits into three logical areas

@@ -78,12 +78,15 @@ naturally onto branches if you want to split work, but it's guidance, not law.
 
 ## Status (July 2026)
 
-- **Filled in:** the shared contracts under `core/` (data model, op vocabulary,
-  peptide domain, constants, KB container). These define *how everything works*
-  and make the package importable.
-- **TODO stubs:** all the logic — engine math, validator, propagation, the
-  simulator, training, the pipeline, eval, and UI. Each stub names its reference
-  note in `../Research/`.
+**Live source of truth — read these instead of re-exploring:**
+- `docs/STATUS.md` — the cached build-state map (every module: done/stub, its
+  role, what each stub must implement, the key constants).
+- `docs/ROADMAP.md` — sequenced next steps by owner (Area C vs Area A tracks).
+
+In short: the shared contracts under `core/` are filled in and pass 8 contract
+tests; everything else (engine math, validator, propagation, simulator, training,
+pipeline, eval, UI) is a TODO stub pointing at a note in `../Research/`. When a
+stub becomes real, update its row in `docs/STATUS.md`.
 
 ## The few rules that actually matter
 
