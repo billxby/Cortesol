@@ -99,9 +99,7 @@ def correlation_group(fields: dict[str, Any]) -> str:
     """The n_eff bucket for a piece of evidence: lab x method x dataset. Reports
     sharing a bucket are treated as correlated (echoes), not independent
     replications. (Confidence Math §3.)"""
-    return "|".join(
-        str(fields.get(k, "?")) for k in ("lab", "method", "dataset")
-    )
+    return "|".join(str(fields.get(k, "?")) for k in ("lab", "method", "dataset"))
 
 
 # --- Peptide-specific red flags (extend the generic screen) ----------------

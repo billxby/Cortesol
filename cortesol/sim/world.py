@@ -44,6 +44,7 @@ class World:
     """A seeded latent peptide world. Deterministic given a seed."""
 
     seed: int
+    entity_prefix: str = "P"
     claims: list[WorldClaim] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -51,7 +52,7 @@ class World:
         # Binding claims: one per peptide, truth alternating so a mix of true and
         # false binders is guaranteed regardless of seed.
         for k in range(1, _NUM_PEPTIDES + 1):
-            pep = f"P{k}"
+            pep = f"{self.entity_prefix}{k}"
             target = _TARGETS[k % len(_TARGETS)]
             z = 1 if k % 2 == 1 else 0
             kd = rng.uniform(1.0, 40.0) if z else rng.uniform(6000.0, 40000.0)
@@ -70,7 +71,7 @@ class World:
         # Efficacy claims for a subset. P1 is truly efficacious; P3/P5 are not, so
         # there is always a false efficacy claim for the `hyped` class to draw on.
         for k, z in ((1, 1), (3, 0), (5, 0)):
-            pep = f"P{k}"
+            pep = f"{self.entity_prefix}{k}"
             indication = _INDICATIONS[k % len(_INDICATIONS)]
             effect = rng.uniform(45.0, 90.0) if z else rng.uniform(0.0, 15.0)
             self.claims.append(

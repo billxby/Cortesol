@@ -1,12 +1,22 @@
-# Freesolo Flash — OPD config (area B, optional / cut line #2). TODO.
-# Reference: Fine-Tuning Plan §Stage 3. Warm-start from the GRPO adapter.
-# Purpose: smooth schema adherence + honestly claim "SFT + RL + distillation".
+# Short disposable OPD branch. GLM-5.2 credentials are managed by Flash.
+model = "Qwen/Qwen3.5-4B"
+algorithm = "opd"
+thinking = false
+seed = 0
 
-[model]
-base = "Qwen/Qwen3.5-4B"
+[environment]
+id = "local/cortesol-belief-update"
+pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
+
+[environment.params]
+split = "rl_train"
 
 [train]
-algorithm = "opd"
-init_from_adapter = ""        # the GRPO checkpoint
-teacher = "glm-5.2"           # managed teacher, token-level grading
-# max_completion_tokens = 384
+init_from_adapter = "cortesol-sft"
+teacher_model = "glm-5.2"
+max_context_tokens = 8192
+max_completion_tokens = 256
+max_examples = 1024
+max_steps = 20
+save_at_steps = [5, 10, 20]
+structured_outputs = "json_object"

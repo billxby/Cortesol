@@ -1,4 +1,4 @@
-# Primary GRPO. The coordinator pins init_from_adapter to the promoted SFT checkpoint.
+# GRPO continuation from an OPD checkpoint that passed the development gate.
 model = "Qwen/Qwen3.5-4B"
 algorithm = "grpo"
 thinking = false
@@ -12,7 +12,7 @@ pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
 split = "rl_train"
 
 [train]
-init_from_adapter = "cortesol-sft"
+init_from_adapter = "cortesol-opd"
 max_context_tokens = 8192
 max_completion_tokens = 256
 group_size = 8

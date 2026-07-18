@@ -43,7 +43,9 @@ def test_neff_discounts_echoes():
     weight. This is the double-counting defense."""
     assert kish_neff(1, config.RHO_WITHIN_GROUP) == pytest.approx(1.0)
     assert neff_marginal_factor(0, config.RHO_WITHIN_GROUP) == 1.0
-    assert neff_marginal_factor(3, config.RHO_WITHIN_GROUP) < neff_marginal_factor(1, config.RHO_WITHIN_GROUP)
+    assert neff_marginal_factor(3, config.RHO_WITHIN_GROUP) < neff_marginal_factor(
+        1, config.RHO_WITHIN_GROUP
+    )
 
 
 def test_source_cap_orders_by_reliability():
@@ -77,7 +79,9 @@ def test_untrusted_view_strips_ground_truth():
     """PD6: the extractor/engine may only ever see untrusted_view(); sim_meta
     (world truth + gold ops) must not survive it."""
     ev = RawEvent(
-        id="e", t=0, source_id="s",
+        id="e",
+        t=0,
+        source_id="s",
         sim_meta={"event_class": "genuine", "world_truth": {"x": 1}, "gold_ops": []},
     )
     assert ev.sim_meta is not None
@@ -96,7 +100,14 @@ def test_fixture_parses_and_gold_is_valid_ops():
         classes.add(ev.sim_meta.event_class.value)
         # gold ops must validate against the op vocabulary
         ProposedOps(ops=ev.sim_meta.gold_ops)
-    assert {"genuine", "hyped", "fraudulent", "injection", "out_of_scope", "contradictory"} <= classes
+    assert {
+        "genuine",
+        "hyped",
+        "fraudulent",
+        "injection",
+        "out_of_scope",
+        "contradictory",
+    } <= classes
 
 
 def test_correlation_group_is_lab_method_dataset():

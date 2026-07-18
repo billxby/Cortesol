@@ -1,5 +1,5 @@
-# Production deterministic-gold SFT. The coordinator replaces environment.id.
-model = "Qwen/Qwen3.5-4B"
+# Mechanical smoke SFT. Nothing advances unless this checkpoint can execute.
+model = "Qwen/Qwen3.5-0.8B"
 algorithm = "sft"
 thinking = false
 seed = 0
@@ -9,13 +9,13 @@ id = "local/cortesol-belief-update"
 pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
 
 [environment.params]
-split = "sft_train"
+split = "sft_smoke"
 
 [train]
 lora_rank = 32
 lora_alpha = 64
 max_context_tokens = 2048
 max_completion_tokens = 256
-max_examples = 2800
-max_steps = 500
-save_at_steps = [100, 250, 500]
+max_examples = 64
+max_steps = 8
+save_at_steps = [8]

@@ -32,6 +32,21 @@ CLASS_ORDER: tuple[EventClass, ...] = (
     EventClass.INJECTION,
 )
 
+SIM_SOURCE_TIERS: dict[str, str] = {
+    "preprint_weak": "weak",
+    "lab_F": "predatory",
+    "journal_X": "reputable",
+    "unknown_mail": "unknown",
+}
+
+
+def source_tier(source_id: str) -> str:
+    if source_id in SIM_SOURCE_TIERS:
+        return SIM_SOURCE_TIERS[source_id]
+    if source_id.startswith("lab_"):
+        return "reputable"
+    return "unknown"
+
 
 def _genuine_fields(rng: random.Random, c: WorldClaim, dataset: str, lab: str) -> dict:
     kd = max(0.1, c.value * rng.uniform(0.8, 1.2))
@@ -217,6 +232,7 @@ def _make_event(world: World, rng: random.Random, i: int, cls: EventClass) -> Ra
     else:  # pragma: no cover - CLASS_ORDER is exhaustive
         raise ValueError(f"unknown event class: {cls!r}")
 
+    fields["source_tier"] = source_tier(source_id)
     return RawEvent(
         id=eid,
         t=i,
@@ -227,9 +243,9 @@ def _make_event(world: World, rng: random.Random, i: int, cls: EventClass) -> Ra
     )
 
 
-def emit_stream(seed: int, length: int) -> list[RawEvent]:
+def emit_stream(seed: int, length: int, *, entity_prefix: str = "P") -> list[RawEvent]:
     """Generate a balanced-class event stream against a seeded world."""
-    world = World(seed)
+    world = World(seed, entity_prefix=entity_prefix)
     rng = random.Random(seed + 1)
     return [_make_event(world, rng, i, CLASS_ORDER[i % len(CLASS_ORDER)]) for i in range(length)]
 

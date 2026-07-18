@@ -17,10 +17,10 @@ Maintenance.md`).
 ## The pipeline
 
 ```
-  event stream ──► quarantine ──► retrieve ──► extract (LLM) ──► ProposedOps
-                     (area A)      (area C)      (area B)             │
+  event stream ──► quarantine ──► screen ──► retrieve ──► extract ──► ProposedOps
+                     (area A)      (area A)    (area C)    (area B)         │
                                                                       ▼
-   belief graph ◄── commit + propagate ◄── validate ◄── screen (red flags)
+   belief graph ◄── commit + propagate ◄── validate ◄──────────────────────┘
       (KB)             (area A)             (area A)        (area A)
         │
         └──► snapshot (JSON) + audit log ──► SSE ──► live graph (area C)
@@ -37,17 +37,17 @@ Implemented by `cortesol/pipeline.py::process_event`.
    `untrusted_view()` (any ground-truth sidecar stripped) and its text is
    datamarked/spotlighted so it can only ever sit in a *data* position. Out comes
    a structured `Evidence`.
-2. **Retrieve** (`retrieval.py`). Embed the event → top-k relevant claims + their
+2. **Screen** (`ingest/screen.py`). A cheap deterministic pass runs *regardless of
+   the model*: GRIM, statcheck, injection markers, implausible binding affinity,
+   missing control peptide, and low purity. Flags shrink evidence influence, and
+   injection-marked evidence cannot authorize a state-changing operation.
+3. **Retrieve** (`retrieval.py`). Rank the event against top-k relevant claims + their
    1-hop neighborhood + the relevant source records, packed into a `Context`. The
    whole extractor prompt must fit the model's 8,192-token window, so state
    serialization is compact by mandate (`core/context.py::serialize_state`).
-3. **Extract** (`ingest/extract.py`). The tuned model reads the serialized Context
+4. **Extract** (`ingest/extract.py`). The tuned model reads the serialized Context
    and emits `ProposedOps` under JSON-schema-constrained decoding. It proposes; it
    does not write.
-4. **Screen** (`ingest/screen.py`). A cheap deterministic pass runs *regardless of
-   the model*: GRIM, statcheck, implausible binding affinity, missing control
-   peptide, low purity, retraction lookup… Each flag raises the evidence's
-   effective false-report rate, shrinking how far it can move belief.
 5. **Validate** (`core/validator.py`). The gate. Enumerated ops only; bounded step
    (|Δℓ| ≤ δ_max); provenance required; referential integrity; per-source rate
    limits; hard-conflict quarantine. Only accepted ops proceed.
@@ -108,6 +108,6 @@ decoding at training *and* serving time.
 ## Stack
 
 Python 3.12 · Pydantic (schema) · NetworkX + NumPy (graph + math, no DB) ·
-FastAPI + sse-starlette + vis-network (live UI) · `openai` client pointed at the
-Freesolo Flash deployment. Snapshot to JSON after every event. See `../System
+FastAPI + sse-starlette + vis-network (live UI) · stdlib HTTPS client pointed at
+the authenticated Freesolo Flash deployment. Snapshot to JSON after every event. See `../System
 Architecture.md` and `../Fine-Tuning Plan.md` for the deeper rationale.

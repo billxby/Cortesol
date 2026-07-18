@@ -111,10 +111,10 @@ class KB:
         blob = json.loads(Path(path).read_text())
         kb = cls()
         kb.event_cursor = blob.get("event_cursor", 0)
-        for k, v in blob["sources"].items():
+        for v in blob["sources"].values():
             kb.add_source(Source(**v))
-        for k, v in blob["claims"].items():
+        for v in blob["claims"].values():
             kb.add_claim(Claim(**v))
-        for k, v in blob["edges"].items():
+        for v in blob["edges"].values():
             kb.add_edge(Edge(**v))
         return kb

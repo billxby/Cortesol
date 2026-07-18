@@ -34,14 +34,14 @@ from .mathx import logit, sigmoid
 # --- Enumerations (closed sets — part of the contract) --------------------
 
 
-class ClaimStatus(str, Enum):
+class ClaimStatus(str, Enum):  # noqa: UP042 -- frozen wire-contract enum
     ACTIVE = "active"
     FLAGGED = "flagged"  # kept but marked (e.g. OOD, high conflict)
     QUARANTINED = "quarantined"  # writes suspended pending review
     RETIRED = "retired"  # superseded; never deleted
 
 
-class EdgeType(str, Enum):
+class EdgeType(str, Enum):  # noqa: UP042 -- frozen wire-contract enum
     SUPPORTS = "supports"
     CONTRADICTS = "contradicts"
     DEPENDS_ON = "depends_on"  # asymmetric: dst depends on src
@@ -52,7 +52,7 @@ Direction = Literal["+", "-"]
 Strength = Literal["weak", "moderate", "strong"]
 
 
-class EventClass(str, Enum):
+class EventClass(str, Enum):  # noqa: UP042 -- frozen wire-contract enum
     """The simulator's generative classes. The gold op is a pure function of
     (world-state, class). The engine NEVER sees this — it lives in sim_meta and
     is used only to build gold labels and score eval. (Fine-Tuning Plan Stage 0.)
