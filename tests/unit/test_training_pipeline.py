@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import tomllib
 
 import pytest
@@ -79,6 +81,24 @@ def test_bundle_excludes_all_held_out_data(generated, tmp_path):
     assert {"sft_smoke.jsonl", "sft_train.jsonl", "rl_train.jsonl"} <= names
     second = build_bundle(bundle, data_dir=path)
     assert first["sha256"] == second["sha256"]
+    probe = """
+import importlib.util
+from pathlib import Path
+import sys
+entry = Path(sys.argv[1]).resolve()
+sys.path = [item for item in sys.path if 'Cortesol' not in item]
+spec = importlib.util.spec_from_file_location('published_environment', entry)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+import cortesol
+assert Path(cortesol.__file__).resolve().is_relative_to(entry.parent)
+assert module.BeliefUpdateEnv.__module__ == 'cortesol.train.environment'
+"""
+    subprocess.run(
+        [sys.executable, "-c", probe, str(bundle / "environment.py")],
+        check=True,
+        cwd=tmp_path,
+    )
 
 
 def test_every_generated_toml_parses_in_flash_1_0_and_uses_exact_schema(tmp_path):
