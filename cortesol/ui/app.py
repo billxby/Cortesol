@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -53,7 +54,18 @@ _HERE = Path(__file__).parent
 _STATIC = _HERE / "static"
 _SIM_STREAM_PATH = _HERE.parents[1] / "data" / "streams" / "eval_seed42.jsonl"
 _PAPERS_PATH = _HERE.parents[1] / "data" / "papers" / "raw_papers.jsonl"
+_ROBUSTNESS_PATH = _HERE.parents[1] / "data" / "papers" / "robustness_pack.jsonl"
+_PER_PEPTIDE = 3  # foundation size per peptide (mirrors `make bootstrap`)
 _DEMO_SEED = 42
+
+
+def _load_robustness() -> list[RawEvent]:
+    """The curated adversarial stress-test pack (hype, contradiction, injection,
+    fraud) that targets already-established claims. Paper-shaped, so it flows
+    through the exact same lifecycle; belief still moves only through the engine."""
+    if not _ROBUSTNESS_PATH.exists():
+        return []
+    return cortex.load_stream(_ROBUSTNESS_PATH)
 
 
 def _use_foundation() -> bool:
@@ -128,6 +140,13 @@ class DemoState:
         self.extractor_kind = "freesolo"
         self.lock = asyncio.Lock()
         self.subscribers: set[asyncio.Queue] = set()
+        # Story-arc phase boundaries over the papers stream (see reset()):
+        #   [0, n_foundation)         Act 1 — the chosen "ground truth" papers
+        #   [n_foundation, n_corpus)  Act 2 — the rest of the corpus (corroboration)
+        #   [n_corpus, len(events))   Act 3 — the adversarial robustness pack
+        self.n_foundation = 0
+        self.n_corpus = 0
+        self.foundation_ids: set[str] = set()
         self.reset()
 
     def _build_extractor(self):
@@ -152,18 +171,34 @@ class DemoState:
 
     def reset(self) -> None:
         self._foundation_loaded = False
+        self.foundation_ids = set()
         if self.data_source == "papers":
+            robust = _load_robustness()
             # Foundation mode (CORTESOL_FOUNDATION=1): open on a pre-established KB —
             # confidence earned by replaying the curated foundation through the engine
-            # (see cortesol/bootstrap.py) — and run the held-out papers live as the
-            # robustness test. Belief was moved only by the engine; loading the
-            # snapshot restores that state + its audit trajectory, it never sets ℓ.
+            # (see cortesol/bootstrap.py). Act 1 is already done; the stream is the
+            # held-out corpus (Act 2) followed by the robustness pack (Act 3).
             loaded = bootstrap.load_foundation() if _use_foundation() else None
             if loaded is not None:
-                self.kb, self.events = loaded
+                self.kb, holdout = loaded
+                self.events = holdout + robust
+                self.n_foundation = 0  # already established in the snapshot
+                self.n_corpus = len(holdout)
                 self._foundation_loaded = True
             else:
-                self.events = cortex.load_stream(_PAPERS_PATH)
+                # The guided 3-act arc, built live from an empty graph. Order the
+                # corpus foundation-first so Act 1 is the curated "ground truth"
+                # papers, Act 2 the rest, Act 3 the adversarial pack. Selection is
+                # identical to `make bootstrap` (highest-reliability venues/peptide).
+                corpus = cortex.load_stream(_PAPERS_PATH)
+                foundation, holdout = bootstrap.select_foundation(corpus, _PER_PEPTIDE)
+                self.foundation_ids = {e.id for e in foundation}
+                self.events = foundation + holdout + robust
+                self.n_foundation = len(foundation)
+                self.n_corpus = len(foundation) + len(holdout)
+                # keep t aligned to stream position (used as the per-doc key)
+                for i, e in enumerate(self.events):
+                    e.t = i
                 self.kb = cortex.seed_kb_from_papers(self.events)
         else:
             self.events = [
@@ -173,6 +208,9 @@ class DemoState:
             ]
             self.kb = seed_kb(World(_DEMO_SEED), self.events)
             _seed_demo_edges(self.kb)
+            # the sim stream has no foundation/robustness acts — one flat phase
+            self.n_foundation = 0
+            self.n_corpus = len(self.events)
         self.extractor = self._build_extractor()
         # Always keep a deterministic, network-free proposer on hand. If the live
         # model call times out or errors mid-run, we degrade to this for that one
@@ -207,6 +245,18 @@ class DemoState:
 
     # -- the browse list (the "papers database" view) --
 
+    def phase_of(self, idx: int) -> str:
+        """Which act a stream position belongs to (papers mode). Foundation is the
+        curated ground-truth slice, corroboration the rest of the corpus, robustness
+        the adversarial pack."""
+        if self.data_source != "papers":
+            return "corroboration"
+        if idx < self.n_foundation:
+            return "foundation"
+        if idx < self.n_corpus:
+            return "corroboration"
+        return "robustness"
+
     def _document(self, idx: int, ev: RawEvent) -> dict:
         f = ev.fields
         if self.data_source == "papers":
@@ -231,6 +281,7 @@ class DemoState:
             "authors": authors_str,
             "tags": tags,
             "status": status,
+            "phase": self.phase_of(idx),
         }
 
     def documents(self) -> list[dict]:
@@ -279,6 +330,10 @@ class DemoState:
             "sources": sources,
             "cursor": self.cursor,
             "total": len(self.events),
+            "n_foundation": self.n_foundation,
+            "n_corpus": self.n_corpus,
+            "phase": self.phase_of(self.cursor),
+            "foundation_built": self.cursor >= self.n_foundation,
             "revealed": len(self.revealed),
             "claims_total": len(self.kb.claims),
             "prior": PRIOR_C_0,
@@ -485,6 +540,50 @@ async def next_event() -> dict:
         }
 
 
+def _build_foundation_sync() -> tuple[list[str], list[dict]]:
+    """Replay the curated ground-truth slice (events[0:n_foundation]) through the
+    real lifecycle with the deterministic proposer, exactly as `make bootstrap`
+    does. Belief moves ONLY through the engine — we cache its output, we never set
+    ℓ. Returns (revealed claim ids, a leaderboard of what got established)."""
+    ext = STATE.fallback  # PaperFakeExtractor in papers mode — deterministic, offline
+    touched: set[str] = set()
+    for i in range(STATE.n_foundation):
+        result = pipeline.process_event(STATE.kb, STATE.events[i], ext)
+        touched.update(result.dirty_claims)
+    STATE.cursor = STATE.n_foundation
+    STATE.reveal(touched)
+    established = [c for c in STATE.kb.claims.values() if c.trajectory]
+    established.sort(key=lambda c: c.ell, reverse=True)
+    top = [
+        {"claim_id": c.id, "text": c.text, "c": round(sigmoid(c.ell), 3), "r": c.r, "s": c.s}
+        for c in established[:8]
+    ]
+    return sorted(touched), top
+
+
+@app.post("/build-foundation")
+async def build_foundation() -> dict:
+    """Act 1 — establish the ground truth. Replay the chosen foundation papers so
+    the initial belief graph forms from empty. No-op if already built or if the KB
+    opened pre-established (CORTESOL_FOUNDATION mode)."""
+    async with STATE.lock:
+        if STATE.data_source != "papers" or STATE.n_foundation == 0:
+            return {"status": "noop", "reason": "no foundation slice to build"}
+        if STATE.cursor >= STATE.n_foundation:
+            return {"status": "noop", "reason": "foundation already established"}
+        revealed, top = await asyncio.to_thread(_build_foundation_sync)
+        n_established = len([c for c in STATE.kb.claims.values() if c.trajectory])
+        message = {
+            "type": "foundation",
+            "n_foundation": STATE.n_foundation,
+            "n_established": n_established,
+            "top": top,
+            "graph": STATE.graph_payload(moved=revealed, include_documents=True),
+        }
+        await STATE.broadcast(message, remember=True)
+        return {"status": "ok", "n_foundation": STATE.n_foundation, "n_established": n_established}
+
+
 @app.post("/discredit")
 async def discredit(payload: dict) -> dict:
     source_id = (payload or {}).get("source_id")
@@ -563,6 +662,88 @@ async def reset() -> dict:
         STATE.reset()
         await STATE.broadcast(STATE.graph_payload())
         return {"status": "ok"}
+
+
+# --------------------------------------------------------------------------
+# Ask the belief graph — a grounded Q&A over the ledger. The ANSWER is read
+# straight from committed belief (confidence, evidence counts, provenance,
+# trajectory); the model never authors it. This is the epistemic angle made
+# interactive: you can interrogate what the system believes and why.
+# --------------------------------------------------------------------------
+
+_SRC_RE = re.compile(r"from (\S+) \[")
+_STANCE = [
+    (0.75, "Strongly supported"),
+    (0.60, "Supported"),
+    (0.45, "Uncertain"),
+    (0.30, "Doubtful"),
+    (0.00, "Refuted"),
+]
+
+
+def _stance(c: float) -> str:
+    for thresh, label in _STANCE:
+        if c >= thresh:
+            return label
+    return "Refuted"
+
+
+def _answer_claim(claim) -> dict:
+    """Turn one belief-graph claim into a grounded answer: the confidence the
+    ledger holds, the evidence behind it, where it came from, and how it moved."""
+    from ..core.mathx import sigmoid as _sig
+
+    c = _sig(claim.ell)
+    # provenance: distinct sources named in this claim's audit trajectory
+    sources: list[str] = []
+    for pt in claim.trajectory:
+        m = _SRC_RE.search(pt.cause or "")
+        if m and m.group(1) not in sources:
+            sources.append(m.group(1))
+    moves = len(claim.trajectory)
+    # every claim begins at the skeptical prior; the trajectory only stores
+    # post-move points, so the honest baseline is the prior itself.
+    c_start = PRIOR_C_0
+    return {
+        "claim_id": claim.id,
+        "text": claim.text,
+        "confidence": round(c, 4),
+        "uncertainty": round(claim.u, 4),
+        "stance": _stance(c),
+        "status": claim.status.value,
+        "r": claim.r,
+        "s": claim.s,
+        "moves": moves,
+        "c_start": round(c_start, 4),
+        "sources": sources[:6],
+    }
+
+
+@app.post("/ask")
+async def ask(payload: dict) -> dict:
+    """Answer a natural-language question about the peptides in the KB, grounded in
+    committed belief. Lexical retrieval finds the most relevant claims; the answer
+    is their confidence + evidence + provenance — never generated prose."""
+    from ..retrieval import _score, _tokens
+
+    question = ((payload or {}).get("question") or "").strip()
+    if not question:
+        return {"status": "error", "reason": "empty question"}
+    query = _tokens(question)
+    ranked = sorted(
+        STATE.kb.claims.values(),
+        key=lambda c: (_score(c, query), c.id),
+        reverse=True,
+    )
+    hits = [c for c in ranked if _score(c, query) > 0][:4]
+    if not hits:
+        return {"status": "ok", "question": question, "answers": [], "grounded": True}
+    return {
+        "status": "ok",
+        "question": question,
+        "answers": [_answer_claim(c) for c in hits],
+        "grounded": True,
+    }
 
 
 app.mount("/static", StaticFiles(directory=str(_STATIC)), name="static")

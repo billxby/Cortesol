@@ -175,68 +175,76 @@ def explain_apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dic
     before_ell = claim.ell
     after_ell = before_ell + b["signed"]
 
+    tier = source.tier if source is not None else "unknown"
+
     steps = [
         {
-            "label": "strength → logΛ",
-            "detail": f"{op.strength} → {b['lam_raw']:.3f}",
-            "note": "coarse evidence-quality label mapped to a pre-cap log-likelihood ratio",
+            "label": "The model's rating",
+            "detail": f"“{op.strength}” = {b['lam_raw']:.2f} weight",
+            "note": "The model only picks a coarse quality label. This is the MOST this one report "
+            "could move belief — every check below can shrink it, none can grow it.",
         },
     ]
     if b["cap"] is not None:
-        tier = source.tier if source is not None else "unknown"
-        capped = "cap binds" if b["lam_capped"] < b["lam_raw"] else "under cap"
+        capped = b["lam_capped"] < b["lam_raw"] - 1e-9
         steps.append(
             {
-                "label": "source cap",
-                "detail": f"min({b['lam_raw']:.3f}, log(τ/φ)={b['cap']:.3f}) = {b['lam_capped']:.3f}",
-                "note": f"anti-hype ceiling for a '{tier}' source (τ={source.tau}, φ={source.phi}) — {capped}",
+                "label": "Source-trust cap",
+                "detail": f"min({b['lam_raw']:.2f}, {b['cap']:.2f}) = {b['lam_capped']:.2f}",
+                "note": (
+                    f"A “{tier}” source is only trusted so far, so its pull is capped at {b['cap']:.2f}. "
+                    + ("The cap bit here — hype can't force a big jump."
+                       if capped else "Still under the cap this time.")
+                ),
             }
         )
     steps.append(
         {
-            "label": "× n_eff",
-            "detail": f"× {b['neff']:.3f} = {b['lam_after_neff']:.3f}",
+            "label": "Double-counting check",
+            "detail": f"× {b['neff']:.2f} = {b['lam_after_neff']:.2f}",
             "note": (
-                "first report in its correlation group — full weight"
+                "First independent report for this claim — counted at full weight."
                 if b["k_index"] == 0
-                else f"echo #{b['k_index'] + 1} in group '{b['group']}' — correlated, damped"
+                else f"Report #{b['k_index'] + 1} from the same source group — down-weighted so "
+                "repeats don't masquerade as fresh, independent replication."
             ),
         }
     )
     steps.append(
         {
-            "label": "× fraud switch",
-            "detail": f"× {b['fraud']:.3f} = {b['lam_after_fraud']:.3f}",
+            "label": "Integrity check",
+            "detail": f"× {b['fraud']:.2f} = {b['lam_after_fraud']:.2f}",
             "note": (
-                "no red flags — Λ intact"
+                "No red flags raised — kept at full strength."
                 if not evidence.red_flags
-                else f"red flags {list(evidence.red_flags)} raise φ_eff, shrinking Λ"
+                else f"Red flags ({', '.join(evidence.red_flags)}) make the report less trustworthy, "
+                "shrinking its effect toward zero."
             ),
         }
     )
     if abs(b["lam_after_fraud"]) > DELTA_MAX:
         steps.append(
             {
-                "label": "clamp ±DELTA_MAX",
-                "detail": f"clip({b['lam_after_fraud']:.3f}, ±{DELTA_MAX}) = {b['delta']:.3f}",
-                "note": "per-event blast-radius bound (PD2)",
+                "label": "Safety clamp",
+                "detail": f"clip to ±{DELTA_MAX} = {b['delta']:.2f}",
+                "note": f"No single report may move one claim by more than ±{DELTA_MAX} — a hard blast-radius bound.",
             }
         )
     steps.append(
         {
-            "label": "apply direction",
-            "detail": f"{op.direction} → Δℓ = {b['signed']:+.3f}",
-            "note": "'+' supports the claim, '−' contradicts it",
+            "label": "Which way?",
+            "detail": f"{'supports (+)' if op.direction == '+' else 'contradicts (−)'} → {b['signed']:+.2f}",
+            "note": "A “+” report raises confidence in the claim; a “−” report lowers it.",
         }
     )
     steps.append(
         {
-            "label": "move belief",
+            "label": "New confidence",
             "detail": (
-                f"ℓ {before_ell:+.3f} → {after_ell:+.3f}  "
-                f"(c {sigmoid(before_ell):.3f} → {sigmoid(after_ell):.3f})"
+                f"{sigmoid(before_ell) * 100:.0f}% → {sigmoid(after_ell) * 100:.0f}%"
             ),
-            "note": "the only belief mutation — through the engine, never set directly",
+            "note": "The only place belief actually changes — computed by the engine from the steps "
+            "above, never written by the model.",
         }
     )
 

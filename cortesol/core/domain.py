@@ -98,8 +98,17 @@ ASSAY_TYPES: tuple[str, ...] = (
 def correlation_group(fields: dict[str, Any]) -> str:
     """The n_eff bucket for a piece of evidence: lab x method x dataset. Reports
     sharing a bucket are treated as correlated (echoes), not independent
-    replications. (Confidence Math §3.)"""
-    return "|".join(str(fields.get(k, "?")) for k in ("lab", "method", "dataset"))
+    replications. (Confidence Math §3.)
+
+    Simulator events carry lab/method/dataset directly. Real papers don't, so we
+    fall back to journal/assay: two different journals reporting the same claim are
+    then treated as *independent* corroboration (full weight), while repeats from
+    the same venue still damp as echoes — otherwise every paper would collapse into
+    one 'unknown' bucket and genuine replication would be discounted."""
+    lab = fields.get("lab") or fields.get("journal") or "?"
+    method = fields.get("method") or fields.get("assay") or "?"
+    dataset = fields.get("dataset") or "?"
+    return "|".join(str(x) for x in (lab, method, dataset))
 
 
 # --- Peptide-specific red flags (extend the generic screen) ----------------

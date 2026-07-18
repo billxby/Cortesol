@@ -94,6 +94,18 @@
   .actionbar .spacer { flex:1; }
   .sep { width:1px; height:24px; background:var(--line); }
 
+  /* ---- story-arc phase indicator ---- */
+  .phase-chip { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:600;
+    padding:5px 12px; border-radius:999px; border:1px solid var(--line); background:var(--wash);
+    color:var(--muted); white-space:nowrap; }
+  .phase-chip .actnum { font-family:ui-monospace, Menlo, monospace; font-size:10.5px; font-weight:700;
+    padding:1px 6px; border-radius:999px; background:var(--panel); border:1px solid var(--line); }
+  .phase-chip.p-foundation { background:var(--blue-soft); border-color:#b6cfe8; color:var(--blue); }
+  .phase-chip.p-corroboration { background:var(--good-soft); border-color:#bfe0cd; color:var(--good); }
+  .phase-chip.p-robustness { background:var(--accent-soft); border-color:#e6bcc0; color:var(--accent); }
+  #build.primary { background:var(--blue); border-color:var(--blue); }
+  #build.primary:hover:not(:disabled) { background:#0a4e93; }
+
   button, select, input { font-family:var(--sans); font-size:13px; color:var(--ink);
     background:var(--panel); border:1px solid #d3d8e0; border-radius:var(--r-sm);
     padding:7px 13px; cursor:pointer; transition:.14s; }
@@ -106,15 +118,45 @@
   button.ghost:hover:not(:disabled) { background:var(--wash2); color:var(--ink); border-color:transparent; }
   button.danger { color:var(--accent); border-color:#e6bcc0; }
   button.danger:hover:not(:disabled) { background:var(--accent-soft); border-color:var(--accent); }
-  .ctl-group { display:inline-flex; align-items:center; gap:7px; }
-  .ctl-lbl { font-size:10px; font-weight:650; letter-spacing:.7px; text-transform:uppercase;
-    color:var(--faint); }
-  .retract { gap:6px; }
-  #discredit-src { max-width:180px; }
-  #source-sel { min-width:160px; }
-  .toggle { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted);
-    cursor:pointer; user-select:none; white-space:nowrap; }
-  .toggle input { width:auto; cursor:pointer; }
+  #discredit-src { min-width:0; }
+
+  /* ---- Tools popover (corpus / retract / reveal / reset) ---- */
+  .menu-wrap { position:relative; }
+  .icon-btn { display:inline-flex; align-items:center; gap:7px; padding:7px 12px; color:var(--muted); }
+  .icon-btn:hover:not(:disabled) { color:var(--ink); }
+  .icon-btn svg { display:block; }
+  #tools-btn[aria-expanded="true"] { background:var(--wash2); color:var(--ink); }
+  .blockbtn { width:100%; text-align:center; }
+  .popover { position:absolute; top:calc(100% + 12px); right:0; width:300px; background:var(--panel);
+    border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow-lg); padding:16px;
+    z-index:50; opacity:0; transform:translateY(-6px) scale(.98); transform-origin:top right;
+    pointer-events:none; transition:.15s ease; }
+  .popover.open { opacity:1; transform:none; pointer-events:auto; }
+  .pop-sec { margin-bottom:16px; }
+  .pop-sec:last-child { margin-bottom:0; }
+  .pop-lbl { font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase;
+    color:var(--faint); margin-bottom:9px; }
+  .pop-div { height:1px; background:var(--line); margin:16px -16px; }
+  .pop-row { display:flex; align-items:center; gap:8px; }
+  .pop-row select { flex:1; min-width:0; }
+  .pop-hint { font-size:11.5px; color:var(--muted); margin-top:9px; line-height:1.45; }
+
+  .seg2 { display:flex; background:var(--wash2); border-radius:999px; padding:3px; gap:2px; }
+  .seg2 button { flex:1; border:none; background:none; font-family:var(--sans); font-size:12.5px;
+    font-weight:550; color:var(--muted); padding:6px 0; border-radius:999px; cursor:pointer; transition:.14s; }
+  .seg2 button:hover { color:var(--ink); border-color:transparent; }
+  .seg2 button.active { background:var(--panel); color:var(--ink); box-shadow:var(--shadow-sm); }
+
+  .switch-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .switch-row .lbl { font-size:13px; color:var(--ink); }
+  .switch { position:relative; width:38px; height:22px; flex:0 0 auto; }
+  .switch input { opacity:0; width:0; height:0; position:absolute; }
+  .switch .slider { position:absolute; inset:0; background:var(--wash2); border:1px solid var(--line);
+    border-radius:999px; transition:.16s; cursor:pointer; }
+  .switch .slider::before { content:""; position:absolute; width:16px; height:16px; left:2px; top:2px;
+    background:#fff; border-radius:50%; box-shadow:var(--shadow-sm); transition:.16s; }
+  .switch input:checked + .slider { background:var(--blue); border-color:var(--blue); }
+  .switch input:checked + .slider::before { transform:translateX(16px); }
 
   /* ---------------- main / views ---------------- */
   main { flex:1; min-height:0; position:relative; }
@@ -129,6 +171,22 @@
   .lib-head h1 { font-family:var(--serif); font-size:30px; letter-spacing:-.6px; color:var(--ink);
     margin:0 0 4px; }
   .lib-head .sub { color:var(--muted); font-size:14px; margin:0 0 18px; max-width:620px; }
+  /* two-step control (Ground truth | Ingest) — doubles as a scope switcher */
+  .steps-bar { display:flex; align-items:stretch; gap:10px; margin:2px 0 20px; max-width:720px; }
+  .steparrow { align-self:center; color:var(--faint); font-size:18px; flex:0 0 auto; }
+  .stepbtn { flex:1; display:flex; align-items:center; gap:13px; text-align:left; padding:13px 16px;
+    border:1px solid var(--line); border-radius:var(--r); background:var(--panel); cursor:pointer;
+    transition:.16s; box-shadow:var(--shadow-sm); }
+  .stepbtn:hover { border-color:#c3cad4; }
+  .stepbtn.active { border-color:var(--ink); box-shadow:0 0 0 2px rgba(11,16,32,.06), var(--shadow-sm); }
+  .stepbtn .stepnum { flex:0 0 auto; width:28px; height:28px; border-radius:50%; background:var(--wash2);
+    color:var(--muted); font-weight:700; font-family:ui-monospace, Menlo, monospace; font-size:14px;
+    display:flex; align-items:center; justify-content:center; transition:.16s; }
+  .stepbtn.active .stepnum { background:var(--ink); color:#fff; }
+  .stepbtn.done .stepnum { background:var(--good); color:#fff; }
+  .stepbtn .steptext { display:flex; flex-direction:column; min-width:0; }
+  .stepbtn .steptitle { font-family:var(--serif); font-size:16px; color:var(--ink); line-height:1.2; }
+  .stepbtn .stepmeta { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:2px; }
   .lib-tools { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .search { position:relative; flex:1; min-width:220px; max-width:420px; }
   .search input { width:100%; padding:9px 13px 9px 36px; border-radius:var(--r-sm);
@@ -168,6 +226,12 @@
     display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
   .pcard .pmeta { color:var(--faint); font-size:12px; margin-top:auto; }
   .pcard .pmeta .j { color:var(--muted); }
+  .pcard .phase-tag { position:absolute; top:14px; right:14px; font-size:9.5px; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; padding:3px 8px; border-radius:999px; }
+  .phase-tag.foundation { color:var(--blue); background:var(--blue-soft); border:1px solid #b6cfe8; }
+  .phase-tag.robustness { color:var(--accent); background:var(--accent-soft); border:1px solid #e6bcc0; }
+  .pcard.is-foundation { border-left:3px solid var(--blue); }
+  .pcard.is-robustness { border-left:3px solid var(--accent); }
   .pcard .ptags { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
   .tag { font-size:11px; color:#3d4c63; background:var(--wash); border:1px solid var(--line);
     border-radius:5px; padding:2px 8px; }
@@ -196,45 +260,134 @@
   /* inspector / reasoning log */
   #inspector { background:var(--panel); border-left:1px solid var(--line); min-height:0;
     display:flex; flex-direction:column; }
-  .insp-head { flex:0 0 auto; display:flex; align-items:baseline; gap:10px;
-    padding:16px 18px 13px; border-bottom:1px solid var(--line); }
-  .insp-head h2 { font-family:var(--serif); font-size:16px; color:var(--ink); margin:0; }
+  .insp-head { flex:0 0 auto; display:flex; align-items:center; gap:10px;
+    padding:12px 16px; border-bottom:1px solid var(--line); }
+  .insp-tabs { display:inline-flex; background:var(--wash2); border-radius:999px; padding:3px; gap:2px; }
+  .insp-tabs button { border:none; background:none; font-family:var(--sans); font-size:12.5px; font-weight:550;
+    color:var(--muted); padding:5px 14px; border-radius:999px; cursor:pointer; transition:.14s; }
+  .insp-tabs button:hover { color:var(--ink); border-color:transparent; }
+  .insp-tabs button.active { background:var(--panel); color:var(--ink); box-shadow:var(--shadow-sm); }
   .insp-head .count { color:var(--faint); font-size:12px; margin-left:auto; }
-  #log { overflow-y:auto; padding:14px 16px 28px; flex:1; }
+  .insp-panel { overflow-y:auto; flex:1; }
+  #log { padding:14px 16px 28px; }
   .empty { color:var(--muted); font-style:italic; padding:12px 2px; }
 
-  .card { border:1px solid var(--line); border-radius:var(--r-sm); margin-bottom:12px;
-    background:var(--panel); overflow:hidden; box-shadow:var(--shadow-sm); }
+  /* ---- Ask the belief graph ---- */
+  #askpanel { padding:16px; display:flex; flex-direction:column; }
+  .askbox { display:flex; gap:8px; }
+  .askbox input { flex:1; padding:9px 13px; border-radius:var(--r-sm); font-size:13.5px; }
+  .askbox input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  .askhint { font-size:11.5px; color:var(--muted); line-height:1.45; margin-top:9px; }
+  .askex { display:flex; flex-wrap:wrap; gap:6px; margin-top:11px; }
+  .askex button { font-size:11.5px; color:var(--muted); background:var(--wash); border:1px solid var(--line);
+    border-radius:999px; padding:5px 11px; cursor:pointer; }
+  .askex button:hover { border-color:#c3cad4; color:var(--ink); }
+  #askresults { margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+
+  .acard { border:1px solid var(--line); border-left:3px solid var(--line); border-radius:var(--r-sm);
+    padding:14px; box-shadow:var(--shadow-sm); }
+  .acard.s-strong { border-left-color:var(--good); }
+  .acard.s-yes    { border-left-color:#4a9d6e; }
+  .acard.s-unsure { border-left-color:var(--warn); }
+  .acard.s-no     { border-left-color:var(--bad); }
+  .acard .aclaim { font-family:var(--serif); font-size:15px; line-height:1.35; color:var(--ink); margin-bottom:10px; }
+  .acard .astance { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:7px; }
+  .astance .slbl { font-size:12px; font-weight:650; }
+  .s-strong .slbl, .s-yes .slbl { color:var(--good); }
+  .s-unsure .slbl { color:var(--warn); }
+  .s-no .slbl { color:var(--bad); }
+  .astance .sconf { font-family:ui-monospace, Menlo, monospace; font-size:15px; font-weight:600; color:var(--ink);
+    font-variant-numeric:tabular-nums; }
+  .acard .abar { height:6px; border-radius:999px; background:var(--wash2); overflow:hidden; margin-bottom:11px; }
+  .acard .abar span { display:block; height:100%; border-radius:inherit; }
+  .acard .aline { font-size:12.5px; line-height:1.5; color:var(--body); }
+  .acard .ameta { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:9px; font-size:11.5px; color:var(--muted); }
+  .acard .ameta b { color:var(--ink); font-weight:600; }
+  .acard .asrc { margin-top:9px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .acard .asrc .slab2 { font-size:10px; font-weight:650; letter-spacing:.6px; text-transform:uppercase; color:var(--faint); }
+  .acard .asrc .schip { font-size:11px; color:#3d4c63; background:var(--wash); border:1px solid var(--line);
+    border-radius:5px; padding:2px 8px; }
+  .acard .afoot { margin-top:11px; padding-top:9px; border-top:1px solid var(--hair); font-size:11px;
+    color:var(--faint); font-style:italic; }
+  .askempty { color:var(--muted); font-style:italic; font-size:13px; padding:8px 2px; }
+
+  .card { position:relative; border:1px solid var(--line); border-left:3px solid var(--line);
+    border-radius:var(--r-sm); margin-bottom:12px; background:var(--panel); overflow:hidden; box-shadow:var(--shadow-sm); }
   .card.fresh { animation:rise .4s ease; }
   @keyframes rise { from { transform:translateY(-6px); opacity:0 } to { transform:none; opacity:1 } }
-  .card .head { display:flex; align-items:center; gap:8px; padding:9px 12px; flex-wrap:wrap;
-    border-bottom:1px solid var(--line); background:var(--wash); }
-  .card .eid { font-weight:600; color:var(--ink); font-size:12.5px; }
-  .pill { font-size:10.5px; padding:2px 9px; border-radius:999px; border:1px solid var(--line);
-    color:var(--muted); background:#fff; white-space:nowrap; }
-  .pill.tier { background:var(--wash2); }
-  .pill.commit { background:var(--good-soft); border-color:#bfe0cd; color:var(--good); }
-  .pill.reject { background:var(--bad-soft); border-color:#e6c3c5; color:var(--bad); }
-  .pill.flag { background:var(--warn-soft); border-color:#e6d5a8; color:var(--warn); }
-  .pill.truth { background:var(--blue-soft); border-color:#c2d4ea; color:var(--blue); }
-  .card .body { padding:10px 12px; }
-  .raw { background:var(--wash); border:1px solid var(--line); border-radius:6px; padding:8px 10px;
-    color:#3a3f47; font-size:12px; line-height:1.5; max-height:104px; overflow:auto; }
-  .row { margin-top:10px; }
-  .k { color:var(--faint); font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+  .card.v-commit { border-left-color:var(--good); }
+  .card.v-flag   { border-left-color:var(--warn); }
+  .card.v-reject { border-left-color:var(--bad); }
+  .card.v-truth  { border-left-color:var(--blue); }
+
+  /* verdict header */
+  .card .top { display:flex; align-items:center; gap:9px; padding:12px 14px 0; }
+  .vbadge { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:650; letter-spacing:.1px; color:var(--muted); }
+  .vbadge::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; flex:0 0 auto; }
+  .v-commit .vbadge { color:var(--good); }
+  .v-flag   .vbadge { color:var(--warn); }
+  .v-reject .vbadge { color:var(--bad); }
+  .v-truth  .vbadge { color:var(--blue); }
+  .card .src { margin-left:auto; font-size:11.5px; color:var(--muted); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; max-width:52%; }
+  .truthtag { font-size:10.5px; padding:2px 8px; border-radius:999px; background:var(--blue-soft);
+    border:1px solid #c2d4ea; color:var(--blue); white-space:nowrap; }
+  .card .body { padding:6px 14px 14px; }
+  .card .eid { font-family:ui-monospace, Menlo, monospace; font-size:10.5px; color:var(--faint); margin:6px 0 0; }
+
+  .quote { font-family:var(--serif); font-size:13.5px; line-height:1.5; color:#2b2f36;
+    border-left:2px solid var(--line); padding:1px 0 1px 11px; margin:8px 0 11px;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .summary { font-size:13px; line-height:1.5; color:var(--body); }
+  .summary b { color:var(--ink); font-weight:650; }
+  .subk { color:var(--faint); font-size:10px; font-weight:650; text-transform:uppercase; letter-spacing:.6px;
+    margin:14px 0 8px; display:flex; align-items:center; gap:8px; }
+
+  /* confidence diff rows */
+  .deltas { display:flex; flex-direction:column; gap:11px; }
+  .drow { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:8px 10px; }
+  .drow .dname { font-size:12.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .drow.ripple .dname { color:var(--muted); }
+  .riptag { font-size:9.5px; color:var(--faint); background:var(--wash2); border-radius:4px; padding:1px 6px; margin-left:7px; }
+  .dnums { display:inline-flex; align-items:center; gap:7px; font-variant-numeric:tabular-nums;
+    font-family:ui-monospace, Menlo, monospace; font-size:11.5px; }
+  .dnums .from { color:var(--faint); }
+  .dnums .arrow { color:var(--faint); }
+  .dnums .to { color:var(--ink); font-weight:600; }
+  .dchip { font-size:10.5px; font-weight:650; padding:1px 7px; border-radius:999px; font-variant-numeric:tabular-nums; }
+  .dchip.up   { color:var(--good); background:var(--good-soft); }
+  .dchip.down { color:var(--bad);  background:var(--bad-soft); }
+  .dchip.flat { color:var(--muted); background:var(--wash2); }
+  .track2 { grid-column:1 / -1; position:relative; height:5px; border-radius:999px; background:var(--wash2); overflow:hidden; }
+  .track2 .seg { position:absolute; top:0; bottom:0; }
+  .track2 .seg.base { left:0; background:#cbd2dc; }
+  .track2 .seg.up   { background:var(--good); }
+  .track2 .seg.down { background:var(--bad); }
+
+  /* refusal reasons + red flags */
+  .reasons { margin-top:10px; display:flex; flex-direction:column; gap:5px; }
+  .reason { font-size:12.5px; line-height:1.45; color:#7a2c30; padding-left:14px; position:relative; }
+  .reason::before { content:"—"; position:absolute; left:0; color:var(--bad); }
+  .flagrow { margin-top:12px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .flagrow .flabel { font-size:10px; font-weight:650; letter-spacing:.6px; text-transform:uppercase; color:var(--faint); margin-right:2px; }
+  .flag-chip { display:inline-block; background:var(--warn-soft); border:1px solid #e6d5a8; color:var(--warn);
+    border-radius:5px; padding:2px 8px; font-size:11px; }
+
   .op { font-family:ui-monospace, Menlo, monospace; font-size:12px; padding:1px 0; }
   .op.accept { color:var(--good); } .op.reject { color:var(--bad); } .op.flag { color:var(--warn); }
-  .flags span { display:inline-block; background:var(--warn-soft); border:1px solid #e6d5a8; color:var(--warn);
-    border-radius:5px; padding:2px 8px; margin:0 5px 4px 0; font-size:11px; }
-  .delta { display:flex; justify-content:space-between; gap:8px; font-family:ui-monospace, Menlo, monospace;
-    font-size:12px; padding:2px 0; }
-  .delta .cid { color:#3a3f47; } .delta .up { color:var(--good); } .delta .down { color:var(--bad); }
-  .delta .rip { color:var(--faint); }
-  .card.cascade { border-color:#e6c3c5; }
-  .card.cascade .head { background:var(--bad-soft); }
+  .k { color:var(--faint); font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+
+  /* one disclosure for all the model + ledger mechanics */
+  details.detail { margin-top:13px; border-top:1px solid var(--hair); padding-top:10px; }
+  details.detail > summary { cursor:pointer; list-style:none; font-size:11.5px; color:var(--muted);
+    display:flex; align-items:center; gap:7px; }
+  details.detail > summary::-webkit-details-marker { display:none; }
+  details.detail > summary::before { content:"▸"; font-size:9px; color:var(--faint); transition:transform .12s; }
+  details.detail[open] > summary::before { transform:rotate(90deg); }
+  details.detail[open] > summary { margin-bottom:10px; }
+  details.detail:hover > summary { color:var(--ink); }
 
   /* ---- Freesolo model output: the filled "form" + quantization ---- */
-  .row.model .k { display:flex; align-items:center; gap:8px; }
   .mtag { font-size:9.5px; text-transform:none; letter-spacing:0; padding:1px 7px; border-radius:999px;
     border:1px solid var(--line); font-family:ui-monospace, Menlo, monospace; }
   .mtag.live { background:var(--good-soft); border-color:#bfe0cd; color:var(--good); }
@@ -255,18 +408,21 @@
   .fields { padding:2px 12px 8px; }
   .field { display:flex; gap:8px; font-family:ui-monospace, Menlo, monospace; font-size:11.5px; padding:1px 0; }
   .field .fk { color:var(--faint); min-width:104px; } .field .fv { color:#2b2f36; word-break:break-word; }
-  .quant { border-top:1px dashed var(--line); margin-top:4px; }
-  .quant .k { padding:8px 12px 0; }
-  ol.steps { list-style:none; counter-reset:s; margin:6px 0 4px; padding:0 12px; }
-  ol.steps li { counter-increment:s; position:relative; border-left:2px solid var(--line);
-    padding:3px 0 5px 12px; margin-left:6px; }
-  ol.steps li::before { content:counter(s); position:absolute; left:-9px; top:2px; width:15px; height:15px;
-    background:var(--wash2); border:1px solid var(--line); border-radius:50%; font-size:9px; color:var(--muted);
-    display:flex; align-items:center; justify-content:center; }
-  .slab { font-size:11px; font-weight:600; color:var(--ink); }
-  .sdet { font-family:ui-monospace, Menlo, monospace; font-size:11.5px; color:var(--blue); }
-  .snote { font-size:10.5px; color:var(--faint); line-height:1.45; }
-  .snet { font-family:ui-monospace, Menlo, monospace; font-size:11.5px; color:#2b2f36; padding:2px 12px 8px; }
+  .quant { border-top:1px dashed var(--line); margin-top:6px; padding-top:9px; }
+  .qhead { font-size:12.5px; line-height:1.5; color:var(--body); padding:0 12px; }
+  .qhead b { font-weight:650; color:var(--ink); }
+  .qhead b.up { color:var(--good); } .qhead b.down { color:var(--bad); } .qhead b.flat { color:var(--muted); }
+  .qcap { font-size:11px; color:var(--muted); line-height:1.45; padding:7px 12px 2px; }
+  ol.steps { list-style:none; counter-reset:s; margin:8px 0 6px; padding:0 12px 0 14px; }
+  ol.steps li { counter-increment:s; position:relative; border-left:2px solid var(--line-soft);
+    padding:0 0 12px 16px; margin-left:8px; }
+  ol.steps li:last-child { padding-bottom:2px; border-left-color:transparent; }
+  ol.steps li::before { content:counter(s); position:absolute; left:-11px; top:-1px; width:19px; height:19px;
+    background:var(--panel); border:1px solid var(--line); border-radius:50%; font-size:10px; font-weight:600;
+    color:var(--muted); display:flex; align-items:center; justify-content:center; }
+  .slab { font-size:12px; font-weight:650; color:var(--ink); }
+  .sdet { font-family:ui-monospace, Menlo, monospace; font-size:12px; color:var(--blue); margin:2px 0 3px; }
+  .snote { font-size:11px; color:var(--muted); line-height:1.5; }
   details.rawjson { margin-top:6px; }
   details.rawjson > summary { cursor:pointer; list-style:none; font-size:10.5px; text-transform:uppercase;
     letter-spacing:.5px; color:var(--faint); display:flex; align-items:center; gap:6px; padding:2px 0; }
@@ -325,25 +481,46 @@
       <div class="track"><div class="fill" id="prog-fill"></div></div>
       <span class="count" id="progress"><b>0</b> / 0 appraised</span>
     </div>
+    <span id="phase-chip" class="phase-chip p-foundation"><span class="actnum">ACT 1</span><span id="phase-label">Establish ground truth</span></span>
     <div class="spacer"></div>
+    <button id="build" class="primary" title="Replay the chosen ground-truth papers through the engine to build the initial belief graph">Establish ground truth &#9656;</button>
     <button id="step" class="primary">Ingest next &#9656;</button>
     <button id="play">Auto-play</button>
     <div class="sep"></div>
-    <div class="ctl-group">
-      <span class="ctl-lbl">Corpus</span>
-      <select id="source-sel" title="Which body of evidence to ingest">
-        <option value="papers">Papers database</option>
-        <option value="sim">Simulator stream</option>
-      </select>
+    <div class="menu-wrap">
+      <button id="tools-btn" class="ghost icon-btn" title="Corpus, retraction &amp; more" aria-haspopup="true" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Tools</span>
+      </button>
+      <div id="tools-menu" class="popover" role="menu">
+        <div class="pop-sec">
+          <div class="pop-lbl">Corpus</div>
+          <div class="seg2" id="corpus-seg">
+            <button data-src="papers" class="active">Papers</button>
+            <button data-src="sim">Simulator</button>
+          </div>
+        </div>
+        <div class="pop-sec">
+          <div class="pop-lbl">Retract a source</div>
+          <div class="pop-row">
+            <select id="discredit-src" title="Pick a source (journal / venue) to discredit"></select>
+            <button id="discredit" class="danger">Discredit</button>
+          </div>
+          <div class="pop-hint">Drains the belief this source contributed and cascades the retraction across the graph.</div>
+        </div>
+        <div class="pop-div"></div>
+        <div class="pop-sec">
+          <div class="switch-row">
+            <span class="lbl">Reveal ground truth</span>
+            <label class="switch"><input type="checkbox" id="reveal" /><span class="slider"></span></label>
+          </div>
+          <div class="pop-hint">Overlays each claim's hidden true state, for the audience.</div>
+        </div>
+        <div class="pop-sec">
+          <button id="reset" class="ghost blockbtn">Reset demo</button>
+        </div>
+      </div>
     </div>
-    <div class="ctl-group retract">
-      <span class="ctl-lbl">Retract</span>
-      <select id="discredit-src" title="Pick a source (journal / venue) to discredit — the engine drains the belief it contributed and cascades the retraction"></select>
-      <button id="discredit" class="danger" title="Discredit the selected source and cascade the retraction">Discredit</button>
-    </div>
-    <div class="sep"></div>
-    <label class="toggle"><input type="checkbox" id="reveal" /> Ground truth</label>
-    <button id="reset" class="ghost">Reset</button>
   </div>
 
   <main>
@@ -352,6 +529,19 @@
       <div class="lib-head">
         <h1 id="lib-title">Papers</h1>
         <p class="sub" id="lib-sub">Peer-reviewed abstracts awaiting appraisal. Click a card to read it; ingest them one at a time to build the belief graph.</p>
+        <div class="steps-bar" id="steps-bar">
+          <button class="stepbtn active" data-scope="foundation">
+            <span class="stepnum">1</span>
+            <span class="steptext"><span class="steptitle">Establish ground truth</span>
+              <span class="stepmeta" id="step1-meta">curated papers</span></span>
+          </button>
+          <span class="steparrow">&rarr;</span>
+          <button class="stepbtn" data-scope="ingest">
+            <span class="stepnum">2</span>
+            <span class="steptext"><span class="steptitle">Ingest new results</span>
+              <span class="stepmeta" id="step2-meta">the rest of the corpus</span></span>
+          </button>
+        </div>
         <div class="lib-tools">
           <div class="search">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -376,10 +566,10 @@
       <div id="stage">
         <div id="net"></div>
         <div id="stagehint"><div class="box">
-          <span class="big">The belief graph will appear here.</span>
-          Each ingested paper is quarantined, screened, and either revises a claim, is
-          flagged, or is refused — every move is recorded at right, and the graph grows as
-          results land.
+          <span class="big">Start from nothing.</span>
+          Hit <b>Establish ground truth</b> to replay the chosen papers through the engine and
+          build the initial belief graph. Then ingest the rest to corroborate it, and run the
+          stress-test pack to see it revise, hold firm, or refuse — every move recorded at right.
         </div></div>
         <div id="legend">
           <b>Node colour</b> — confidence (<span id="prior-note">prior</span>)
@@ -396,10 +586,26 @@
       </div>
       <aside id="inspector">
         <div class="insp-head">
-          <h2>Reasoning log</h2>
+          <div class="insp-tabs" id="insp-tabs">
+            <button data-tab="log" class="active">Live log</button>
+            <button data-tab="ask">Ask</button>
+          </div>
           <span class="count" id="log-count"></span>
         </div>
-        <div id="log"><div class="empty">Awaiting the first ingested paper…</div></div>
+        <div id="log" class="insp-panel"><div class="empty">Awaiting the first ingested paper…</div></div>
+        <div id="askpanel" class="insp-panel" hidden>
+          <div class="askbox">
+            <input id="askq" type="search" placeholder="Ask about a peptide…" autocomplete="off" />
+            <button id="askbtn" class="primary">Ask</button>
+          </div>
+          <div class="askhint">Answered straight from the belief ledger — confidence, evidence and provenance, never generated prose.</div>
+          <div class="askex" id="askex">
+            <button data-q="Does semaglutide bind GLP1R?">semaglutide → GLP1R?</button>
+            <button data-q="Is tirzepatide efficacious in obesity?">tirzepatide in obesity?</button>
+            <button data-q="Does retatrutide bind GCGR?">retatrutide → GCGR?</button>
+          </div>
+          <div id="askresults"></div>
+        </div>
       </aside>
     </section>
   </main>
@@ -521,6 +727,70 @@ let CURSOR = 0, TOTAL = 0;
 let FILTER = "all", QUERY = "";
 let IS_PAPERS = true;
 let firstIngestSeen = false;
+let PHASE = "foundation", N_FOUND = 0, N_CORPUS = 0, FOUNDATION_BUILT = false;
+let SCOPE = "foundation";        // which pool the Library shows: foundation | ingest
+let _autoScoped = false;         // only auto-jump to step 2 once, on first build
+
+const PHASE_META = {
+  foundation:    { act: "STEP 1", label: "Establish ground truth" },
+  corroboration: { act: "STEP 2", label: "Ingest new results" },
+  robustness:    { act: "STEP 2", label: "Stress-test robustness" },
+};
+const PHASE_TAG = { foundation: "Ground truth", robustness: "Stress test" };
+
+// The two Library pools are disjoint: step 1 is ONLY the curated ground-truth
+// papers; step 2 is everything we ingest afterwards (corroboration + stress test).
+function docPool(d){ return d.phase === "foundation" ? "foundation" : "ingest"; }
+
+function updatePhase(g){
+  const wasBuilt = FOUNDATION_BUILT;
+  if (g){
+    if (g.phase) PHASE = g.phase;
+    if (g.n_foundation != null) N_FOUND = g.n_foundation;
+    if (g.n_corpus != null) N_CORPUS = g.n_corpus;
+    if (g.foundation_built != null) FOUNDATION_BUILT = g.foundation_built;
+  }
+  const meta = PHASE_META[PHASE] || PHASE_META.corroboration;
+  const chip = $("phase-chip");
+  chip.className = `phase-chip p-${PHASE}`;
+  chip.querySelector(".actnum").textContent = meta.act;
+  $("phase-label").textContent = meta.label;
+  // In the guided papers arc, step 1 is a single "Establish ground truth" action;
+  // the per-paper Ingest/Auto-play controls take over once the foundation exists.
+  const buildPhase = IS_PAPERS && N_FOUND > 0 && !FOUNDATION_BUILT;
+  $("build").style.display = buildPhase ? "" : "none";
+  $("step").style.display = buildPhase ? "none" : "";
+  $("play").style.display = buildPhase ? "none" : "";
+  // On the first successful build, move the Library to step 2 automatically.
+  if (FOUNDATION_BUILT && !wasBuilt && !_autoScoped){ _autoScoped = true; SCOPE = "ingest"; }
+  updateSteps();
+}
+
+function ingestCounts(){
+  const base = IS_PAPERS ? N_FOUND : 0;        // step 1 papers are not "ingested"
+  return { done: Math.max(0, CURSOR - base), total: Math.max(0, TOTAL - base) };
+}
+
+function updateSteps(){
+  const bar = $("steps-bar");
+  bar.style.display = (IS_PAPERS && N_FOUND > 0) ? "flex" : "none";
+  if (bar.style.display === "none") return;
+  const ing = ingestCounts();
+  $("step1-meta").textContent = FOUNDATION_BUILT ? "established from the engine" : `${N_FOUND} curated papers`;
+  $("step2-meta").textContent = FOUNDATION_BUILT ? `${ing.done} / ${ing.total} ingested` : `${ing.total} papers · after step 1`;
+  bar.querySelectorAll(".stepbtn").forEach((b) => {
+    const sc = b.dataset.scope;
+    b.classList.toggle("active", sc === SCOPE);
+    b.classList.toggle("done", sc === "foundation" && FOUNDATION_BUILT);
+  });
+}
+function docsInScope(){
+  if (!(IS_PAPERS && N_FOUND > 0)) return DOCS;   // sim / no-foundation: one flat pool
+  return DOCS.filter((d) => docPool(d) === SCOPE);
+}
+$("steps-bar").querySelectorAll(".stepbtn").forEach((b) => b.onclick = () => {
+  SCOPE = b.dataset.scope; updateSteps(); renderGrid();
+});
 
 function htmlLabel(n){
   let t = `<div style="font:12px Georgia,serif;max-width:250px;padding:3px 5px;line-height:1.45">`
@@ -551,18 +821,26 @@ function applyGraph(g){
   PRIOR = g.prior ?? PRIOR;
   $("prior-note").textContent = `prior c=${PRIOR.toFixed(2)}`;
   GraphStore.apply(g.nodes, g.edges);
-  if (g.documents) { DOCS = g.documents; renderGrid(); }
+  if (g.documents) DOCS = g.documents;
+  // order matters: resolve data-source (syncToggles), then phase/scope (updatePhase),
+  // then cursor (updateProgress) BEFORE rendering the grid so it paints scope-aware.
   syncToggles(g);
+  updatePhase(g);
   updateProgress(g.cursor, g.total);
+  if (g.documents) renderGrid();
   $("stagehint").style.display = g.nodes.length ? "none" : "flex";
 }
 
 function updateProgress(cursor, total){
   if (cursor != null) { CURSOR = cursor; TOTAL = total; }
-  const done = Object.keys(VERDICTS).length || CURSOR;
-  $("progress").innerHTML = `<b>${CURSOR}</b> / ${TOTAL} appraised`;
-  $("prog-fill").style.width = TOTAL ? `${(CURSOR / TOTAL) * 100}%` : "0%";
+  // The counter tracks the INGESTION corpus only — the ground-truth papers are a
+  // separate step, so step 2 starts cleanly at 0 rather than "63 / 154".
+  const ing = ingestCounts();
+  const label = IS_PAPERS ? "ingested" : "appraised";
+  $("progress").innerHTML = `<b>${ing.done}</b> / ${ing.total} ${label}`;
+  $("prog-fill").style.width = ing.total ? `${(ing.done / ing.total) * 100}%` : "0%";
   $("step").disabled = CURSOR >= TOTAL;
+  updateSteps();
 }
 
 // ---------- library grid ----------
@@ -583,8 +861,9 @@ function matchesQuery(d){
 }
 
 function updateChipCounts(){
-  const counts = { all: DOCS.length, pending:0, done:0, flagged:0, refused:0 };
-  DOCS.forEach((d) => { const b = bucket(docStatus(d.idx)); if (counts[b] != null) counts[b]++; });
+  const scoped = docsInScope();
+  const counts = { all: scoped.length, pending:0, done:0, flagged:0, refused:0 };
+  scoped.forEach((d) => { const b = bucket(docStatus(d.idx)); if (counts[b] != null) counts[b]++; });
   document.querySelectorAll(".chip .n").forEach((el) => { el.textContent = counts[el.dataset.c] ?? ""; });
 }
 
@@ -592,12 +871,12 @@ function updateChipCounts(){
 function renderGrid(){
   $("lib-title").textContent = IS_PAPERS ? "Papers" : "Incoming results";
   $("lib-sub").textContent = IS_PAPERS
-    ? "Peer-reviewed abstracts awaiting appraisal. Click a card to read it; ingest them one at a time to build the belief graph."
+    ? "Two separate steps. Step 1 establishes the graph from a curated ground-truth set; step 2 ingests everything else — corroborating papers and a small adversarial pack (red) that stress-tests it."
     : "Simulated experimental results streaming in one at a time. Ingest them to drive the belief engine.";
   updateChipCounts();
 
   const grid = $("paper-grid");
-  const shown = DOCS.filter((d) => (FILTER === "all" || bucket(docStatus(d.idx)) === FILTER) && matchesQuery(d));
+  const shown = docsInScope().filter((d) => (FILTER === "all" || bucket(docStatus(d.idx)) === FILTER) && matchesQuery(d));
   if (!shown.length){
     grid.innerHTML = `<div class="no-results" style="grid-column:1/-1">No papers match “${esc(QUERY)}”${FILTER!=="all"?` in ${FILTER}`:""}.</div>`;
     return;
@@ -629,11 +908,13 @@ function updateGridForEvent(idx){
 
 function paperCard(d){
   const st = docStatus(d.idx);
+  const ph = d.phase && d.phase !== "corroboration" ? d.phase : "";
   const card = document.createElement("div");
-  card.className = `pcard ${st === "next" ? "next" : st === "pending" ? "" : "done"}`;
+  card.className = `pcard ${st === "next" ? "next" : st === "pending" ? "" : "done"}${ph ? ` is-${ph}` : ""}`;
   card.dataset.idx = d.idx;
   card.innerHTML =
-    `<span class="st ${st}">${STATUS_LABEL[st]}</span>`
+    (ph ? `<span class="phase-tag ${ph}">${PHASE_TAG[ph] || ""}</span>` : "")
+    + `<span class="st ${st}">${STATUS_LABEL[st]}</span>`
     + `<div class="ptitle">${esc(d.title)}</div>`
     + (d.authors ? `<div class="pauth">${esc(d.authors)}</div>` : "")
     + `<div class="pmeta"><span class="j">${esc(d.journal)}</span>${d.year ? ` · ${esc(d.year)}` : ""}</div>`
@@ -679,7 +960,7 @@ function syncToggles(g){
   if (g.data_source === undefined) return;
   SUPPRESS = true;
   IS_PAPERS = g.data_source === "papers";
-  $("source-sel").value = g.data_source;
+  $("corpus-seg").querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.src === g.data_source));
   $("step").textContent = IS_PAPERS ? "Ingest next paper ▸" : "Ingest next ▸";
   if (!WARMING) {
     const badge = $("model-badge");
@@ -699,16 +980,35 @@ function populateSources(sources){
 }
 
 // ---------- reasoning log ----------
-function deltaRows(deltas){
+// Friendly claim label (mirrors _node_label server-side): c_bind_P5_CXCR4 -> "P5 CXCR4".
+function claimLabel(id){
+  let l = id || "";
+  if (l.startsWith("c_bind_")) l = l.slice(7);
+  else if (l.startsWith("c_efficacy_")) l = "~" + l.slice(11);
+  else if (l.startsWith("c_")) l = "~" + l.slice(2);
+  return l.replace(/_/g, " ");
+}
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+// each claim that moved is one clean diff row: name · before→after · Δ chip · diff-bar
+function deltaRows(deltas, heading){
   if(!deltas.length) return "";
   const rows = deltas.map((d)=>{
-    const dir = d.d_c>0?"up":(d.d_c<0?"down":"rip");
-    const arrow = d.d_c>0?"▲":(d.d_c<0?"▼":"•");
-    const rip = d.op?"":' <span class="rip">(ripple)</span>';
-    return `<div class="delta"><span class="cid">${esc(d.claim_id)}${rip}</span>`
-      +`<span class="${dir}">${arrow} ${d.c_before.toFixed(2)}→${d.c_after.toFixed(2)} (${d.d_c>=0?"+":""}${d.d_c.toFixed(2)})</span></div>`;
+    const cls = d.d_c>0 ? "up" : (d.d_c<0 ? "down" : "flat");
+    const sign = d.d_c>=0 ? "+" : "";
+    const b = clamp01(d.c_before)*100, a = clamp01(d.c_after)*100;
+    const lo = Math.min(b,a), seg = Math.abs(a-b);
+    const isRip = !d.op;
+    return `<div class="drow${isRip?" ripple":""}">`
+      + `<span class="dname">${esc(claimLabel(d.claim_id))}${isRip?'<span class="riptag">ripple</span>':""}</span>`
+      + `<span class="dnums"><span class="from">${d.c_before.toFixed(2)}</span>`
+      + `<span class="arrow">→</span><span class="to">${d.c_after.toFixed(2)}</span>`
+      + `<span class="dchip ${cls}">${sign}${d.d_c.toFixed(2)}</span></span>`
+      + `<span class="track2"><span class="seg base" style="width:${b}%"></span>`
+      + (seg>0.5 ? `<span class="seg ${cls}" style="left:${lo}%;width:${seg}%"></span>` : "")
+      + `</span></div>`;
   }).join("");
-  return `<div class="row"><div class="k">Δ confidence</div>${rows}</div>`;
+  return `<div class="deltas">${heading===false?"":`<div class="subk">${heading||"Confidence updates"}</div>`}${rows}</div>`;
 }
 function verdictOf(m){
   if (m.rejected.length && !m.accepted.length) return "reject";
@@ -732,13 +1032,18 @@ function opSummary(op){
   return "";
 }
 function quantSteps(step){
+  const dc = step.d_c, cls = dc>0?"up":dc<0?"down":"flat";
+  const pct = (x)=>`${Math.round(clamp01(x)*100)}%`;
+  const head = `The model proposed <b>${esc(step.strength)}</b> ${step.direction==="+"?"support":"doubt"}; `
+    + `the ledger let confidence move <b class="${cls}">${dc>=0?"+":""}${(dc*100).toFixed(1)} pts</b> `
+    + `(${pct(step.c_before)} → ${pct(step.c_after)}).`;
   const items = step.steps.map(s=>
     `<li><div class="slab">${esc(s.label)}</div>`
     +`<div class="sdet">${esc(s.detail)}</div>`
     +`<div class="snote">${esc(s.note)}</div></li>`).join("");
-  const net = `net Δc ${step.d_c>=0?"+":""}${step.d_c.toFixed(3)}  ·  c ${step.c_before.toFixed(3)} → ${step.c_after.toFixed(3)}`;
-  return `<div class="quant"><div class="k">Quantization — strength label → capped, damped Δconfidence</div>`
-    + `<ol class="steps">${items}</ol><div class="snet">${net}</div></div>`;
+  return `<div class="quant"><div class="qhead">${head}</div>`
+    + `<div class="qcap">How the engine got there — the model only proposes a label; each check below can shrink it, none can inflate it:</div>`
+    + `<ol class="steps">${items}</ol></div>`;
 }
 function opForm(op, step){
   const cls = OP_CLASS[op.op] || "";
@@ -768,35 +1073,78 @@ function modelSection(m){
   const raw = r.raw_json
     ? `<details class="rawjson"><summary>Raw JSON (ProposedOps)</summary><pre class="rawblock">${esc(r.raw_json)}</pre></details>`
     : "";
-  return `<div class="row model"><div class="k">Freesolo output — the form it filled ${tag}</div>${think}${body}${raw}</div>`;
+  return `<div class="subk">Freesolo proposed ${tag}</div>${think}${body}${raw}`;
 }
+
+// A plain-language sentence: what the ledger actually did with this event.
+function summaryOf(m){
+  const v = verdictOf(m);
+  if (v==="reject") return `Belief <b>held firm</b> — the proposal did not survive the gate.`;
+  if (v==="flag")   return `<b>Flagged out-of-distribution</b> — recorded, but held out of belief.`;
+  const moves = m.deltas || [];
+  if (!moves.length) return `Accepted — no confidence change.`;
+  const prim = [...moves].filter(d=>d.op).sort((a,b)=>Math.abs(b.d_c)-Math.abs(a.d_c))[0] || moves[0];
+  const dir = prim.d_c>=0 ? "Reinforced" : "Weakened";
+  const ripples = moves.length - 1;
+  const rip = ripples>0 ? ` and rippled to ${ripples} downstream claim${ripples>1?"s":""}` : "";
+  return `${dir} <b>${esc(claimLabel(prim.claim_id))}</b>${rip}.`;
+}
+
+// All the mechanics — model form, per-op math, accepted ops, raw JSON — behind one disclosure.
+function detailBlock(m){
+  const r = m.reasoning || {};
+  const acc = m.accepted.length
+    ? `<div class="subk">Ledger — accepted ops</div>${m.accepted.map(a=>`<div class="op ${a.op==="FLAG_OOD"?"flag":"accept"}">${esc(a.detail)}</div>`).join("")}`
+    : "";
+  const inner = modelSection(m) + acc;
+  if (!inner) return "";
+  return `<details class="detail"><summary>Model reasoning &amp; ledger math</summary>${inner}</details>`;
+}
+
 function eventCard(m){
   const v = verdictOf(m);
-  const card = document.createElement("div"); card.className = "card fresh";
-  const vpill = v==="reject" ? '<span class="pill reject">Refused</span>'
-    : v==="flag" ? '<span class="pill flag">Flagged OOD</span>'
-    : '<span class="pill commit">Committed</span>';
-  const truth = m.truth ? `<span class="pill truth reveal-only" style="display:none">truth: ${esc(m.truth)}</span>` : "";
-  const acc = m.accepted.map(a=>`<div class="op ${a.op==="FLAG_OOD"?"flag":"accept"}">${esc(a.detail)}</div>`).join("");
-  const rej = m.rejected.map(a=>`<div class="op reject">${esc(a.detail)}</div>`).join("");
+  const vcls = v==="reject" ? "v-reject" : v==="flag" ? "v-flag" : "v-commit";
+  const vlabel = v==="reject" ? "Refused" : v==="flag" ? "Flagged OOD" : "Committed";
+  const card = document.createElement("div"); card.className = `card ${vcls} fresh`;
+  const truth = m.truth ? `<span class="truthtag reveal-only" style="display:none">truth: ${esc(m.truth)}</span>` : "";
+  const src = `${esc(m.source_id||"")}${m.source_tier?` · tier ${esc(m.source_tier)}`:""}`;
+  const reasons = (v==="reject" && m.rejected.length)
+    ? `<div class="reasons">${m.rejected.map(a=>`<div class="reason">${esc(a.detail)}</div>`).join("")}</div>` : "";
   const flags = m.red_flags.length
-    ? `<div class="row"><div class="k">Screen — red flags</div><div class="flags">${m.red_flags.map(f=>`<span>${esc(f)}</span>`).join("")}</div></div>` : "";
+    ? `<div class="flagrow"><span class="flabel">Screen</span>${m.red_flags.map(f=>`<span class="flag-chip">${esc(f)}</span>`).join("")}</div>` : "";
+  const deltas = m.deltas.length ? deltaRows(m.deltas) : "";
   card.innerHTML =
-    `<div class="head"><span class="eid">${esc(m.event_id)}</span>`
-    + `<span class="pill tier">${esc(m.source_tier)}</span>${vpill}${truth}</div>`
-    + `<div class="body"><div class="raw">${esc(m.raw_text)}</div>`
-    + modelSection(m)
-    + (acc?`<div class="row"><div class="k">Ledger — accepted ops</div>${acc}</div>`:"")
-    + (rej?`<div class="row"><div class="k">Rejected</div>${rej}</div>`:"")
-    + flags + deltaRows(m.deltas) + `</div>`;
+    `<div class="top"><span class="vbadge">${vlabel}</span>${truth}<span class="src">${src}</span></div>`
+    + `<div class="body">`
+    + `<div class="eid">${esc(m.event_id)}</div>`
+    + `<div class="quote">${esc(m.raw_text)}</div>`
+    + `<div class="summary">${summaryOf(m)}</div>`
+    + reasons + deltas + flags + detailBlock(m)
+    + `</div>`;
+  return card;
+}
+function foundationCard(m){
+  const card=document.createElement("div"); card.className="card v-truth fresh";
+  const rows = (m.top||[]).map(t=>{
+    const pct = clamp01(t.c)*100;
+    return `<div class="drow"><span class="dname">${esc(t.text)}</span>`
+      + `<span class="dnums"><span class="to">c=${t.c.toFixed(2)}</span>`
+      + `<span class="dchip flat">r${t.r} · s${t.s}</span></span>`
+      + `<span class="track2"><span class="seg base" style="width:${pct}%;background:${confColor(t.c)}"></span></span></div>`;
+  }).join("");
+  card.innerHTML = `<div class="top"><span class="vbadge">Ground truth established</span>`
+    + `<span class="src">${m.n_foundation} papers → ${m.n_established} claims</span></div>`
+    + `<div class="body"><div class="summary">Confidence <b>earned</b> by replaying the curated papers through the engine — never set directly.</div>`
+    + `<div class="deltas">${rows}</div></div>`;
   return card;
 }
 function cascadeCard(m){
-  const card=document.createElement("div"); card.className="card cascade fresh";
-  card.innerHTML = `<div class="head"><span class="eid">Retraction</span>`
-    + `<span class="pill reject">${esc(m.source_id)}</span></div>`
-    + `<div class="body"><div class="k">Un-belief drained from ${m.deltas.length} claim(s)</div>`
-    + deltaRows(m.deltas) + `</div>`;
+  const card=document.createElement("div"); card.className="card v-reject fresh";
+  const n = m.deltas.length;
+  card.innerHTML = `<div class="top"><span class="vbadge">Retraction</span>`
+    + `<span class="src">${esc(m.source_id)}</span></div>`
+    + `<div class="body"><div class="summary">Discredited <b>${esc(m.source_id)}</b> — un-belief drained from ${n} claim${n===1?"":"s"}.</div>`
+    + deltaRows(m.deltas, "Confidence drained") + `</div>`;
   return card;
 }
 function pushCard(card){
@@ -822,6 +1170,12 @@ function connect(){
       updateGridForEvent(m.t);       // then touch only the two changed cards
       pushCard(eventCard(m));
       // reveal the payoff the first time the user ingests
+      if (!firstIngestSeen){ firstIngestSeen = true; setView("graph"); }
+      return;
+    }
+    if (m.type==="foundation"){
+      applyGraph(m.graph);
+      pushCard(foundationCard(m));
       if (!firstIngestSeen){ firstIngestSeen = true; setView("graph"); }
       return;
     }
@@ -879,14 +1233,91 @@ function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; $(
 function startPlay(){ $("play").textContent="Pause"; $("play").classList.add("on");
   playTimer=setInterval(async ()=>{ const r=await post("/event"); if(r.status==="done") stopPlay(); }, 950); }
 function resetLog(msg){ stopPlay(); $("log").innerHTML=`<div class="empty">${msg}</div>`; LOGN=0; $("log-count").textContent="";
-  VERDICTS={}; firstIngestSeen=false; }
+  VERDICTS={}; firstIngestSeen=false; SCOPE="foundation"; _autoScoped=false; }
 
+$("build").onclick = async () => {
+  const b = $("build"); b.disabled = true; b.textContent = "Establishing…";
+  toast("Replaying the ground-truth papers through the engine…", "", true);
+  try {
+    const r = await post("/build-foundation");
+    if (r.status === "ok") toast(`Ground truth established — ${r.n_established} claims earned from ${r.n_foundation} papers.`, "ok");
+    else toast(r.reason || "Nothing to build.", "");
+  } finally { b.disabled = false; b.innerHTML = "Establish ground truth &#9656;"; }
+};
 $("step").onclick = () => post("/event");
 $("play").onclick = () => (playTimer?stopPlay():startPlay());
-$("discredit").onclick = () => { const s=$("discredit-src").value; if(s) post("/discredit",{source_id:s}); };
-$("reset").onclick = async () => { resetLog("Reset. Ingest a paper to begin again."); await post("/reset"); };
+$("discredit").onclick = () => { const s=$("discredit-src").value; if(s){ post("/discredit",{source_id:s}); closeTools(); setView("graph"); } };
+$("reset").onclick = async () => { closeTools(); resetLog("Reset. Ingest a paper to begin again."); await post("/reset"); };
 $("reveal").onclick = (e) => { REVEAL = e.target.checked; applyReveal(); };
-$("source-sel").onchange = async (e) => { if(SUPPRESS) return; resetLog("Loading source…"); setView("library"); await post("/source",{mode:e.target.value}); };
+
+// ---------- Tools popover (corpus / retract / reveal / reset) ----------
+const _tbtn = $("tools-btn"), _tmenu = $("tools-menu");
+function closeTools(){ _tmenu.classList.remove("open"); _tbtn.setAttribute("aria-expanded","false"); }
+_tbtn.onclick = (e) => { e.stopPropagation();
+  const open = _tmenu.classList.toggle("open"); _tbtn.setAttribute("aria-expanded", open?"true":"false"); };
+document.addEventListener("click", (e) => { if(!_tmenu.contains(e.target) && !_tbtn.contains(e.target)) closeTools(); });
+document.addEventListener("keydown", (e) => { if(e.key==="Escape") closeTools(); });
+
+$("corpus-seg").querySelectorAll("button").forEach((b) => b.onclick = async () => {
+  if(SUPPRESS) return;
+  const mode = b.dataset.src;
+  if (mode === (IS_PAPERS?"papers":"sim")) { closeTools(); return; }
+  closeTools(); resetLog("Loading source…"); setView("library");
+  await post("/source",{mode});
+});
+
+// ---------- Ask the belief graph ----------
+$("insp-tabs").querySelectorAll("button").forEach((b) => b.onclick = () => {
+  const tab = b.dataset.tab;
+  $("insp-tabs").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
+  $("log").hidden = tab !== "log";
+  $("askpanel").hidden = tab !== "ask";
+  $("log-count").style.display = tab === "log" ? "" : "none";
+  if (tab === "ask") $("askq").focus();
+});
+const STANCE_CLS = { "Strongly supported":"s-strong", "Supported":"s-yes", "Uncertain":"s-unsure", "Doubtful":"s-no", "Refuted":"s-no" };
+// journal ids arrive as "venue_the_lancet__diabetes___endocrinology" — make them readable
+function prettySource(s){
+  let t = String(s).replace(/^venue_/, "").replace(/_+/g, " ").trim();
+  t = t.replace(/\b\w/g, (m) => m.toUpperCase());
+  return t.length > 40 ? t.slice(0, 38) + "…" : t;
+}
+function askCard(a){
+  const pct = Math.round(clamp01(a.confidence)*100);
+  const cls = STANCE_CLS[a.stance] || "s-unsure";
+  const line = a.moves
+    ? `Confidence moved from <b>${Math.round(clamp01(a.c_start)*100)}%</b> to <b>${pct}%</b> across ${a.moves} update${a.moves===1?"":"s"} through the engine.`
+    : `No evidence has moved this claim yet — it sits at the skeptical prior.`;
+  const status = a.status && a.status !== "active" ? `<span>status <b>${esc(a.status)}</b></span>` : "";
+  const srcs = (a.sources && a.sources.length)
+    ? `<div class="asrc"><span class="slab2">Evidence from</span>${a.sources.map(s=>`<span class="schip">${esc(prettySource(s))}</span>`).join("")}</div>` : "";
+  return `<div class="acard ${cls}">`
+    + `<div class="aclaim">${esc(a.text)}</div>`
+    + `<div class="astance"><span class="slbl">${esc(a.stance)}</span><span class="sconf">${pct}%</span></div>`
+    + `<div class="abar"><span style="width:${pct}%;background:${confColor(a.confidence)}"></span></div>`
+    + `<div class="aline">${line}</div>`
+    + `<div class="ameta"><span><b>${a.r}</b> supporting · <b>${a.s}</b> contradicting</span>`
+    + `<span>uncertainty <b>${a.uncertainty.toFixed(2)}</b></span>${status}</div>`
+    + srcs
+    + `<div class="afoot">Answered from the belief ledger — not written by the model.</div></div>`;
+}
+async function runAsk(q){
+  const box = $("askresults");
+  box.innerHTML = `<div class="askempty">Searching the belief graph…</div>`;
+  try {
+    const r = await post("/ask", { question: q });
+    if (!r.answers || !r.answers.length){
+      box.innerHTML = `<div class="askempty">No claim in the graph matches that yet. Try a peptide and its target, e.g. “semaglutide GLP1R”.</div>`;
+      return;
+    }
+    box.innerHTML = r.answers.map(askCard).join("");
+  } catch(e){
+    box.innerHTML = `<div class="askempty">Couldn't reach the belief graph. Is the server running?</div>`;
+  }
+}
+$("askbtn").onclick = () => { const q = $("askq").value.trim(); if (q) runAsk(q); };
+$("askq").addEventListener("keydown", (e) => { if (e.key === "Enter"){ const q = e.target.value.trim(); if (q) runAsk(q); } });
+$("askex").querySelectorAll("button").forEach((b) => b.onclick = () => { $("askq").value = b.dataset.q; runAsk(b.dataset.q); });
 
 connect();
 </script>
