@@ -135,7 +135,7 @@ class DemoState:
             try:
                 self.extractor_kind = "freesolo"
                 return FreesoloExtractor(
-                    run_id, api_key=api_key, api_url=_env("FLASH_API_URL"), timeout=60
+                    run_id, api_key=api_key, api_url=_env("FLASH_API_URL"), timeout=30
                 )
             except Exception:
                 pass
@@ -156,6 +156,13 @@ class DemoState:
             self.kb = seed_kb(World(_DEMO_SEED), self.events)
             _seed_demo_edges(self.kb)
         self.extractor = self._build_extractor()
+        # Always keep a deterministic, network-free proposer on hand. If the live
+        # model call times out or errors mid-run, we degrade to this for that one
+        # event so the demo keeps flowing — belief still moves ONLY through the
+        # engine, just from a deterministic proposal instead of the model's.
+        self.fallback = (
+            PaperFakeExtractor() if self.data_source == "papers" else FakeExtractor()
+        )
         self.cursor = 0
         self.history: list[dict] = []  # recent event/cascade messages, replayed on connect
         # Story arc: the graph starts EMPTY and builds up. A claim node is
@@ -404,6 +411,21 @@ async def stream(request: Request) -> EventSourceResponse:
     return EventSourceResponse(gen())
 
 
+def _process_resilient(event: RawEvent) -> tuple[EventResult, bool]:
+    """Run one event through the real lifecycle, degrading to the offline proposer
+    if the live model call fails (timeout / network / bad gateway). Returns the
+    EventResult and whether the fallback was used. The engine still disposes; only
+    the *proposal* source changes, so this never sets belief directly."""
+    ctx = pipeline.prepare_event(STATE.kb, event)
+    used_fallback = False
+    try:
+        proposed = STATE.extractor.extract(ctx)
+    except Exception:  # timeout, URLError, gateway error — keep the demo alive
+        used_fallback = True
+        proposed = STATE.fallback.extract(ctx)
+    return pipeline.commit_proposal(STATE.kb, ctx, proposed), used_fallback
+
+
 @app.post("/event")
 async def next_event() -> dict:
     async with STATE.lock:
@@ -412,14 +434,21 @@ async def next_event() -> dict:
         event = STATE.events[STATE.cursor]
         # the live model call is blocking network I/O — run it off the event loop
         # so SSE pings and other requests stay responsive while the model thinks
-        result = await asyncio.to_thread(
-            pipeline.process_event, STATE.kb, event, STATE.extractor
-        )
+        result, used_fallback = await asyncio.to_thread(_process_resilient, event)
+        if used_fallback:
+            # the live checkpoint didn't answer in time — reflect that honestly in
+            # the badge so the demo shows it's now running on the offline proposer
+            STATE.extractor_kind = "offline"
         STATE.cursor += 1
         STATE.reveal(result.dirty_claims)  # committed claims join the graph
         message = _event_message(event, result)
         await STATE.broadcast(message, remember=True)
-        return {"status": "ok", "cursor": STATE.cursor, "event_id": event.id}
+        return {
+            "status": "ok",
+            "cursor": STATE.cursor,
+            "event_id": event.id,
+            "fallback": used_fallback,
+        }
 
 
 @app.post("/discredit")
