@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# uv
+.uv/
+uv.lock
+
+# Env / secrets — NEVER commit Freesolo or OpenAI keys
+.env
+.env.local
+*.key
+
+# Test / tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Cortesol runtime artifacts
+snapshots/          # KB JSON snapshots written after each event
+runs/               # eval outputs, wandb-ish local logs
+data/sft/*.jsonl    # generated SFT datasets (regenerable from the sim)
+data/episodes/      # generated GRPO episode seeds
+*.gif               # demo recordings live in docs/media/ only when intentional
+!docs/media/*.gif
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,12 @@
+# Freesolo Flash — OPD config (area B, optional / cut line #2). TODO.
+# Reference: Fine-Tuning Plan §Stage 3. Warm-start from the GRPO adapter.
+# Purpose: smooth schema adherence + honestly claim "SFT + RL + distillation".
+
+[model]
+base = "Qwen/Qwen3.5-4B"
+
+[train]
+algorithm = "opd"
+init_from_adapter = ""        # the GRPO checkpoint
+teacher = "glm-5.2"           # managed teacher, token-level grading
+# max_completion_tokens = 384
