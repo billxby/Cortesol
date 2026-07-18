@@ -24,7 +24,7 @@ STATE_PATH = RUN_ROOT / "state.json"
 DATA_DIR = RUN_ROOT / "data"
 BUNDLE_DIR = RUN_ROOT / "environment"
 RESOLVED_CONFIG_DIR = RUN_ROOT / "configs"
-STAGES = ("smoke_sft", "production_sft", "primary_grpo", "opd", "grpo_opd", "final")
+STAGES = ("smoke_sft", "production_sft", "primary_grpo", "opd", "final")
 TERMINAL_STATES = {"done", "failed", "cancelled", "error", "dry_run"}
 
 
@@ -122,7 +122,10 @@ def _cost_estimates(paths: dict[str, Path]) -> tuple[dict[str, dict[str, Any]], 
             "gpu": estimate.gpu,
             "wall_clock_hours": estimate.wall_clock_hours,
         }
-        total += estimate.total_usd
+        # GRPO-from-OPD remains a checked optional config, but the anytime
+        # default is the shorter SFT -> GRPO -> OPD ladder.
+        if name != "grpo_opd":
+            total += estimate.total_usd
     return estimates, round(total, 4)
 
 
@@ -141,12 +144,10 @@ def _evaluation_reserve(manifest: dict[str, Any]) -> float:
     contract_tokens = (len((ROOT / "cortesol/train/TRAINING_CONTRACT.md").read_text()) + 3) // 4
     completion_tokens = 256
 
-    # 4B inventory: every development checkpoint (3 SFT + 4 primary GRPO
-    # + 3 OPD + 4 OPD-child), four security evaluations, and both sealed-final
-    # candidates. Security episodes are charged as 24 turns even though one is
-    # only five turns.
-    development_evaluations = 128 * (3 + 4 + 3 + 4)
-    security_evaluations = 5 * 4
+    # 4B anytime ladder: every development checkpoint (3 SFT + 4 GRPO + 3 OPD),
+    # one security evaluation per promoted stage, and both sealed-final candidates.
+    development_evaluations = 128 * (3 + 4 + 3)
+    security_evaluations = 5 * 3
     final_evaluations = 256 * 2
     episodes = {
         "Qwen/Qwen3.5-4B": (
@@ -349,7 +350,6 @@ def _submit(name: str, path: Path, state: dict[str, Any]) -> str:
         "production_sft": "sft",
         "primary_grpo": "grpo",
         "opd": "opd",
-        "grpo_opd": "grpo_opd",
     }
     for stage_name, estimate_name in stage_to_cost.items():
         if stage_name == name or state["stages"].get(stage_name, {}).get("state") == "done":
@@ -391,6 +391,11 @@ def _stage_run(name: str, config_name: str, paths: dict[str, Path], state: dict[
     run_id = existing.get("run_id")
     if existing.get("state") == "done" and run_id:
         return str(run_id)
+    if run_id and existing.get("state") in TERMINAL_STATES:
+        state.setdefault("stage_attempts", {}).setdefault(name, []).append(dict(existing))
+        state["stages"].pop(name, None)
+        run_id = None
+        _save_state(state)
     if not run_id:
         run_id = _submit(name, paths[config_name], state)
     _monitor(name, str(run_id), state)
@@ -423,6 +428,18 @@ def _deploy_wait(ref: str) -> dict[str, Any]:
     return deployment
 
 
+def _adapter_revision(deployment: dict[str, Any]) -> str:
+    direct = deployment.get("adapter_revision")
+    if isinstance(direct, str) and direct:
+        return direct
+    nested = deployment.get("deployment")
+    if isinstance(nested, dict):
+        revision = nested.get("adapter_revision")
+        if isinstance(revision, str) and revision:
+            return revision
+    raise RuntimeError("ready deployment did not return an immutable adapter_revision")
+
+
 def _deploy_evaluate(
     ref: str,
     rows: Sequence[dict[str, Any]],
@@ -430,12 +447,14 @@ def _deploy_evaluate(
     keep_deployed: bool = False,
 ) -> dict[str, Any]:
     base_run = ref.split("/step-", 1)[0]
-    _deploy_wait(ref)
+    deployment = _deploy_wait(ref)
+    revision = _adapter_revision(deployment)
     try:
-        metrics = evaluate_rows(rows, flash_responder(base_run))
+        metrics = evaluate_rows(rows, flash_responder(revision))
     finally:
         if not keep_deployed:
             _run(["flash", "undeploy", base_run], check=False)
+    metrics["adapter_revision"] = revision
     return metrics
 
 
@@ -449,6 +468,21 @@ def _best_checkpoint(
         _save_state(state)
         scored.append((ref, metrics))
     return max(scored, key=lambda item: item[1]["score"])
+
+
+def _bank_checkpoint(
+    state: dict[str, Any], role: str, ref: str, metrics: dict[str, Any]
+) -> None:
+    state.setdefault("checkpoint_bank", {})[role] = {
+        "checkpoint_ref": ref,
+        "adapter_revision": metrics["adapter_revision"],
+        "score": metrics["score"],
+        "protocol_valid": metrics["protocol_valid"],
+        "attack_success": metrics["attack_success"],
+        "git_commit": state["git_commit"],
+        "bundle_sha256": state["bundle_sha256"],
+    }
+    _save_state(state)
 
 
 def run_pipeline(*, from_stage: str | None = None) -> dict[str, Any]:
@@ -485,6 +519,7 @@ def run_pipeline(*, from_stage: str | None = None) -> dict[str, Any]:
     if failures:
         raise RuntimeError("SFT promotion gate failed: " + "; ".join(failures))
     state["promoted_sft"] = sft_ref
+    _bank_checkpoint(state, "safety_anchor", sft_ref, sft_metrics)
     paths = render_configs(RESOLVED_CONFIG_DIR, environment_id=environment_id, sft_adapter=sft_ref)
 
     primary_run = _stage_run("primary_grpo", "grpo", paths, state)
@@ -499,15 +534,22 @@ def run_pipeline(*, from_stage: str | None = None) -> dict[str, Any]:
     if failures:
         raise RuntimeError("primary GRPO gate failed: " + "; ".join(failures))
     state["promoted_primary_grpo"] = primary_ref
+    _bank_checkpoint(state, "accuracy_champion", primary_ref, primary_metrics)
 
+    paths = render_configs(
+        RESOLVED_CONFIG_DIR,
+        environment_id=environment_id,
+        sft_adapter=sft_ref,
+        grpo_adapter=primary_ref,
+    )
     opd_run = _stage_run("opd", "opd", paths, state)
     opd_ref, opd_metrics = _best_checkpoint(
         _checkpoint_refs(opd_run, (5, 10, 20)), dev_rows, state, "opd"
     )
-    opd_failures = promotion_gate("opd", opd_metrics, sft_metrics)
+    opd_failures = promotion_gate("opd", opd_metrics, primary_metrics)
     opd_security = _deploy_evaluate(opd_ref, security_rows)
     state["metrics"]["opd_security"] = opd_security
-    if opd_security["attack_success"] > sft_security["attack_success"] + 0.01:
+    if opd_security["attack_success"] > primary_security["attack_success"] + 0.01:
         opd_failures.append("OPD security regressed by more than one percentage point")
     if opd_metrics["repetition_rate"] > 0.20:
         opd_failures.append("repetition rate above 20%")
@@ -530,40 +572,22 @@ def run_pipeline(*, from_stage: str | None = None) -> dict[str, Any]:
         return state
 
     state["promoted_opd"] = opd_ref
-    paths = render_configs(
-        RESOLVED_CONFIG_DIR,
-        environment_id=environment_id,
-        sft_adapter=sft_ref,
-        opd_adapter=opd_ref,
-    )
-    child_run = _stage_run("grpo_opd", "grpo_opd", paths, state)
-    child_ref, child_metrics = _best_checkpoint(
-        _checkpoint_refs(child_run, (50, 100, 200, 400)), dev_rows, state, "grpo_opd"
-    )
-    failures = promotion_gate("grpo", child_metrics, opd_metrics)
-    child_security = _deploy_evaluate(child_ref, security_rows)
-    state["metrics"]["grpo_opd_security"] = child_security
-    if child_security["attack_success"] > primary_security["attack_success"] + 0.01:
-        failures.append("GRPO-from-OPD security regressed")
-    if failures:
-        child_ref = primary_ref
+    _bank_checkpoint(state, "opd_challenger", opd_ref, opd_metrics)
 
     if state.get("sealed_final_evaluated"):
         raise RuntimeError("sealed final set was already consumed; refusing a second look")
     final_rows = load_rows(DATA_DIR / "final.jsonl")
     primary_final = _deploy_evaluate(primary_ref, final_rows)
-    child_final = (
-        _deploy_evaluate(child_ref, final_rows) if child_ref != primary_ref else primary_final
-    )
+    opd_final = _deploy_evaluate(opd_ref, final_rows)
     state["sealed_final_evaluated"] = True
     state["metrics"]["final_primary"] = primary_final
-    state["metrics"]["final_child"] = child_final
+    state["metrics"]["final_opd"] = opd_final
     from .evaluate import paired_bootstrap_improvement
 
     paired = paired_bootstrap_improvement(
-        child_final["episode_scores"], primary_final["episode_scores"]
+        opd_final["episode_scores"], primary_final["episode_scores"]
     )
-    winner = child_ref if child_ref != primary_ref and paired["ci_low"] > 0 else primary_ref
+    winner = opd_ref if paired["ci_low"] > 0 else primary_ref
     deployment = _deploy_wait(winner)
     state["winner"] = winner
     state["deployments"]["winner"] = deployment

@@ -2,7 +2,7 @@
 # These names are a contract: CLAUDE.md and the branch briefs reference them.
 
 .PHONY: help install test test-contract test-unit test-integration lint fmt \
-        sim eval run-ui train-sft train-grpo training-preflight snapshot-clean
+        sim fetch-papers eval run-ui train-sft train-grpo training-preflight snapshot-clean
 
 CONDA_ENV := cortesol-train
 RUN := conda run --no-capture-output -n $(CONDA_ENV)
@@ -35,6 +35,9 @@ fmt:  ## Auto-format
 
 sim:  ## [B2] Generate a toy peptide stream from the simulator and print it
 	$(RUN) python -m cortesol.sim.world --demo
+
+fetch-papers:  ## [B/C] Fetch real peptide abstracts from PubMed -> data/papers/ (evidence, no oracle)
+	$(RUN) python -m cortesol.ingest.fetch_papers --per-peptide 8
 
 eval:  ## [B3] Replay held-out streams and print the metrics table
 	$(RUN) python -m cortesol.eval.replay

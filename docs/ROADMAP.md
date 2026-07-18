@@ -41,6 +41,56 @@ Goal: belief moves correctly, or refuses to. All TDD against `tests/unit/`.
 4. **`ingest/screen.py::screen()`** — deterministic red-flag battery, no LLM.
 5. **`ingest/quarantine.py::quarantine()`** — `RawEvent → Evidence`.
 
+## Track B — the Freesolo model (the update policy)  ·  owner: Bill
+
+Goal: replace `FakeExtractor` with the *learned* "propose" step — the only model
+in the system. It reads a serialized `Context` (quarantined event + retrieved
+state) under `ops_json_schema()`-constrained decoding and emits `ProposedOps`;
+it never writes state (the validator + engine dispose). The win condition is
+**calibration**: emit the right op + direction + strength so the capped engine
+arithmetic lands closer to truth than a prompted frontier model would.
+
+**TLDR of the model's job.** Decide, per event: (a) which retrieved claim the
+report is about, (b) direction `+/-` and strength `weak/moderate/strong` of the
+evidence, (c) refuse when warranted — injection → `REJECT`, out-of-scope →
+`FLAG_OOD`, physically impossible → `REJECT(unverifiable)`. The engine converts
+strength → a *bounded* log-odds move, so the model only needs to be right about
+strength, not about magnitude.
+
+**Pipeline (post-train a small model on Freesolo Flash):**
+1. ✅ **`extract.py::extract()`** — authenticated Freesolo-only client with strict
+   `ProposedOps` parsing and fail-closed malformed handling. `FakeExtractor`
+   remains the deterministic local seam.
+2. ✅ **Deterministic dataset factory** — 64 smoke + 2,800 production SFT rows,
+   1,024 RL episodes, isolated development/final/security splits, manifest and
+   replay/hash/leakage gates. Gold comes from the simulator and must replay
+   through the real ledger; no teacher credential is required for SFT.
+3. ✅ **`train/environment.py::BeliefUpdateEnv`** — GRPO env: one episode = a stream
+   applied through the REAL validator + engine; terminal reward = −Brier of final
+   KB vs ground truth + capped shaping (schema-valid, provenance, correct
+   REJECT/FLAG_OOD). Ref: Fine-Tuning Plan §Stage 2. Watch reward-hacking.
+4. ✅ **Flash configs + coordinator** — Qwen3.5-4B, Conda, schema-constrained
+   GRPO/OPD, cost cap, immutable checkpoint evaluation, and a resumable anytime
+   ladder: corrected SFT checkpoint → GRPO → short managed GLM-5.2 OPD challenger.
+5. ✅ **Checkpoint swarm fallback** — up to three independently deployed gated
+   checkpoints vote on whole canonical proposals; no operation mixing, and no
+   quorum fails closed through the same ledger.
+
+**Real-paper extension (new, for the live demo — see `ingest/fetch_papers.py`).**
+Real PubMed abstracts carry NO structured `fields` (no `metric`/`value`/`n`/`p`),
+and their peptides are named ("semaglutide"), not `P\d+`. So `FakeExtractor`
+FLAG_OODs nearly all 149 fetched events. The real extractor must therefore also
+do **field extraction from prose** before/with proposing the op. Two routes:
+  - **B-real-1:** LLM `extract()` reads the abstract, emits both the parsed
+    fields and the op under the schema (the designed path).
+  - **B-real-2 (no-network demo):** a `RealPaperExtractor` that leans on the
+    peptide/target already in `fields` (from the fetcher) + keyword cues to
+    propose an op — cheaper, demo-only. *Done = the 149 real events produce
+    non-OOD ops that flow through the pipeline.*
+
+Note: real-paper events have `sim_meta=null` (no oracle), so they feed the demo,
+NOT the Brier/ECE eval — those stay on the simulator stream.
+
 ## The simulator (`sim/`, Area B)  ·  owner: Bill  ·  ✅ DONE
 
 This is the peptide **data lane** — no real papers are fetched (out of scope).

@@ -17,8 +17,8 @@ Maintenance.md`).
 ## The pipeline
 
 ```
-  event stream ──► quarantine ──► screen ──► retrieve ──► extract ──► ProposedOps
-                     (area A)      (area A)    (area C)    (area B)         │
+  event stream ──► quarantine ──► retrieve ──► extract ──► screen ──► ProposedOps
+                     (area A)       (area C)    (area B)    (area A)        │
                                                                       ▼
    belief graph ◄── commit + propagate ◄── validate ◄──────────────────────┘
       (KB)             (area A)             (area A)        (area A)
@@ -37,16 +37,17 @@ Implemented by `cortesol/pipeline.py::process_event`.
    `untrusted_view()` (any ground-truth sidecar stripped) and its text is
    datamarked/spotlighted so it can only ever sit in a *data* position. Out comes
    a structured `Evidence`.
-2. **Screen** (`ingest/screen.py`). Deterministic fraud, quality, injection, and
-   OOD checks run before model-visible retrieval. Unsafe evidence cannot authorize
-   state-changing operations.
-3. **Retrieve** (`retrieval.py`). Rank the event against top-k relevant claims + their
+2. **Retrieve** (`retrieval.py`). Rank the event against top-k relevant claims + their
    1-hop neighborhood + the relevant source records, packed into a `Context`. The
    whole extractor prompt must fit the model's 8,192-token window, so state
    serialization is compact by mandate (`core/context.py::serialize_state`).
-4. **Extract** (`ingest/extract.py`). The tuned model reads the serialized Context
+3. **Extract** (`ingest/extract.py`). The tuned model reads the serialized Context
    and emits `ProposedOps` under JSON-schema-constrained decoding. It proposes; it
    does not write.
+4. **Screen** (`ingest/screen.py`). Deterministic fraud, quality, injection, and
+   OOD checks run after proposal but before validation. This keeps derived red
+   flags out of model inputs while ensuring unsafe evidence cannot authorize a
+   state-changing operation.
 5. **Validate** (`core/validator.py`). The gate. Enumerated ops only; bounded step
    (|Δℓ| ≤ δ_max); provenance required; referential integrity; per-source rate
    limits; hard-conflict quarantine. Only accepted ops proceed.

@@ -62,6 +62,7 @@ def test_dataset_profile_is_complete_deterministic_and_sealed(generated, tmp_pat
             payload = json.loads(row)
             assert set(payload) == {"input", "output", "metadata"}
             assert "sim_meta" not in payload["input"]
+            assert "red_flags=" not in payload["input"]
 
     reserve = _evaluation_reserve(manifest)
     assert 0 < reserve < 27.2476
@@ -136,6 +137,7 @@ def test_every_generated_toml_parses_in_flash_1_0_and_uses_exact_schema(tmp_path
         tmp_path,
         environment_id="owner/cortesol",
         sft_adapter="sft-run/step-500",
+        grpo_adapter="grpo-run/step-400",
         opd_adapter="opd-run/step-20",
     )
     schema = json.loads((tmp_path / "ops.schema.json").read_text())
@@ -155,6 +157,7 @@ def test_every_generated_toml_parses_in_flash_1_0_and_uses_exact_schema(tmp_path
             assert spec.train.max_context_tokens == 12_288
             if name == "opd":
                 assert spec.train.group_size == 1
+                assert spec.train.init_from_adapter == "grpo-run/step-400"
 
 
 def test_gold_episode_reconstructs_and_scores_perfect_actions():

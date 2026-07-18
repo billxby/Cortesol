@@ -32,16 +32,24 @@ def flash_responder(adapter_ref: str) -> Callable[[list[dict[str, str]]], str]:
     if not api_key:
         raise RuntimeError("FREESOLO_API_KEY is required for deployed evaluation")
     api_url = os.environ.get("FLASH_API_URL", "https://flash.freesolo.co").rstrip("/")
-    run_id = adapter_ref.split("/step-", 1)[0]
+    target = adapter_ref.strip()
+    if "/step-" in target:
+        raise ValueError(
+            "chat requires the immutable adapter_revision returned by deployment, "
+            "not a RUN_ID/step-N checkpoint reference"
+        )
+    run_id = target.split("@", 1)[0]
+    adapter_revision = target if "@" in target else None
 
     def respond(messages: list[dict[str, str]]) -> str:
-        body = json.dumps(
-            {
-                "messages": messages,
-                "temperature": 0.0,
-                "max_tokens": 256,
-            }
-        ).encode()
+        payload: dict[str, Any] = {
+            "messages": messages,
+            "temperature": 0.0,
+            "max_tokens": 256,
+        }
+        if adapter_revision:
+            payload["adapter_revision"] = adapter_revision
+        body = json.dumps(payload).encode()
         request = urllib.request.Request(
             f"{api_url}/v1/runs/{run_id}/chat",
             data=body,
