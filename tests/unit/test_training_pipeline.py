@@ -146,6 +146,7 @@ def test_every_generated_toml_parses_in_flash_1_0_and_uses_exact_schema(tmp_path
         spec = spec_from_file(str(path))
         assert spec.thinking is False
         if name == "smoke_sft":
+            assert spec.model == "Qwen/Qwen3.5-4B"
             assert spec.train.max_steps == 32
             assert spec.train.save_at_steps == (32,)
         if name in {"grpo", "opd", "grpo_opd"}:

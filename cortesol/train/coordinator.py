@@ -149,10 +149,9 @@ def _evaluation_reserve(manifest: dict[str, Any]) -> float:
     security_evaluations = 5 * 4
     final_evaluations = 256 * 2
     episodes = {
-        "Qwen/Qwen3.5-0.8B": 1,
         "Qwen/Qwen3.5-4B": (
-            development_evaluations + security_evaluations + final_evaluations
-        ),
+            1 + development_evaluations + security_evaluations + final_evaluations
+        )
     }
     input_tokens_per_episode = sum(
         contract_tokens

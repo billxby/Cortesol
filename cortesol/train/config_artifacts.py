@@ -56,17 +56,16 @@ def render_configs(
     schema_path = out / "ops.schema.json"
     schema_path.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     adapters = {"grpo": sft_adapter, "opd": sft_adapter, "grpo_opd": opd_adapter}
+    structured_outputs = json.dumps({"json": schema}, sort_keys=True, separators=(",", ":"))
     rendered: dict[str, Path] = {}
     for name in TEMPLATES:
         with (CONFIG_DIR / f"{name}.toml").open("rb") as handle:
             config = tomllib.load(handle)
         config["environment"]["id"] = environment_id
+        train = config["train"]
         if name in adapters:
-            train = config["train"]
             train["init_from_adapter"] = adapters[name]
-            train["structured_outputs"] = json.dumps(
-                {"json": schema}, sort_keys=True, separators=(",", ":")
-            )
+            train["structured_outputs"] = structured_outputs
             if "lora_rank" in train or "lora_alpha" in train:
                 raise ValueError(f"warm-start config {name} must inherit LoRA metadata")
         path = out / f"{name}.toml"
