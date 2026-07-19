@@ -25,10 +25,11 @@ import re
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
+from . import research
 from .. import bootstrap, pipeline
 from ..adapters import cortex
 from ..core import propagate
@@ -211,6 +212,13 @@ class DemoState:
             # the sim stream has no foundation/robustness acts — one flat phase
             self.n_foundation = 0
             self.n_corpus = len(self.events)
+        # Research-tab papers are appended to self.events beyond this boundary. The
+        # choreographed demo stream is everything up to stream_len; pinning it here
+        # means chat-added papers never inflate the "0/91" counter and are never
+        # auto-ingested by Ingest-next / Auto-play.
+        self.stream_len = len(self.events)
+        self.research_ids: set[str] = set()
+        self.research_verdicts: dict[int, str] = {}
         self.extractor = self._build_extractor()
         # Always keep a deterministic, network-free proposer on hand. If the live
         # model call times out or errors mid-run, we degrade to this for that one
@@ -234,6 +242,102 @@ class DemoState:
     def reveal(self, claim_ids) -> None:
         self.revealed.update(cid for cid in claim_ids if cid in self.kb.claims)
 
+    # -- research tab: add chat-found papers to the library + graph --
+
+    def add_research_papers(self, papers: list[dict]) -> dict:
+        """Add chat-found papers to the Library + belief graph and assess them.
+
+        Mirrors cortex.load_stream's RawEvent shaping, merges the public entities
+        into the running KB (additive, idempotent — earned belief is never
+        overwritten), then runs each paper through the REAL lifecycle so the ENGINE,
+        not the chat model, assigns confidence. Belief still moves only through
+        pipeline.process_event; this only reads `.c` back afterwards.
+
+        Returns {claims, papers, moved}: a per-claim confidence readout for the
+        agent, per-paper verdict cards for the client, and the moved claim ids for a
+        live graph broadcast. The caller holds STATE.lock."""
+        from ..ingest.quarantine import quarantine
+        from ..ingest.screen import screen
+
+        existing_ids = {e.id for e in self.events}
+        new_events: list[RawEvent] = []
+        for p in papers:
+            pmid = str(p.get("pmid") or "").strip()
+            eid = f"pmid_{pmid}" if pmid else f"research_{len(self.events) + len(new_events)}"
+            if eid in existing_ids:
+                continue  # already in the library (e.g. found twice) — don't duplicate
+            existing_ids.add(eid)
+            title = (p.get("title") or "").strip()
+            abstract = (p.get("abstract") or "").strip()
+            new_events.append(
+                RawEvent(
+                    id=eid,
+                    t=len(self.events) + len(new_events),
+                    source_id=cortex._journal_source_id(p.get("journal")),
+                    raw_text=f"{title}\n\n{abstract}".strip(),
+                    fields={
+                        "peptide": p.get("peptide"),
+                        "primary_target": p.get("primary_target"),
+                        "journal": p.get("journal"),
+                        "year": p.get("year"),
+                        "title": title,
+                        "authors": (p.get("authors") or [])[:6],
+                        "pmid": pmid,
+                    },
+                    sim_meta=None,
+                )
+            )
+
+        # Register the new library entries, then seed their public entities into the
+        # running KB (a Source per venue, a c_bind claim per peptide/target, edges).
+        for ev in new_events:
+            ev.t = len(self.events)
+            self.events.append(ev)
+            self.research_ids.add(ev.id)
+        cortex.merge_papers_into_kb(self.kb, new_events)
+
+        # Run each paper through the real lifecycle with the deterministic offline
+        # proposer (real papers are prose — PaperFakeExtractor reads the abstract).
+        proposer = PaperFakeExtractor()
+        touched: set[str] = set()
+        papers_out: list[dict] = []
+        for ev in new_events:
+            result = pipeline.process_event(self.kb, ev, proposer)
+            touched.update(result.dirty_claims)
+            verdict = _verdict_of(result)
+            self.research_verdicts[ev.t] = verdict
+            f = ev.fields
+            papers_out.append(
+                {
+                    "idx": ev.t,
+                    "pmid": f.get("pmid"),
+                    "title": f.get("title"),
+                    "journal": f.get("journal"),
+                    "year": str(f.get("year") or ""),
+                    "verdict": verdict,
+                    "red_flags": screen(quarantine(ev), self.kb),
+                }
+            )
+        self.reveal(touched)
+
+        # Confidence readout — read straight off the ledger (never set).
+        claims_out: list[dict] = []
+        for cid in sorted(touched):
+            claim = self.kb.get_claim(cid)
+            if claim is None:
+                continue
+            claims_out.append(
+                {
+                    "claim": claim.text,
+                    "confidence": round(claim.c, 3),
+                    "supporting": claim.r,
+                    "contradicting": claim.s,
+                    "status": claim.status.value,
+                    "stance": _stance(claim.c),
+                }
+            )
+        return {"claims": claims_out, "papers": papers_out, "moved": sorted(touched)}
+
     # -- graph serialization (read-only view of the KB) --
 
     def _impact(self, claim_id: str) -> float:
@@ -248,7 +352,9 @@ class DemoState:
     def phase_of(self, idx: int) -> str:
         """Which act a stream position belongs to (papers mode). Foundation is the
         curated ground-truth slice, corroboration the rest of the corpus, robustness
-        the adversarial pack."""
+        the adversarial pack; research papers are appended live from the chat tab."""
+        if 0 <= idx < len(self.events) and self.events[idx].id in self.research_ids:
+            return "research"
         if self.data_source != "papers":
             return "corroboration"
         if idx < self.n_foundation:
@@ -272,7 +378,13 @@ class DemoState:
             authors = []
             tags = [t for t in (f.get("metric"), f.get("assay")) if t]
         authors_str = ", ".join(authors[:3]) + (" et al." if len(authors) > 3 else "")
-        status = "done" if idx < self.cursor else ("active" if idx == self.cursor else "pending")
+        phase = self.phase_of(idx)
+        # Research papers were run through the engine at add-time, so they are always
+        # appraised (they sit past the choreographed cursor, which never reaches them).
+        if phase == "research":
+            status = "done"
+        else:
+            status = "done" if idx < self.cursor else ("active" if idx == self.cursor else "pending")
         return {
             "idx": idx,
             "title": title,
@@ -281,7 +393,7 @@ class DemoState:
             "authors": authors_str,
             "tags": tags,
             "status": status,
-            "phase": self.phase_of(idx),
+            "phase": phase,
         }
 
     def documents(self) -> list[dict]:
@@ -329,7 +441,7 @@ class DemoState:
             "edges": edges,
             "sources": sources,
             "cursor": self.cursor,
-            "total": len(self.events),
+            "total": self.stream_len,
             "n_foundation": self.n_foundation,
             "n_corpus": self.n_corpus,
             "phase": self.phase_of(self.cursor),
@@ -341,7 +453,9 @@ class DemoState:
             "extractor_kind": self.extractor_kind,
             "flash_available": flash_available(),
             "flash_tuned_available": bool(_env("FLASH_MODEL_TUNED")),
+            "gemini_available": research.gemini_available(),
             "documents": self.documents() if include_documents else None,
+            "research_verdicts": self.research_verdicts,
         }
 
     async def broadcast(self, message: dict, remember: bool = False) -> None:
@@ -516,7 +630,7 @@ def _process_resilient(event: RawEvent) -> tuple[EventResult, bool, dict]:
 @app.post("/event")
 async def next_event() -> dict:
     async with STATE.lock:
-        if STATE.cursor >= len(STATE.events):
+        if STATE.cursor >= STATE.stream_len:
             return {"status": "done", "cursor": STATE.cursor}
         event = STATE.events[STATE.cursor]
         # the live model call is blocking network I/O — run it off the event loop
@@ -744,6 +858,62 @@ async def ask(payload: dict) -> dict:
         "answers": [_answer_claim(c) for c in hits],
         "grounded": True,
     }
+
+
+# --------------------------------------------------------------------------
+# Research chat — a Gemini agent grounded in the belief graph (see ui/research.py).
+# Two tools: find_papers (PubMed) and add_to_belief_graph (adds to the Library and
+# runs the real lifecycle). The chat model proposes which papers to fetch and
+# assess; belief still moves ONLY through the engine (pipeline.process_event).
+# --------------------------------------------------------------------------
+
+
+def _verdict_of(result: EventResult) -> str:
+    """Coarse outcome of one processed event, mirroring the frontend's verdictOf:
+    committed (belief moved), flagged out-of-distribution, or refused."""
+    kinds = [a.kind for a in result.audit]
+    if "commit" in kinds:
+        return "commit"
+    if "flag_ood" in kinds:
+        return "flag"
+    if "reject" in kinds:
+        return "reject"
+    return "commit"  # accepted no-op / propagation only
+
+
+async def _add_research_papers(papers: list[dict]) -> dict:
+    """Tool callback for research.run_chat: mutate the KB under the lock, then push a
+    live graph + Library update to every /stream subscriber so the other tabs reflect
+    the new belief immediately."""
+    async with STATE.lock:
+        readout = await asyncio.to_thread(STATE.add_research_papers, papers)
+    await STATE.broadcast(
+        STATE.graph_payload(moved=readout.get("moved"), include_documents=True)
+    )
+    return readout
+
+
+@app.post("/research/chat")
+async def research_chat(payload: dict) -> StreamingResponse:
+    """Stream a Research-tab chat turn as NDJSON (one JSON object per line). The
+    client POSTs {messages:[{role,content}, …]} and reads the body with
+    fetch()+ReadableStream (EventSource is GET-only, so it can't carry the history).
+    The server is stateless per request apart from the in-turn paper cache."""
+    messages = (payload or {}).get("messages") or []
+
+    async def gen():
+        try:
+            async for evt in research.run_chat(messages, add_papers=_add_research_papers):
+                yield json.dumps(evt) + "\n"
+        except Exception as exc:  # never leave the stream hanging
+            yield json.dumps({"type": "error", "text": str(exc)}) + "\n"
+            yield json.dumps({"type": "done"}) + "\n"
+
+    return StreamingResponse(
+        gen(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 app.mount("/static", StaticFiles(directory=str(_STATIC)), name="static")

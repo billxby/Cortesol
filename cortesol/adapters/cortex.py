@@ -90,15 +90,15 @@ def load_stream(path: str | Path) -> list[RawEvent]:
     return events
 
 
-def seed_kb_from_papers(events: list[RawEvent]) -> KB:
-    """A fresh KB seeded from the PUBLIC entities the corpus references — a Source
-    per venue and one binding claim per unique (peptide, primary_target). This is
-    the real-paper analogue of eval/replay.py::seed_kb (which seeds from `World`):
-    it gives the extractor existing claims to APPLY onto, while novel propositions
-    still arrive dynamically via ADD_CLAIM. No belief is set — claims start at the
-    skeptical prior."""
-    kb = KB()
-
+def merge_papers_into_kb(kb: KB, events: list[RawEvent]) -> KB:
+    """Add the PUBLIC entities a batch of papers references into an EXISTING KB —
+    a Source per venue and one binding claim per unique (peptide, primary_target),
+    plus shared-target SUPPORTS edges. Idempotent: existing sources/claims/edges are
+    left untouched, so this can be called repeatedly (e.g. as new papers arrive from
+    the Research chat) and safely re-seeds only what is missing. No belief is set —
+    new claims start at the skeptical prior, and belief still moves only through the
+    engine when the papers are later processed. New claims wire into the existing
+    graph via the shared-target topology below."""
     # one Source per venue, tiered by journal name
     for e in events:
         if kb.get_source(e.source_id) is None:
@@ -106,7 +106,6 @@ def seed_kb_from_papers(events: list[RawEvent]) -> KB:
             kb.add_source(Source.from_tier(e.source_id, tier))
 
     # one binding claim per unique (peptide, target)
-    binder_of: dict[str, str] = {}
     for e in events:
         pep = e.fields.get("peptide")
         tgt = e.fields.get("primary_target")
@@ -121,7 +120,6 @@ def seed_kb_from_papers(events: list[RawEvent]) -> KB:
                     ontology_tags=[f"peptide:{pep}", f"target:{tgt}", "binding_affinity:Kd"],
                 )
             )
-        binder_of.setdefault(str(pep), cid)
 
     # light typed topology: peptides that share a target support each other (same
     # program); derived only from public identities, never from any measurement.
@@ -137,6 +135,16 @@ def seed_kb_from_papers(events: list[RawEvent]) -> KB:
                 kb.add_edge(Edge(id=eid, src=a, dst=b, type=EdgeType.SUPPORTS, weight=0.6))
 
     return kb
+
+
+def seed_kb_from_papers(events: list[RawEvent]) -> KB:
+    """A fresh KB seeded from the PUBLIC entities the corpus references — a Source
+    per venue and one binding claim per unique (peptide, primary_target). This is
+    the real-paper analogue of eval/replay.py::seed_kb (which seeds from `World`):
+    it gives the extractor existing claims to APPLY onto, while novel propositions
+    still arrive dynamically via ADD_CLAIM. No belief is set — claims start at the
+    skeptical prior."""
+    return merge_papers_into_kb(KB(), events)
 
 
 def load_kb(path: str) -> KB:
