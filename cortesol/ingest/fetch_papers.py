@@ -67,10 +67,13 @@ LEADING_PEPTIDES: tuple[Peptide, ...] = (
     Peptide("degarelix", ("Firmagon",), "GnRH receptor", "prostate cancer"),
     Peptide("enfuvirtide", ("Fuzeon", "T-20"), "gp41", "HIV fusion inhibition"),
     Peptide("elamipretide", ("SS-31", "MTP-131"), "cardiolipin", "mitochondrial disease"),
-    Peptide("bpc-157", ("body protection compound 157",), "unknown", "tissue repair (research)"),
+    # These three have no single confirmed receptor target — carried by their
+    # (curated) efficacy claims instead, never a "binds unknown" node. See
+    # core/domain.PEPTIDE_KNOWLEDGE.
+    Peptide("bpc-157", ("body protection compound 157",), "", "tissue repair (research)"),
     Peptide("thymosin-beta-4", ("TB-500", "thymosin b4"), "actin", "tissue repair (research)"),
-    Peptide("ghk-cu", ("copper tripeptide-1", "GHK copper"), "unknown", "skin / wound healing"),
-    Peptide("selank", (), "unknown", "anxiolytic (research)"),
+    Peptide("ghk-cu", ("copper tripeptide-1", "GHK copper"), "", "skin / wound healing"),
+    Peptide("selank", (), "", "anxiolytic (research)"),
 )
 
 # --- Source-tier heuristic ----------------------------------------------------

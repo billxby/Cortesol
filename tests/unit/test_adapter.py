@@ -36,7 +36,10 @@ def test_journal_to_tier_orders_by_reputation():
     assert journal_to_tier("The New England journal of medicine") == "top_journal"
     assert journal_to_tier("bioRxiv") == "preprint"
     assert journal_to_tier("Circulation") == "reputable"
-    assert journal_to_tier("Some Unheard-of Venue") == "unknown"
+    # An unrecognised but PUBLISHED venue defaults to `reputable`, never `unknown`:
+    # a peer-reviewed paper is not epistemically equivalent to knowing nothing.
+    # Distrust is still expressed by the lower preprint/predatory caps.
+    assert journal_to_tier("Some Unheard-of Venue") == "reputable"
     # every tier returned must be a real SOURCE_PRIORS key
     for j in ("Nature", "medRxiv", "Drugs", "xyz"):
         assert journal_to_tier(j) in config.SOURCE_PRIORS

@@ -219,6 +219,13 @@ class DemoState:
         self.stream_len = len(self.events)
         self.research_ids: set[str] = set()
         self.research_verdicts: dict[int, str] = {}
+        # Research-tab provenance: each chat query is a "session" that fetched papers
+        # and moved (or created) some claims. research_sessions maps a session id to
+        # its query text + the papers/claims it produced; claim_sessions is the
+        # inverse index (claim -> the queries that touched it) so the graph can
+        # highlight the branch a single query grew.
+        self.research_sessions: dict[str, dict] = {}
+        self.claim_sessions: dict[str, set[str]] = {}
         self.extractor = self._build_extractor()
         # Always keep a deterministic, network-free proposer on hand. If the live
         # model call times out or errors mid-run, we degrade to this for that one
@@ -244,7 +251,9 @@ class DemoState:
 
     # -- research tab: add chat-found papers to the library + graph --
 
-    def add_research_papers(self, papers: list[dict]) -> dict:
+    def add_research_papers(
+        self, papers: list[dict], *, session_id: str | None = None, query: str | None = None
+    ) -> dict:
         """Add chat-found papers to the Library + belief graph and assess them.
 
         Mirrors cortex.load_stream's RawEvent shaping, merges the public entities
@@ -253,12 +262,24 @@ class DemoState:
         not the chat model, assigns confidence. Belief still moves only through
         pipeline.process_event; this only reads `.c` back afterwards.
 
-        Returns {claims, papers, moved}: a per-claim confidence readout for the
-        agent, per-paper verdict cards for the client, and the moved claim ids for a
-        live graph broadcast. The caller holds STATE.lock."""
+        When `session_id` is given, the new papers and every claim they moved are
+        recorded under that research session (tagged onto the RawEvent + indexed in
+        research_sessions / claim_sessions) so the query's branch can be traced in
+        the Library and highlighted in the graph.
+
+        Returns {claims, papers, moved, session_id}: a per-claim confidence readout
+        for the agent, per-paper verdict cards for the client, the moved claim ids
+        for a live graph broadcast, and the session it was filed under. The caller
+        holds STATE.lock."""
         from ..ingest.quarantine import quarantine
         from ..ingest.screen import screen
 
+        # the peptides this batch is about — used to ground the readout even when the
+        # papers turn out to be already-in-library duplicates (so the agent still gets
+        # real confidences to answer with, not an empty result).
+        input_peptides = {
+            str(p.get("peptide") or "").strip().lower() for p in papers if p.get("peptide")
+        }
         existing_ids = {e.id for e in self.events}
         new_events: list[RawEvent] = []
         for p in papers:
@@ -283,6 +304,9 @@ class DemoState:
                         "title": title,
                         "authors": (p.get("authors") or [])[:6],
                         "pmid": pmid,
+                        "doi": p.get("doi"),
+                        "research_query": query,
+                        "session_id": session_id,
                     },
                     sim_meta=None,
                 )
@@ -311,6 +335,7 @@ class DemoState:
                 {
                     "idx": ev.t,
                     "pmid": f.get("pmid"),
+                    "doi": f.get("doi"),
                     "title": f.get("title"),
                     "journal": f.get("journal"),
                     "year": str(f.get("year") or ""),
@@ -320,9 +345,38 @@ class DemoState:
             )
         self.reveal(touched)
 
-        # Confidence readout — read straight off the ledger (never set).
+        # File this batch under its research session so the query's branch is traceable.
+        if session_id:
+            sess = self.research_sessions.setdefault(
+                session_id,
+                {"id": session_id, "query": query or "", "paper_idxs": [], "claim_ids": set()},
+            )
+            if query:
+                sess["query"] = query
+            sess["paper_idxs"].extend(ev.t for ev in new_events)
+            sess["claim_ids"].update(touched)
+            for cid in touched:
+                self.claim_sessions.setdefault(cid, set()).add(session_id)
+
+        # Confidence readout — the claims this batch moved PLUS every existing claim
+        # about the queried peptides, so the agent gets grounded numbers even when the
+        # papers were deduped or only some claims moved. Read straight off the ledger.
+        readout_ids = set(touched)
+        if input_peptides:
+            for cid, claim in self.kb.claims.items():
+                pep_tag = next(
+                    (
+                        t.split(":", 1)[1].lower()
+                        for t in claim.ontology_tags
+                        if t.startswith("peptide:")
+                    ),
+                    None,
+                )
+                if pep_tag and pep_tag in input_peptides:
+                    readout_ids.add(cid)
+
         claims_out: list[dict] = []
-        for cid in sorted(touched):
+        for cid in sorted(readout_ids):
             claim = self.kb.get_claim(cid)
             if claim is None:
                 continue
@@ -336,7 +390,25 @@ class DemoState:
                     "stance": _stance(claim.c),
                 }
             )
-        return {"claims": claims_out, "papers": papers_out, "moved": sorted(touched)}
+        return {
+            "claims": claims_out,
+            "papers": papers_out,
+            "moved": sorted(touched),
+            "session_id": session_id,
+        }
+
+    def research_sessions_view(self) -> list[dict]:
+        """Serialize the research sessions for the client's history sidebar + branch
+        highlighting: query text, paper count, and the claim ids each query touched."""
+        return [
+            {
+                "id": s["id"],
+                "query": s["query"],
+                "n_papers": len(s["paper_idxs"]),
+                "claims": sorted(s["claim_ids"]),
+            }
+            for s in self.research_sessions.values()
+        ]
 
     # -- graph serialization (read-only view of the KB) --
 
@@ -394,6 +466,12 @@ class DemoState:
             "tags": tags,
             "status": status,
             "phase": phase,
+            # ids for the "look it up" link (papers mode only; None in sim mode)
+            "pmid": f.get("pmid") or (ev.id[5:] if ev.id.startswith("pmid_") else None),
+            "doi": f.get("doi"),
+            "source_kind": "researched" if ev.id in self.research_ids else "preloaded",
+            "research_query": f.get("research_query"),
+            "session_id": f.get("session_id"),
         }
 
     def documents(self) -> list[dict]:
@@ -418,6 +496,7 @@ class DemoState:
                     "status": c.status.value,
                     "impact": round(self._impact(c.id), 3),
                     "moved": c.id in moved_set,
+                    "sessions": sorted(self.claim_sessions.get(c.id, ())),
                 }
             )
         edges = [
@@ -456,6 +535,7 @@ class DemoState:
             "gemini_available": research.gemini_available(),
             "documents": self.documents() if include_documents else None,
             "research_verdicts": self.research_verdicts,
+            "research_sessions": self.research_sessions_view(),
         }
 
     async def broadcast(self, message: dict, remember: bool = False) -> None:
@@ -513,7 +593,7 @@ def _event_message(event: RawEvent, result: EventResult, reasoning: dict | None 
         "event_id": event.id,
         "t": event.t,
         "source_id": event.source_id,
-        "source_tier": src.tier if src else "unknown",
+        "source_tier": src.tier if src else "reputable",
         "raw_text": event.raw_text,  # DATA — rendered as text, never markup
         "fields": event.fields,
         "accepted": accepted,
@@ -562,6 +642,7 @@ def paper(idx: int) -> dict:
         "peptide": f.get("peptide"),
         "target": f.get("primary_target"),
         "pmid": (f.get("pmid") or e.id.replace("pmid_", "")),
+        "doi": f.get("doi"),
         "status": (
             "done" if idx < STATE.cursor else ("active" if idx == STATE.cursor else "pending")
         ),
@@ -881,16 +962,31 @@ def _verdict_of(result: EventResult) -> str:
     return "commit"  # accepted no-op / propagation only
 
 
-async def _add_research_papers(papers: list[dict]) -> dict:
-    """Tool callback for research.run_chat: mutate the KB under the lock, then push a
-    live graph + Library update to every /stream subscriber so the other tabs reflect
-    the new belief immediately."""
-    async with STATE.lock:
-        readout = await asyncio.to_thread(STATE.add_research_papers, papers)
-    await STATE.broadcast(
-        STATE.graph_payload(moved=readout.get("moved"), include_documents=True)
-    )
-    return readout
+def _make_add_research_papers(session_id: str | None, query: str | None):
+    """Build the tool callback for research.run_chat, binding this turn's session id +
+    query. It mutates the KB under the lock, files the papers under the session, then
+    pushes a live graph + Library update to every /stream subscriber so the other tabs
+    (Library, Belief graph) reflect the new belief and the new branch immediately."""
+
+    async def _add(papers: list[dict]) -> dict:
+        async with STATE.lock:
+            readout = await asyncio.to_thread(
+                STATE.add_research_papers, papers, session_id=session_id, query=query
+            )
+        await STATE.broadcast(
+            STATE.graph_payload(moved=readout.get("moved"), include_documents=True)
+        )
+        return readout
+
+    return _add
+
+
+def _latest_user_query(messages: list[dict]) -> str:
+    """The most recent user turn — used as the research session's title/query."""
+    for m in reversed(messages or []):
+        if m.get("role") == "user" and isinstance(m.get("content"), str):
+            return m["content"].strip()
+    return ""
 
 
 @app.post("/research/chat")
@@ -900,10 +996,13 @@ async def research_chat(payload: dict) -> StreamingResponse:
     fetch()+ReadableStream (EventSource is GET-only, so it can't carry the history).
     The server is stateless per request apart from the in-turn paper cache."""
     messages = (payload or {}).get("messages") or []
+    session_id = ((payload or {}).get("session_id") or "").strip() or None
+    query = ((payload or {}).get("query") or "").strip() or _latest_user_query(messages)
+    add_papers = _make_add_research_papers(session_id, query)
 
     async def gen():
         try:
-            async for evt in research.run_chat(messages, add_papers=_add_research_papers):
+            async for evt in research.run_chat(messages, add_papers=add_papers):
                 yield json.dumps(evt) + "\n"
         except Exception as exc:  # never leave the stream hanging
             yield json.dumps({"type": "error", "text": str(exc)}) + "\n"

@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 from ..core.context import Context, serialize_state
-from ..core.domain import MIN_PLAUSIBLE_KD_PM
+from ..core.domain import MIN_PLAUSIBLE_KD_PM, peptide_facts
 from ..core.ops import AddClaim, ApplyEvidence, FlagOOD, ProposedOps, Reject, ops_json_schema
 from ..core.schema import Claim
 
@@ -396,11 +396,13 @@ _INDICATIONS = (
 class PaperFakeExtractor:
     """Deterministic proposer for real PubMed abstracts (`papers` mode, offline).
 
-    Maps the paper to its pre-seeded binding claim by peptide identity and reads
-    the prose for direction (does it support or contradict?) and strength (meta-
-    analysis/RCT -> strong; case report/in-vitro -> weak). When the abstract names
-    an indication with no efficacy claim yet in context, it also proposes ADD_CLAIM
-    — so the graph grows new nodes as papers arrive."""
+    Reads the prose for direction (does it support or contradict?) and strength
+    (meta-analysis/RCT -> strong; case report/in-vitro -> weak), then routes that
+    evidence to the peptide's claims: its binding claim AND its best-matching curated
+    GROUNDED property claim (efficacy/selectivity/stability from PEPTIDE_KNOWLEDGE),
+    picked by which claim's keyword cues the abstract hits. That is how real papers
+    move the widened graph instead of only "binds X". For a peptide with no curated
+    knowledge it falls back to growing an efficacy claim via ADD_CLAIM."""
 
     def extract(self, ctx: Context, model: str | None = None) -> ProposedOps:
         eid = ctx.evidence.id
@@ -413,24 +415,11 @@ class PaperFakeExtractor:
                 ops=[Reject(evidence_id=eid, reason="injection")],
             )
 
-        peptide = str(ctx.evidence.fields.get("peptide", "")).lower()
-        target = str(ctx.evidence.fields.get("primary_target", "")).lower()
+        peptide = str(ctx.evidence.fields.get("peptide", "")).strip().lower()
+        target = str(ctx.evidence.fields.get("primary_target", "")).strip().lower()
+        retrieved = ctx.claims
 
-        # match the pre-seeded binding claim by peptide (and target when possible)
-        claim = None
-        if peptide:
-            cands = [c for c in ctx.claims if peptide in c.text.lower() or peptide in c.id.lower()]
-            binders = [c for c in cands if "bind" in c.id.lower()]
-            pool = binders or cands
-            if target:
-                pref = [c for c in pool if target in c.id.lower() or target in c.text.lower()]
-                pool = pref or pool
-            claim = pool[0] if pool else None
-        if claim is None:
-            claim = ctx.claims[0] if ctx.claims else None
-        if claim is None:
-            return ProposedOps(think="no seeded claim to map this paper to.")
-
+        # Direction from the prose (does it support or contradict the claim?).
         direction = "-" if any(m in low for m in _NEG_MARKERS) else "+"
 
         # Strength from the parsed structured fields first (study design + stats),
@@ -454,37 +443,92 @@ class PaperFakeExtractor:
         else:
             strength = "moderate"
 
-        ops = [
-            ApplyEvidence(
-                claim_id=claim.id,
-                direction=direction,
-                strength=strength,
-                evidence_id=eid,
-            )
-        ]
+        # (a) the peptide's binding claim, if one was seeded (i.e. a real target).
+        binding = None
+        if peptide:
+            binders = [
+                c for c in retrieved if "c_bind_" in c.id.lower() and peptide in c.id.lower()
+            ]
+            if target:
+                pref = [c for c in binders if target in c.id.lower()]
+                binders = pref or binders
+            binding = binders[0] if binders else None
 
-        # Grow the graph: introduce an efficacy claim when the abstract names an
-        # indication and none exists yet in the retrieved context.
-        indication = next((slug for kw, slug in _INDICATIONS if kw in low), None)
-        if indication and peptide:
-            has_eff = any(
-                "efficacy" in c.id.lower() and peptide in c.text.lower()
-                for c in ctx.claims
-            )
-            if not has_eff:
-                ops.append(
-                    AddClaim(
-                        text=f"{ctx.evidence.fields.get('peptide')} is efficacious in {indication}",
-                        ontology_tags=[
-                            f"peptide:{ctx.evidence.fields.get('peptide')}",
-                            f"efficacy:{indication}",
-                        ],
-                        initial_evidence_id=eid,
-                    )
+        # (b) the peptide's best-matching GROUNDED property claim: the curated claim
+        #     whose cues the abstract hits most, matched against the seeded nodes.
+        facts = peptide_facts(peptide)
+        prop_id = None
+        if facts:
+            best = 0
+            for namespace, slug, _text, cues in facts["claims"]:
+                hits = sum(1 for cue in cues if cue in low)
+                if hits <= best:
+                    continue
+                want = f"_{namespace}_{peptide}_{slug}"
+                match = next((c for c in retrieved if want in c.id.lower()), None)
+                if match is not None:
+                    best, prop_id = hits, match.id
+
+        ops: list = []
+        note: list[str] = []
+        if binding is not None:
+            ops.append(
+                ApplyEvidence(
+                    claim_id=binding.id, direction=direction, strength=strength, evidence_id=eid
                 )
+            )
+            note.append(f"{binding.id} {direction}{strength}")
+        if prop_id and prop_id != (binding.id if binding else None):
+            ops.append(
+                ApplyEvidence(
+                    claim_id=prop_id, direction=direction, strength=strength, evidence_id=eid
+                )
+            )
+            note.append(f"{prop_id} {direction}{strength}")
 
-        return ProposedOps(
-            think=f"{claim.id}: APPLY_EVIDENCE {direction}{strength}"
-            + (f"; +ADD_CLAIM efficacy:{indication}" if len(ops) > 1 else ""),
-            ops=ops,
-        )
+        # Fallback: nothing grounded matched — map to any claim about this peptide
+        # (else the first retrieved claim) so belief still moves; only flag if the
+        # graph truly has nothing to attach to.
+        if not ops:
+            claim = None
+            if peptide:
+                cands = [
+                    c for c in retrieved if peptide in c.text.lower() or peptide in c.id.lower()
+                ]
+                claim = cands[0] if cands else None
+            claim = claim or (retrieved[0] if retrieved else None)
+            if claim is None:
+                return ProposedOps(think="no seeded claim to map this paper to.")
+            ops.append(
+                ApplyEvidence(
+                    claim_id=claim.id, direction=direction, strength=strength, evidence_id=eid
+                )
+            )
+            note.append(f"{claim.id} {direction}{strength}")
+
+        # For a peptide with NO curated knowledge, still grow the graph the old way:
+        # introduce an efficacy claim when the abstract names an indication and none
+        # exists yet (keeps the Research chat useful for arbitrary peptides).
+        if not facts and peptide and len(ops) < 2:
+            indication = next((slug for kw, slug in _INDICATIONS if kw in low), None)
+            if indication:
+                has_eff = any(
+                    "efficacy" in c.id.lower() and peptide in c.text.lower() for c in retrieved
+                )
+                if not has_eff:
+                    ops.append(
+                        AddClaim(
+                            text=(
+                                f"{ctx.evidence.fields.get('peptide')} is efficacious in "
+                                f"{indication}"
+                            ),
+                            ontology_tags=[
+                                f"peptide:{ctx.evidence.fields.get('peptide')}",
+                                f"efficacy:{indication}",
+                            ],
+                            initial_evidence_id=eid,
+                        )
+                    )
+                    note.append(f"+ADD_CLAIM efficacy:{indication}")
+
+        return ProposedOps(think="; ".join(note) or "no-op", ops=ops)

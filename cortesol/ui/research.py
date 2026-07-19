@@ -24,6 +24,7 @@ import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 
 from ..adapters import cortex
+from ..core.domain import peptide_facts
 from ..ingest import fetch_papers
 from ..ingest.extract import _env
 
@@ -130,7 +131,8 @@ TOOLS = [
                         "type": "string",
                         "description": (
                             "Primary molecular target of the peptide, e.g. 'GLP1R'. "
-                            "Use 'unknown' if there is no well-defined target."
+                            "Use 'none' if the peptide has no single well-defined receptor "
+                            "target (its efficacy claims carry it instead)."
                         ),
                     },
                     "k": {
@@ -193,15 +195,21 @@ def _paper_ref(p: dict) -> dict:
 
 
 def _resolve_target(peptide: str, target: str) -> str:
-    """Fill a missing target from the curated LEADING_PEPTIDES list when possible."""
-    if target and target.strip().lower() not in ("", "unknown", "none", "n/a"):
+    """The grounded primary target for a peptide: the model's value if real, else the
+    curated one (core/domain.PEPTIDE_KNOWLEDGE, then LEADING_PEPTIDES). Returns "" —
+    never "unknown" — when the peptide has no single confirmed receptor; the KB then
+    seeds its efficacy claims rather than a meaningless "binds unknown" node."""
+    if target and target.strip().lower() not in ("", "unknown", "none", "n/a", "null"):
         return target.strip()
     pep = (peptide or "").strip().lower()
+    facts = peptide_facts(pep)
+    if facts is not None:
+        return facts.get("target") or ""
     for p in fetch_papers.LEADING_PEPTIDES:
         names = (p.name.lower(), *(a.lower() for a in p.aliases))
         if pep and pep in names:
-            return p.target
-    return target or "unknown"
+            return p.target or ""
+    return ""
 
 
 def _find_papers(args: dict) -> list[dict]:
@@ -300,7 +308,9 @@ async def run_chat(
                     content_parts.append(delta.content)
                     yield {"type": "token", "text": delta.content}
                 for tc in getattr(delta, "tool_calls", None) or []:
-                    slot = tool_calls.setdefault(tc.index, {"id": None, "name": "", "args": ""})
+                    slot = tool_calls.setdefault(
+                        tc.index, {"id": None, "name": "", "args": "", "extra": None}
+                    )
                     if tc.id:
                         slot["id"] = tc.id
                     fn = getattr(tc, "function", None)
@@ -308,6 +318,12 @@ async def run_chat(
                         slot["name"] = fn.name
                     if fn and fn.arguments:
                         slot["args"] += fn.arguments
+                    # Gemini attaches a `thought_signature` (under extra_content) to each
+                    # function call; it MUST be echoed back with the tool-call turn or the
+                    # next request 400s. Capture it from whichever chunk carries it.
+                    extra = getattr(tc, "model_extra", None) or {}
+                    if extra.get("extra_content"):
+                        slot["extra"] = extra["extra_content"]
 
             if not tool_calls:
                 yield {"type": "done"}
@@ -323,6 +339,8 @@ async def run_chat(
                             "id": tc["id"] or f"call_{i}",
                             "type": "function",
                             "function": {"name": tc["name"], "arguments": tc["args"] or "{}"},
+                            # echo Gemini's thought_signature back on the tool call
+                            **({"extra_content": tc["extra"]} if tc.get("extra") else {}),
                         }
                         for i, tc in sorted(tool_calls.items())
                     ],

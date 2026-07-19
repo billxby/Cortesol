@@ -145,6 +145,8 @@
   .pop-row { display:flex; align-items:center; gap:8px; }
   .pop-row select { flex:1; min-width:0; }
   .pop-hint { font-size:11.5px; color:var(--muted); margin-top:9px; line-height:1.45; }
+  .check-row { display:flex; align-items:center; gap:8px; margin-top:11px; font-size:12.5px; color:var(--ink); cursor:pointer; }
+  .check-row input { width:15px; height:15px; margin:0; accent-color:var(--accent); cursor:pointer; }
 
   .seg2 { display:flex; background:var(--wash2); border-radius:999px; padding:3px; gap:2px; }
   .seg2 button { flex:1; border:none; background:none; font-family:var(--sans); font-size:12.5px;
@@ -167,8 +169,11 @@
   main { flex:1; min-height:0; position:relative; }
   .view { position:absolute; inset:0; display:none; }
   body[data-view="library"] #library { display:flex; flex-direction:column; }
+  body[data-view="research"] #research { display:grid; grid-template-columns:288px 1fr; }
   body[data-view="graph"] #graphview { display:grid;
     grid-template-columns:1fr minmax(340px, 400px); }
+  /* the ingest/action bar is the sim-stream driver — irrelevant to the chat tab */
+  body[data-view="research"] .actionbar { display:none; }
 
   /* ---------------- library view ---------------- */
   #library { overflow:hidden; }
@@ -192,6 +197,38 @@
   .stepbtn .steptext { display:flex; flex-direction:column; min-width:0; }
   .stepbtn .steptitle { font-family:var(--serif); font-size:16px; color:var(--ink); line-height:1.2; }
   .stepbtn .stepmeta { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:2px; }
+
+  /* per-stage card accents (foundation / stress-test / live research) */
+  .pcard.is-foundation { border-left:3px solid var(--blue); }
+  .pcard.is-stress { border-left:3px solid var(--accent); }   /* adversarial pack — red */
+  .pcard.is-research { border-left:3px solid #0d8f8f; }       /* live-researched — teal */
+
+  /* ---- explainer panel: "what this step does", shown under the steps bar ---- */
+  .explain { max-width:940px; margin:-6px 0 22px; background:var(--panel); border:1px solid var(--line);
+    border-left:3px solid var(--line); border-radius:var(--r); padding:14px 18px; box-shadow:var(--shadow-sm);
+    display:none; }
+  .explain.show { display:block; animation:rise .25s ease; }
+  .explain.ex-foundation { border-left-color:var(--blue); }
+  .explain.ex-enrich { border-left-color:var(--good); }
+  .explain.ex-stress { border-left-color:var(--accent); }
+  .explain.ex-all { border-left-color:var(--ink); }
+  .explain .ex-top { display:flex; align-items:center; gap:9px; margin-bottom:5px; }
+  .explain .ex-badge { font-size:9.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; color:var(--muted); background:var(--wash2); flex:0 0 auto; }
+  .ex-foundation .ex-badge { color:var(--blue); background:var(--blue-soft); }
+  .ex-enrich .ex-badge { color:var(--good); background:var(--good-soft); }
+  .ex-stress .ex-badge { color:var(--accent); background:var(--accent-soft); }
+  .explain .ex-title { font-family:var(--serif); font-size:16.5px; color:var(--ink); letter-spacing:-.2px; }
+  .explain .ex-body { font-size:13px; line-height:1.6; color:var(--body); }
+  .explain .ex-body b { color:var(--ink); font-weight:650; }
+  .explain .pipe { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .explain .pstep { display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:var(--ink);
+    background:var(--wash); border:1px solid var(--line); border-radius:999px; padding:5px 11px; }
+  .explain .pstep .pn { font-family:ui-monospace, Menlo, monospace; font-size:9px; font-weight:700;
+    color:#fff; background:var(--good); width:15px; height:15px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center; }
+  .explain .parrow { color:var(--faint); font-size:13px; }
+
   .lib-tools { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .search { position:relative; flex:1; min-width:220px; max-width:420px; }
   .search input { width:100%; padding:9px 13px 9px 36px; border-radius:var(--r-sm);
@@ -235,11 +272,16 @@
     letter-spacing:.5px; text-transform:uppercase; padding:3px 8px; border-radius:999px; }
   .phase-tag.foundation { color:var(--blue); background:var(--blue-soft); border:1px solid #b6cfe8; }
   .phase-tag.robustness { color:var(--accent); background:var(--accent-soft); border:1px solid #e6bcc0; }
-  .pcard.is-foundation { border-left:3px solid var(--blue); }
-  .pcard.is-robustness, .pcard.is-research { border-left:3px solid var(--accent); }
   .pcard .ptags { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
   .tag { font-size:11px; color:#3d4c63; background:var(--wash); border:1px solid var(--line);
     border-radius:5px; padding:2px 8px; }
+  /* origin query on a researched card — links a paper back to the question that found it */
+  .pcard .pquery { margin-top:9px; font-size:11.5px; color:var(--blue); background:var(--blue-soft);
+    border:1px solid #cadcef; border-radius:6px; padding:4px 9px; display:flex; align-items:center; gap:6px;
+    cursor:pointer; }
+  .pcard .pquery svg { flex:0 0 auto; opacity:.8; }
+  .pcard .pquery span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pcard .pquery:hover { background:#dce8f6; }
   .no-results { text-align:center; color:var(--muted); padding:60px 20px; font-style:italic; }
 
   /* provenance chip — where a paper came from: the preset library vs. researched live */
@@ -319,14 +361,10 @@
   .gres .gstatus { font-size:10.5px; color:var(--faint); margin-top:6px; text-transform:capitalize;
     font-family:ui-monospace, Menlo, monospace; }
 
-  .card { position:relative; border:1px solid var(--line); border-left:3px solid var(--line);
+  .card { position:relative; border:1px solid var(--line);
     border-radius:var(--r-sm); margin-bottom:12px; background:var(--panel); overflow:hidden; box-shadow:var(--shadow-sm); }
   .card.fresh { animation:rise .4s ease; }
   @keyframes rise { from { transform:translateY(-6px); opacity:0 } to { transform:none; opacity:1 } }
-  .card.v-commit { border-left-color:var(--good); }
-  .card.v-flag   { border-left-color:var(--warn); }
-  .card.v-reject { border-left-color:var(--bad); }
-  .card.v-truth  { border-left-color:var(--blue); }
 
   /* verdict header */
   .card .top { display:flex; align-items:center; gap:9px; padding:12px 14px 0; }
@@ -342,6 +380,11 @@
     border:1px solid #c2d4ea; color:var(--blue); white-space:nowrap; }
   .card .body { padding:6px 14px 14px; }
   .card .eid { font-family:ui-monospace, Menlo, monospace; font-size:10.5px; color:var(--faint); margin:6px 0 0; }
+  .eidrow { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:6px 0 0; }
+  .eidrow .eid { margin:0; }
+  /* "look it up" — external link to the paper (PubMed by PMID, else DOI) */
+  .srclink { color:var(--muted); text-decoration:none; font-weight:550; white-space:nowrap; }
+  .srclink:hover { color:var(--blue); text-decoration:underline; }
 
   .quote { font-family:var(--serif); font-size:13.5px; line-height:1.5; color:#2b2f36;
     border-left:2px solid var(--line); padding:1px 0 1px 11px; margin:8px 0 11px;
@@ -440,6 +483,144 @@
   pre.rawblock { margin:6px 0 2px; padding:10px 12px; background:#1d222b; color:#d6dbe4; border-radius:6px;
     font-family:ui-monospace, Menlo, monospace; font-size:11px; line-height:1.5; overflow:auto; max-height:260px; }
 
+  /* ---------------- research view (chat) ---------------- */
+  #research { overflow:hidden; background:var(--wash); }
+  /* left: research history sidebar */
+  .rs-side { border-right:1px solid var(--line); background:var(--panel); display:flex;
+    flex-direction:column; min-height:0; }
+  .rs-side-head { flex:0 0 auto; padding:16px 16px 12px; }
+  .rs-new { width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
+    font-weight:600; padding:10px 14px; border-radius:var(--r-sm); background:var(--ink); color:#fff;
+    border-color:var(--ink); }
+  .rs-new:hover:not(:disabled) { background:#000; }
+  .rs-side-lbl { font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase;
+    color:var(--faint); padding:4px 18px 8px; }
+  .rs-list { flex:1; min-height:0; overflow-y:auto; padding:0 10px 20px; }
+  .rs-item { padding:10px 12px; border-radius:var(--r-sm); cursor:pointer; transition:.12s;
+    border:1px solid transparent; margin-bottom:2px; }
+  .rs-item:hover { background:var(--wash); }
+  .rs-item.active { background:var(--blue-soft); border-color:#cadcef; }
+  .rs-item .q { font-size:13px; color:var(--ink); line-height:1.35; font-weight:550;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .rs-item .meta { font-size:11px; color:var(--faint); margin-top:5px; display:flex; gap:8px;
+    align-items:center; font-variant-numeric:tabular-nums; }
+  .rs-item .meta .dot { width:3px; height:3px; border-radius:50%; background:var(--faint); }
+  .rs-empty { color:var(--muted); font-style:italic; font-size:12.5px; padding:16px 18px; }
+
+  /* right: the conversation */
+  .rs-main { display:flex; flex-direction:column; min-height:0; position:relative; }
+  .rs-scroll { flex:1; min-height:0; overflow-y:auto; }
+  .rs-thread { max-width:760px; margin:0 auto; padding:26px 26px 20px; }
+
+  /* empty / hero state */
+  .rs-hero { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; padding:30px; text-align:center; pointer-events:none; }
+  .rs-hero .kicker { font-size:12px; font-weight:650; letter-spacing:.6px; text-transform:uppercase;
+    color:var(--blue); margin-bottom:12px; }
+  .rs-hero h1 { font-family:var(--serif); font-size:34px; letter-spacing:-.6px; color:var(--ink);
+    margin:0 0 10px; }
+  .rs-hero p { color:var(--muted); font-size:14.5px; max-width:460px; margin:0 0 22px; line-height:1.55; }
+  .rs-suggest { display:flex; flex-wrap:wrap; gap:9px; justify-content:center; max-width:560px;
+    pointer-events:auto; }
+  .rs-chip { font-size:13px; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; padding:9px 15px; box-shadow:var(--shadow-sm); }
+  .rs-chip:hover { border-color:var(--blue); color:var(--blue); }
+
+  /* message turns */
+  .msg { margin-bottom:18px; }
+  .msg.user { display:flex; justify-content:flex-end; }
+  .msg.user .bubble { background:var(--ink); color:#fff; border-radius:16px 16px 4px 16px;
+    padding:11px 15px; max-width:78%; font-size:14px; line-height:1.5; white-space:pre-wrap; }
+  .msg.assistant .bubble { font-size:14.5px; line-height:1.62; color:var(--body); }
+  .msg.assistant .bubble b { color:var(--ink); font-weight:650; }
+  .msg.assistant .who { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:650;
+    color:var(--muted); margin-bottom:8px; }
+  .msg.assistant .who::before { content:""; width:20px; height:20px; border-radius:6px;
+    background:linear-gradient(135deg,var(--blue),#3f86d4); flex:0 0 auto; }
+  .msg .cursor { display:inline-block; width:7px; height:15px; background:var(--blue);
+    margin-left:2px; vertical-align:text-bottom; animation:blink 1s step-start infinite; border-radius:1px; }
+  .msg.err .bubble { background:var(--bad-soft); border:1px solid #eecccd; color:var(--bad);
+    border-radius:var(--r-sm); padding:10px 14px; font-size:13px; }
+
+  /* tool activity chips inside a turn */
+  .tool-act { display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--muted);
+    background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:6px 13px;
+    margin:9px 0; width:fit-content; max-width:100%; }
+  .tool-act .ico { width:14px; height:14px; flex:0 0 auto; color:var(--blue); }
+  .tool-act .sp { width:12px; height:12px; border:2px solid var(--line); border-top-color:var(--blue);
+    border-radius:50%; animation:spin .7s linear infinite; flex:0 0 auto; }
+  .tool-act.done { color:var(--good); background:var(--good-soft); border-color:#bfe0cd; }
+  .tool-act.done .ico { color:var(--good); }
+  .tool-act .chk { color:var(--good); font-weight:700; }
+
+  /* paper verdict cards + claim assessment cards, rendered inline in a turn */
+  .rs-cards { display:flex; flex-direction:column; gap:8px; margin:10px 0 4px; }
+  .rs-block-lbl { font-size:10px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+    color:var(--faint); margin:6px 0 2px; }
+  .rpaper { border:1px solid var(--line); border-radius:var(--r-sm);
+    background:var(--panel); padding:11px 13px; box-shadow:var(--shadow-sm); }
+  .rpaper .rp-top { display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  .rpaper .rp-v { font-size:10.5px; font-weight:650; letter-spacing:.3px; text-transform:uppercase;
+    padding:2px 8px; border-radius:999px; flex:0 0 auto; }
+  .rp-v.commit { color:var(--good); background:var(--good-soft); }
+  .rp-v.flag   { color:var(--warn); background:var(--warn-soft); }
+  .rp-v.reject { color:var(--bad); background:var(--bad-soft); }
+  .rpaper .rp-title { font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35;
+    cursor:pointer; }
+  .rpaper .rp-title:hover { color:var(--blue); }
+  .rpaper .rp-meta { font-size:11.5px; color:var(--muted); margin-top:3px; }
+  .rpaper .rp-flags { margin-top:7px; display:flex; flex-wrap:wrap; gap:5px; }
+
+  .rclaim { border:1px solid var(--line); border-radius:var(--r-sm); background:var(--panel);
+    padding:10px 13px; box-shadow:var(--shadow-sm); }
+  .rclaim .rc-text { font-size:13.5px; color:var(--ink); margin-bottom:7px; }
+  .rclaim .rc-bar { position:relative; height:6px; border-radius:999px; background:var(--wash2);
+    overflow:hidden; margin-bottom:6px; }
+  .rclaim .rc-bar .fill { position:absolute; inset:0 auto 0 0; border-radius:inherit; }
+  .rclaim .rc-nums { display:flex; align-items:center; gap:10px; font-size:11.5px; color:var(--muted);
+    font-variant-numeric:tabular-nums; }
+  .rclaim .rc-nums b { color:var(--ink); font-weight:650; }
+  .rclaim .rc-stance { margin-left:auto; font-weight:600; }
+
+  /* "view branch in graph" button after a turn that moved belief */
+  .rs-branchbtn { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600;
+    color:var(--blue); background:var(--blue-soft); border:1px solid #cadcef; border-radius:999px;
+    padding:7px 14px; margin-top:6px; }
+  .rs-branchbtn:hover { background:#dce8f6; }
+
+  /* composer */
+  .rs-composer { flex:0 0 auto; border-top:1px solid var(--line); background:var(--panel);
+    padding:14px 26px 18px; }
+  .rs-inputwrap { max-width:760px; margin:0 auto; display:flex; align-items:flex-end; gap:10px;
+    background:var(--panel); border:1px solid #d3d8e0; border-radius:16px; padding:8px 8px 8px 16px;
+    box-shadow:var(--shadow-sm); transition:.14s; }
+  .rs-inputwrap:focus-within { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  .rs-inputwrap textarea { flex:1; border:none; background:none; resize:none; font-family:var(--sans);
+    font-size:14.5px; line-height:1.5; padding:7px 0; max-height:160px; color:var(--ink); outline:none; }
+  .rs-send { width:38px; height:38px; flex:0 0 auto; border-radius:11px; background:var(--ink);
+    border-color:var(--ink); color:#fff; display:inline-flex; align-items:center; justify-content:center;
+    padding:0; }
+  .rs-send:hover:not(:disabled) { background:#000; }
+  .rs-send:disabled { background:var(--wash2); border-color:var(--line); color:var(--faint); }
+  .rs-hint { max-width:760px; margin:8px auto 0; font-size:11.5px; color:var(--faint); text-align:center; }
+  .rs-offline { max-width:760px; margin:0 auto 10px; font-size:12.5px; color:var(--warn);
+    background:var(--warn-soft); border:1px solid #e6d5a8; border-radius:var(--r-sm); padding:9px 13px; }
+
+  /* branch banner over the graph view */
+  #branch-banner { position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:8;
+    display:none; align-items:center; gap:11px; background:rgba(255,255,255,.96); backdrop-filter:blur(6px);
+    border:1px solid #cadcef; border-radius:999px; padding:8px 14px;
+    box-shadow:var(--shadow-md); max-width:min(620px, 86%); }
+  #branch-banner.show { display:flex; }
+  #branch-banner .bb-lbl { font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase;
+    color:var(--blue); flex:0 0 auto; }
+  #branch-banner .bb-q { font-size:13px; color:var(--ink); font-weight:550; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  #branch-banner .bb-n { font-size:11.5px; color:var(--muted); flex:0 0 auto; font-variant-numeric:tabular-nums; }
+  #branch-banner .bb-x { flex:0 0 auto; border:none; background:var(--wash2); border-radius:50%;
+    width:24px; height:24px; font-size:15px; line-height:1; color:var(--muted); padding:0; }
+  #branch-banner .bb-x:hover { background:var(--line); color:var(--ink); }
+
   /* ---------------- modal reader ---------------- */
   #modal { position:fixed; inset:0; background:rgba(15,20,28,.5); display:none; align-items:center;
     justify-content:center; z-index:60; padding:30px; backdrop-filter:blur(2px); }
@@ -474,6 +655,7 @@
     <div class="spacer"></div>
     <nav class="segmented" id="nav">
       <button data-view="library" class="active">Library</button>
+      <button data-view="research">Research</button>
       <button data-view="graph">Belief graph <span class="livedot"></span></button>
     </nav>
     <div class="spacer"></div>
@@ -494,7 +676,7 @@
     <button id="build" class="primary" title="Replay the chosen ground-truth papers through the engine to build the initial belief graph">Establish base &#9656;</button>
     <button id="step" class="primary">Ingest next &#9656;</button>
     <button id="play" title="Ingest every remaining paper in sequence">Ingest all papers &#9656;</button>
-    <span id="ready" class="ready-badge" style="display:none">Model ready for research &amp; verification</span>
+    <span id="ready" class="ready-badge" style="display:none">All papers ingested — ready to research</span>
     <div class="sep"></div>
     <div class="menu-wrap">
       <button id="tools-btn" class="ghost icon-btn" title="Corpus, retraction &amp; more" aria-haspopup="true" aria-expanded="false">
@@ -525,8 +707,12 @@
           </div>
           <div class="pop-hint">Overlays each claim's hidden true state, for the audience.</div>
         </div>
+        <div class="pop-div"></div>
         <div class="pop-sec">
-          <button id="reset" class="ghost blockbtn">Reset demo</button>
+          <div class="pop-lbl">Reset for a fresh run</div>
+          <button id="reset" class="danger blockbtn">Reset the belief graph</button>
+          <label class="check-row"><input type="checkbox" id="reset-chats" /><span>Also delete research conversations</span></label>
+          <div class="pop-hint">Rebuilds the graph from scratch — back to step&nbsp;1 — so you can run the demo again for the next visitor. Your research chats are kept unless you tick the box.</div>
         </div>
       </div>
     </div>
@@ -550,12 +736,13 @@
               <span class="stepmeta" id="step2-meta">expand the model&rsquo;s knowledge</span></span>
           </button>
           <span class="steparrow">&rarr;</span>
-          <button class="stepbtn" data-scope="research">
+          <button class="stepbtn" data-scope="stress">
             <span class="stepnum">3</span>
-            <span class="steptext"><span class="steptitle">Research &amp; verify</span>
-              <span class="stepmeta" id="step3-meta">find &amp; check new results</span></span>
+            <span class="steptext"><span class="steptitle">Stress-test</span>
+              <span class="stepmeta" id="step3-meta">adversarial papers</span></span>
           </button>
         </div>
+        <div class="explain" id="explain"></div>
         <div class="lib-tools">
           <div class="search">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -575,15 +762,63 @@
       </div>
     </section>
 
+    <!-- ---------- Research (chat) ---------- -->
+    <section id="research" class="view">
+      <aside class="rs-side">
+        <div class="rs-side-head">
+          <button id="rs-new" class="rs-new">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New research
+          </button>
+        </div>
+        <div class="rs-side-lbl">History</div>
+        <div class="rs-list" id="rs-list"><div class="rs-empty">Your peptide research sessions appear here.</div></div>
+      </aside>
+      <div class="rs-main">
+        <div class="rs-scroll" id="rs-scroll">
+          <div class="rs-hero" id="rs-hero">
+            <div class="kicker">Cortesol Research</div>
+            <h1>Ask anything about peptides</h1>
+            <p>I pull the literature, run every paper through the belief engine, and answer
+               only from the confidence it earns — never from what a paper merely claims.</p>
+            <div class="rs-suggest" id="rs-suggest">
+              <button class="rs-chip">Does semaglutide bind GLP1R?</button>
+              <button class="rs-chip">Is BPC-157 effective for tendon healing?</button>
+              <button class="rs-chip">What's the evidence on tirzepatide?</button>
+            </div>
+          </div>
+          <div class="rs-thread" id="rs-thread" style="display:none"></div>
+        </div>
+        <div class="rs-composer">
+          <div class="rs-offline" id="rs-offline" style="display:none">
+            Research chat needs a Gemini API key — set <b>GEMINI_API_KEY</b> in <b>.env</b>, then reload.
+          </div>
+          <div class="rs-inputwrap">
+            <textarea id="rs-input" rows="1" placeholder="Ask about a peptide, its target, efficacy, safety…" autocomplete="off"></textarea>
+            <button id="rs-send" class="rs-send" title="Send" disabled>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </div>
+          <div class="rs-hint">Answers are grounded in the engine-earned belief graph. Papers you research are added to the Library and graph.</div>
+        </div>
+      </div>
+    </section>
+
     <!-- ---------- Belief graph ---------- -->
     <section id="graphview" class="view">
       <div id="stage">
         <div id="net"></div>
+        <div id="branch-banner">
+          <span class="bb-lbl">Branch</span>
+          <span class="bb-q" id="bb-q"></span>
+          <span class="bb-n" id="bb-n"></span>
+          <button class="bb-x" id="bb-x" title="Clear branch highlight">&times;</button>
+        </div>
         <div id="stagehint"><div class="box">
           <span class="big">Start from nothing.</span>
           Hit <b>Establish base</b> to replay the ground-truth papers and form the initial graph.
-          Then <b>enrich</b> it with more papers, and finally <b>research &amp; verify</b> new
-          results — watch it revise, hold firm, or refuse. Every move is recorded at right.
+          Then <b>enrich</b> it with more papers, and finally <b>stress-test</b> it with adversarial
+          ones — watch it revise, hold firm, or refuse. Every move is recorded at right.
         </div></div>
         <div id="legend">
           <b>Node colour</b> — confidence (<span id="prior-note">prior</span>)
@@ -638,6 +873,25 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => { const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; };
 
+// External "look it up" link for a paper: PubMed by PMID (always resolvable and
+// free), falling back to the publisher via DOI. "" when neither id is present.
+// PMIDs are all-digits — the numeric guard keeps sim-mode synthetic ids (e.g.
+// "evt_12") from producing a dead PubMed link.
+const pmidOf = (o) => { const v = o && o.pmid != null ? String(o.pmid).trim() : ""; return /^\d+$/.test(v) ? v : ""; };
+function sourceUrl(o){
+  const pmid = pmidOf(o);
+  if (pmid) return "https://pubmed.ncbi.nlm.nih.gov/" + pmid + "/";
+  const doi = o && o.doi ? String(o.doi).trim() : "";
+  if (doi) return "https://doi.org/" + encodeURI(doi);
+  return "";
+}
+function sourceLabel(o){ return pmidOf(o) ? "View on PubMed" : "View paper"; }
+function sourceLinkHTML(o, prefix){
+  const url = sourceUrl(o);
+  if (!url) return "";
+  return (prefix || "") + `<a class="srclink" href="${esc(url)}" target="_blank" rel="noopener">${esc(sourceLabel(o))} ↗</a>`;
+}
+
 // confidence -> colour (crimson -> gold -> green), tuned for a light background
 function confColor(c) {
   const stops = [[0,[248,113,113]],[0.5,[251,191,36]],[1,[52,211,153]]];
@@ -660,11 +914,31 @@ let FOCUS = null;                       // selected node id (null = nothing sele
 let HL_LINKS = new Set();               // edges incident to the selected node
 
 function nodeBase(n){ return 2.4 + Math.sqrt(Math.max(0, n.impact || 0)) * 3.2 + (n.moved ? 1.6 : 0); }
-// node size by downstream impact (swells when it just moved); the selected node grows a touch.
-function nodeVal(n){ const v = nodeBase(n); return (FOCUS && n.id === FOCUS) ? v * 1.6 : v; }
-// colour is ALWAYS confidence — selection never changes the colour scheme.
-function nodeColor(n){ return confColor(n.c == null ? PRIOR : n.c); }
-function linkColor(l){ return (EDGE_STYLE[l.type] || {}).color || "#98a2b3"; }
+// is this node part of the currently-highlighted research branch?
+function inBranch(n){ return !!ACTIVE_BRANCH && (n.sessions || []).includes(ACTIVE_BRANCH); }
+// node size by downstream impact (swells when it just moved); the selected node grows a
+// touch, and a branch's own claims swell so the query's subgraph reads at a glance.
+function nodeVal(n){ let v = nodeBase(n);
+  if (FOCUS && n.id === FOCUS) v *= 1.6;
+  if (inBranch(n)) v *= 1.5;
+  return v; }
+// colour is ALWAYS confidence — except when a research branch is pinned, when off-branch
+// claims fade to grey so the query's own subgraph stands out. Selection never recolours.
+function nodeColor(n){
+  if (ACTIVE_BRANCH && !inBranch(n)) return "#dfe3ea";
+  return confColor(n.c == null ? PRIOR : n.c);
+}
+// an edge is "in branch" only when BOTH endpoints belong to the pinned query.
+function linkInBranch(l){
+  if (!ACTIVE_BRANCH) return true;
+  const s = l.source, t = l.target;
+  return ((s && s.sessions) || []).includes(ACTIVE_BRANCH)
+      && ((t && t.sessions) || []).includes(ACTIVE_BRANCH);
+}
+function linkColor(l){
+  const base = (EDGE_STYLE[l.type] || {}).color || "#98a2b3";
+  return (ACTIVE_BRANCH && !linkInBranch(l)) ? "#e6e9ef" : base;
+}
 function linkWidth(l){
   const w = 1.3 + Math.abs(l.weight || 1) * 1.7;
   return (FOCUS && HL_LINKS.has(l)) ? w * 1.6 : w;
@@ -678,7 +952,8 @@ function linkParticles(l){
 
 function refreshGraphStyles(){
   if (!GRAPH) return;
-  GRAPH.nodeVal(nodeVal).linkWidth(linkWidth).linkDirectionalParticles(linkParticles);
+  GRAPH.nodeVal(nodeVal).nodeColor(nodeColor)
+    .linkWidth(linkWidth).linkColor(linkColor).linkDirectionalParticles(linkParticles);
 }
 // Select a node: note its incident edges and gently emphasise them. No camera motion,
 // so rotation keeps orbiting the graph's centre.
@@ -745,7 +1020,8 @@ const GraphStore = {
       let node = this.byId.get(n.id);
       if (!node) { node = { id: n.id }; this.byId.set(n.id, node); }  // new -> laid out fresh
       Object.assign(node, { label:n.label, text:n.text, c:n.c, u:n.u, r:n.r, s:n.s,
-        status:n.status, impact:n.impact, moved:n.moved, truth:n.truth });  // x/y preserved
+        status:n.status, impact:n.impact, moved:n.moved, truth:n.truth,
+        sessions:n.sessions || [] });  // x/y preserved
     });
     for (const id of [...this.byId.keys()]) if (!seen.has(id)) this.byId.delete(id);
     this.data = {
@@ -779,24 +1055,33 @@ let PHASE = "foundation", N_FOUND = 0, N_CORPUS = 0, FOUNDATION_BUILT = false;
 let SCOPE = "all";               // which pool the Library shows: all | foundation | enrich | research
 let INSP_PANEL = "log";          // inspector sidebar: "log" (reasoning) | "search" (graph search)
 let GSEARCH_Q = "", GSEARCH_N = 0;   // graph-search query + last result count
+// ---- Research tab state ----
+let SESSIONS = {};               // sid -> {id, query, createdAt, items:[]} (client transcripts)
+let SERVER_SESSIONS = {};        // sid -> {id, query, n_papers, claims} (server branch truth)
+let CUR_SESSION = null;          // the open conversation's session id
+let ACTIVE_BRANCH = null;        // sid whose subgraph is pinned/highlighted in the graph view
+let CHATTING = false;            // a chat turn is streaming
+let GEMINI_OK = false;           // whether the research chat backend is configured
 
 const PHASE_META = {
   foundation:    { act: "STEP 1", label: "Establish base" },
   corroboration: { act: "STEP 2", label: "Enrich model" },
-  robustness:    { act: "STEP 3", label: "Research & verify" },
+  robustness:    { act: "STEP 3", label: "Stress-test" },
 };
 
-// The Library pools map onto the three workflow stages: step 1 is the curated
+// The Library pools map onto the workflow stages: step 1 is the curated
 // ground-truth base, step 2 is corroborating papers that enrich the model, step 3
-// is the adversarial "research & verify" pack we find and check afterwards.
+// is the adversarial "stress-test" pack. Papers you pull live in the Research tab
+// form a separate "research" pool that gets its own section when present.
 function docPool(d){
   if (d.phase === "foundation") return "foundation";
-  if (d.phase === "robustness") return "research";
+  if (d.phase === "robustness") return "stress";      // the curated adversarial pack
+  if (d.phase === "research")   return "research";    // live, chat-fetched papers
   return "enrich";
 }
-// provenance shown on each card: the preset library vs. fetched live via research
+// provenance shown on each card: the preset library vs. fetched live via the chat tab
 function provOf(d){
-  const researched = d.source_kind === "researched" || d.phase === "robustness";
+  const researched = d.source_kind === "researched";
   return researched ? { cls: "researched", label: "Researched" } : { cls: "preloaded", label: "Preloaded" };
 }
 const clampInt = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
@@ -804,7 +1089,7 @@ const clampInt = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 function stageCounts(scope){
   if (scope === "foundation") return { done: FOUNDATION_BUILT ? N_FOUND : 0, total: N_FOUND };
   if (scope === "enrich")     return { done: clampInt(CURSOR - N_FOUND, 0, N_CORPUS - N_FOUND), total: Math.max(0, N_CORPUS - N_FOUND) };
-  if (scope === "research")   return { done: clampInt(CURSOR - N_CORPUS, 0, TOTAL - N_CORPUS), total: Math.max(0, TOTAL - N_CORPUS) };
+  if (scope === "stress")     return { done: clampInt(CURSOR - N_CORPUS, 0, TOTAL - N_CORPUS), total: Math.max(0, TOTAL - N_CORPUS) };
   return { done: 0, total: 0 };
 }
 
@@ -853,21 +1138,25 @@ function ingestCounts(){
 function updateSteps(){
   const bar = $("steps-bar");
   bar.style.display = (IS_PAPERS && N_FOUND > 0) ? "flex" : "none";
-  if (bar.style.display === "none") return;
-  const e = stageCounts("enrich"), r = stageCounts("research");
+  if (bar.style.display === "none"){ renderExplain(); return; }
+  const e = stageCounts("enrich"), r = stageCounts("stress");
   $("step1-meta").textContent = FOUNDATION_BUILT ? "ground truth established" : `${N_FOUND} curated papers`;
-  $("step2-meta").textContent = FOUNDATION_BUILT ? `${e.done} / ${e.total} ingested` : `${e.total} papers · after step 1`;
-  $("step3-meta").textContent = `${r.done} / ${r.total} checked`;
+  $("step2-meta").textContent = FOUNDATION_BUILT ? `${e.done} of ${e.total} ingested` : `${e.total} papers · after step 1`;
+  // Phrase step 3 as progress through a set of challenges, never as a pass/fail score.
+  $("step3-meta").textContent = r.done === 0
+    ? `${r.total} adversarial papers`
+    : (r.done >= r.total ? `all ${r.total} handled` : `${r.done} of ${r.total} run`);
   const done = {
     foundation: FOUNDATION_BUILT,
     enrich: e.total > 0 && e.done >= e.total,
-    research: r.total > 0 && r.done >= r.total,
+    stress: r.total > 0 && r.done >= r.total,
   };
   bar.querySelectorAll(".stepbtn").forEach((b) => {
     const sc = b.dataset.scope;
     b.classList.toggle("active", sc === SCOPE);
     b.classList.toggle("done", !!done[sc]);
   });
+  renderExplain();
 }
 function docsInScope(){
   if (!(IS_PAPERS && N_FOUND > 0)) return DOCS;   // sim / no-foundation: one flat pool
@@ -879,6 +1168,59 @@ $("steps-bar").querySelectorAll(".stepbtn").forEach((b) => b.onclick = () => {
   SCOPE = (SCOPE === sc) ? "all" : sc;   // click the active stage again to see all papers
   updateSteps(); renderGrid();
 });
+
+// ---- step explainer: a plain-language "what this step does" panel under the steps bar.
+// Defaults to an overview; clicking a step swaps in that step's description (enrichment
+// also shows the per-paper lifecycle, which is the mechanism people most want to see). ----
+const EXPLAIN = {
+  all: {
+    badge: "How it works", cls: "ex-all",
+    title: "Three stages, one rule",
+    body: "<b>The model proposes; the ledger disposes.</b> First <b>establish a base</b> from curated papers, "
+      + "then <b>enrich</b> it with more evidence, then <b>stress-test</b> it with adversarial ones. A paper is "
+      + "only ever <i>data</i> — belief moves solely through the engine, never by what a paper claims. "
+      + "Click a step above to see what it does.",
+  },
+  foundation: {
+    badge: "Step 1", cls: "ex-foundation",
+    title: "Establish the base",
+    body: "The highest-reliability papers per peptide are replayed through the engine to form the starting graph. "
+      + "This sets the confidence each core claim begins with — a skeptical prior every later result has to earn "
+      + "its way above. Nothing here is taken on faith.",
+  },
+  enrich: {
+    badge: "Step 2", cls: "ex-enrich",
+    title: "Enrich the model",
+    body: "More real papers stream in, one at a time — each running the full lifecycle below. A solid replication "
+      + "<b>nudges confidence up</b>, but never past the trust cap of its source, so no single paper can spike a "
+      + "belief. Weak, hyped, or fraudulent papers move it little or not at all. Watch confidences climb as "
+      + "independent evidence stacks up.",
+    pipe: ["Quarantine text", "Screen for fraud / hype", "Model proposes update", "Validate", "Commit (bounded)"],
+  },
+  stress: {
+    badge: "Step 3", cls: "ex-stress",
+    title: "Stress-test the beliefs",
+    body: "Five adversarial papers are aimed at claims you've already established: a genuine large replication "
+      + "(should <b>revise up</b>), a hyped case report and a p-hacked study (should <b>hold firm</b>), a preprint "
+      + "contradiction (should <b>dip, but only a little</b>), and a prompt-injection ordering the system to set "
+      + "confidence to 1.0 (should be <b>refused</b>). This is the epistemic immune system on display — not a "
+      + "pass/fail test, but proof that belief bends to real evidence and resists everything else.",
+  },
+};
+function renderExplain(){
+  const el = $("explain"); if (!el) return;
+  if (!(IS_PAPERS && N_FOUND > 0)){ el.className = "explain"; el.innerHTML = ""; return; }
+  const x = EXPLAIN[SCOPE] || EXPLAIN.all;
+  const pipe = x.pipe
+    ? `<div class="pipe">` + x.pipe.map((p, i) =>
+        (i ? `<span class="parrow">&rarr;</span>` : "")
+        + `<span class="pstep"><span class="pn">${i + 1}</span>${esc(p)}</span>`).join("") + `</div>`
+    : "";
+  el.className = `explain show ${x.cls}`;
+  el.innerHTML = `<div class="ex-top"><span class="ex-badge">${esc(x.badge)}</span>`
+    + `<span class="ex-title">${esc(x.title)}</span></div>`
+    + `<div class="ex-body">${x.body}</div>${pipe}`;
+}
 
 function htmlLabel(n){
   let t = `<div style="font:12px Georgia,serif;max-width:250px;padding:3px 5px;line-height:1.45">`
@@ -901,6 +1243,7 @@ function setView(view){
       setTimeout(() => GraphStore.fit(), 320);
     });
   }
+  if (view === "research") setTimeout(() => { const i = $("rs-input"); if (i) i.focus(); }, 40);
 }
 $("nav").querySelectorAll("button").forEach((b) => b.onclick = () => setView(b.dataset.view));
 
@@ -918,6 +1261,14 @@ function applyGraph(g){
   if (g.documents) renderGrid();
   $("stagehint").style.display = g.nodes.length ? "none" : "flex";
   renderGraphSearch();   // keep the graph-search list live as claims/confidences change
+  // research-tab: refresh the branch index (server truth) + gemini availability
+  if (g.research_sessions){
+    SERVER_SESSIONS = {};
+    g.research_sessions.forEach((s) => { SERVER_SESSIONS[s.id] = s; });
+    renderSessionList();
+  }
+  if (g.gemini_available !== undefined){ GEMINI_OK = g.gemini_available; updateComposerState(); }
+  applyBranch();   // keep branch highlight + banner consistent after any graph refresh
 }
 
 function updateProgress(cursor, total){
@@ -941,20 +1292,19 @@ function docStatus(idx){
   return "pending";
 }
 const STATUS_LABEL = { pending:"Pending", next:"Next up", flagged:"Flagged OOD", refused:"Refused" };
-// "done" reads differently per stage: base is established, enrichment ingested, research checked
+// "done" reads differently per stage: base is established, enrichment ingested,
+// a stress-test paper is handled, a researched paper is added.
 function doneLabel(d){
   const p = docPool(d);
-  return p === "foundation" ? "Established" : p === "research" ? "Checked" : "Ingested";
+  if (p === "foundation") return "Established";
+  if (p === "stress")     return "Handled";
+  if (p === "research")   return "Added";
+  return "Ingested";
 }
 function statusText(d, st){ return st === "done" ? doneLabel(d) : (STATUS_LABEL[st] || "Pending"); }
-function stageClass(d){
-  const p = docPool(d);
-  return p === "foundation" ? "is-foundation" : p === "research" ? "is-research" : "";
-}
 function cardClass(d, st){
   const base = st === "next" ? "next" : st === "pending" ? "" : "done";
-  const stage = stageClass(d);
-  return `pcard ${base}${stage ? " " + stage : ""}`;
+  return `pcard ${base}`;
 }
 // which coarse filter bucket a status belongs to
 function bucket(st){ return st === "next" ? "pending" : st; }
@@ -972,11 +1322,13 @@ function updateChipCounts(){
   document.querySelectorAll(".chip .n").forEach((el) => { el.textContent = counts[el.dataset.c] ?? ""; });
 }
 
-// the three workflow stages, shown as labeled sections in the "all papers" view
+// the workflow stages, shown as labeled sections in the "all papers" view. The
+// "research" section only appears once you've pulled papers live in the chat tab.
 const SECTIONS = [
-  { scope:"foundation", num:"1", title:"Base",       note:"Ground-truth foundation" },
-  { scope:"enrich",     num:"2", title:"Enrichment", note:"Expanding the model’s knowledge" },
-  { scope:"research",   num:"3", title:"Research",   note:"Newly found & verified results" },
+  { scope:"foundation", num:"1", title:"Base",        note:"Curated ground-truth foundation" },
+  { scope:"enrich",     num:"2", title:"Enrichment",  note:"More papers strengthen the beliefs" },
+  { scope:"stress",     num:"3", title:"Stress-test", note:"Adversarial papers — hype, fraud, injection, replication" },
+  { scope:"research",   num:"+", title:"Researched",  note:"Pulled live from the Research tab" },
 ];
 const passDoc = (d) => (FILTER === "all" || bucket(docStatus(d.idx)) === FILTER) && matchesQuery(d);
 function cardsFrag(docs){
@@ -1012,7 +1364,9 @@ function renderGrid(){
     const docs = DOCS.filter((d) => docPool(d) === sec.scope).filter(passDoc);
     if (!docs.length) return;
     any = true;
-    const total = stageCounts(sec.scope).total;
+    // count the actual pool (includes live chat-researched papers), not just the
+    // choreographed stream slice, so the header never undercounts step 3.
+    const total = DOCS.filter((d) => docPool(d) === sec.scope).length;
     const section = document.createElement("section");
     section.className = "lib-section";
     const head = document.createElement("div");
@@ -1059,14 +1413,24 @@ function paperCard(d){
   const card = document.createElement("div");
   card.className = cardClass(d, st);
   card.dataset.idx = d.idx;
+  const queryChip = d.research_query
+    ? `<div class="pquery" data-sid="${esc(d.session_id || "")}" title="Found by this research question — click to trace its branch in the graph">`
+      + `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`
+      + `<span>${esc(d.research_query)}</span></div>` : "";
   card.innerHTML =
       `<span class="prov ${prov.cls}">${prov.label}</span>`
     + `<span class="st ${st}">${statusText(d, st)}</span>`
     + `<div class="ptitle">${esc(d.title)}</div>`
     + (d.authors ? `<div class="pauth">${esc(d.authors)}</div>` : "")
-    + `<div class="pmeta"><span class="j">${esc(d.journal)}</span>${d.year ? ` · ${esc(d.year)}` : ""}</div>`
-    + (d.tags && d.tags.length ? `<div class="ptags">${d.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : "");
+    + `<div class="pmeta"><span class="j">${esc(d.journal)}</span>${d.year ? ` · ${esc(d.year)}` : ""}${sourceLinkHTML(d, " · ")}</div>`
+    + (d.tags && d.tags.length ? `<div class="ptags">${d.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : "")
+    + queryChip;
   card.onclick = () => openPaper(d.idx);
+  const chip = card.querySelector(".pquery");
+  if (chip) chip.onclick = (e) => { e.stopPropagation(); if (chip.dataset.sid) viewBranch(chip.dataset.sid); };
+  // the paper link opens a new tab — don't also fire the card's reader onclick
+  const slink = card.querySelector(".srclink");
+  if (slink) slink.onclick = (e) => e.stopPropagation();
   return card;
 }
 
@@ -1094,7 +1458,8 @@ async function openPaper(idx){
   $("m-title").textContent = p.title;
   $("m-authors").textContent = (p.authors || []).join(", ");
   $("m-jmeta").innerHTML = `<span class="j">${esc(p.journal)}</span>${p.year ? ` · ${esc(p.year)}` : ""}`
-    + (p.pmid ? ` · PMID ${esc(p.pmid)}` : "") + (p.peptide ? ` · <b>${esc(p.peptide)}</b> → ${esc(p.target)}` : "");
+    + (p.pmid ? ` · PMID ${esc(p.pmid)}` : "") + (p.peptide ? ` · <b>${esc(p.peptide)}</b> → ${esc(p.target)}` : "")
+    + sourceLinkHTML(p, " · ");
   $("m-abstract").textContent = p.abstract || "(no abstract)";
   $("modal").classList.add("open");
 }
@@ -1265,7 +1630,7 @@ function eventCard(m){
   card.innerHTML =
     `<div class="top"><span class="vbadge">${vlabel}</span>${truth}<span class="src">${src}</span></div>`
     + `<div class="body">`
-    + `<div class="eid">${esc(m.event_id)}</div>`
+    + `<div class="eidrow"><span class="eid">${esc(m.event_id)}</span>${sourceLinkHTML(m.fields || {})}</div>`
     + `<div class="quote">${esc(m.raw_text)}</div>`
     + `<div class="summary">${summaryOf(m)}</div>`
     + reasons + deltas + flags + detailBlock(m)
@@ -1483,7 +1848,15 @@ $("build").onclick = async () => {
 $("step").onclick = () => post("/event");
 $("play").onclick = () => (playTimer?stopPlay():startPlay());
 $("discredit").onclick = () => { const s=$("discredit-src").value; if(s){ post("/discredit",{source_id:s}); closeTools(); setView("graph"); } };
-$("reset").onclick = async () => { closeTools(); resetLog("Reset. Ingest a paper to begin again."); await post("/reset"); };
+$("reset").onclick = async () => {
+  const alsoChats = $("reset-chats") && $("reset-chats").checked;
+  closeTools();
+  resetLog("Reset — establish the base to begin again.");
+  await post("/reset");                       // rebuilds the KB from scratch (server also clears research branches)
+  if (alsoChats){ clearResearchChats(); $("reset-chats").checked = false; }
+  setView("library");                         // land on the clean starting view for the next visitor
+  toast(alsoChats ? "Reset — belief graph and research chats cleared." : "Reset — belief graph cleared, research chats kept.", "ok");
+};
 $("reveal").onclick = (e) => { REVEAL = e.target.checked; applyReveal(); };
 
 // ---------- Tools popover (corpus / retract / reveal / reset) ----------
@@ -1501,6 +1874,335 @@ $("corpus-seg").querySelectorAll("button").forEach((b) => b.onclick = async () =
   closeTools(); resetLog("Loading source…"); setView("library");
   await post("/source",{mode});
 });
+
+// ==================== Research tab (chat grounded in the belief graph) ====================
+// A Motion-style assistant: ask anything about a peptide, it pulls papers, runs each
+// through the REAL belief engine (server-side), and answers only from the confidence it
+// earns. Every query is a "session" — its transcript lives here (localStorage), and the
+// claims it moved form a traceable branch you can pin in the belief graph.
+
+const LS_KEY = "cortesol.research.sessions.v1";
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "s" + Date.now() + Math.round(performance.now()));
+
+function loadSessionStore(){
+  try { SESSIONS = JSON.parse(localStorage.getItem(LS_KEY) || "{}") || {}; }
+  catch(e){ SESSIONS = {}; }
+}
+function saveSessionStore(){
+  // strip transient DOM refs before persisting
+  const clean = {};
+  for (const [id, s] of Object.entries(SESSIONS)){
+    clean[id] = { id:s.id, query:s.query, createdAt:s.createdAt,
+      items:(s.items||[]).map(({_el,_txt,_streaming,...rest}) => rest) };
+  }
+  try { localStorage.setItem(LS_KEY, JSON.stringify(clean)); } catch(e){}
+}
+function curSession(){ return CUR_SESSION ? SESSIONS[CUR_SESSION] : null; }
+
+// ---- tiny, safe inline markdown for assistant prose ----
+function mdInline(s){
+  let h = esc(s);
+  h = h.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  h = h.replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>");
+  return h;
+}
+function scrollThread(){ const sc = $("rs-scroll"); if (sc) sc.scrollTop = sc.scrollHeight; }
+
+// ---- session lifecycle ----
+function newSession(){
+  CUR_SESSION = null;                 // created lazily on first send
+  $("rs-thread").style.display = "none";
+  $("rs-thread").innerHTML = "";
+  $("rs-hero").style.display = "";
+  renderSessionList();
+  const i = $("rs-input"); if (i){ i.value = ""; autosize(i); updateComposerState(); i.focus(); }
+}
+// Wipe all client-side research transcripts (the "delete past conversations" option on
+// reset). The server-side branches are already cleared by /reset; this drops the local
+// history sidebar + open conversation so nothing lingers for the next visitor.
+function clearResearchChats(){
+  SESSIONS = {}; CUR_SESSION = null;
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  newSession();            // back to the empty hero state + refreshed (now-empty) sidebar
+}
+function ensureSession(firstText){
+  if (CUR_SESSION && SESSIONS[CUR_SESSION]) return SESSIONS[CUR_SESSION];
+  const id = uid();
+  SESSIONS[id] = { id, query:(firstText||"").slice(0,140), createdAt:Date.now(), items:[] };
+  CUR_SESSION = id;
+  $("rs-hero").style.display = "none";
+  $("rs-thread").style.display = "";
+  $("rs-thread").innerHTML = "";
+  return SESSIONS[id];
+}
+function openSession(sid){
+  const s = SESSIONS[sid];
+  CUR_SESSION = sid;
+  $("rs-hero").style.display = "none";
+  $("rs-thread").style.display = "";
+  const thread = $("rs-thread"); thread.innerHTML = "";
+  if (s){ s.items.forEach((it) => { it._el = renderItem(it); if (it._el) thread.appendChild(it._el); }); }
+  else if (SERVER_SESSIONS[sid]){
+    // a branch known to the server but whose transcript was cleared — offer the branch only
+    const q = SERVER_SESSIONS[sid].query || "this query";
+    thread.appendChild(elFromHTML(`<div class="msg assistant"><div class="who">Cortesol</div>`
+      + `<div class="bubble">This research session was cleared from this browser, but its branch is still in the belief graph.</div></div>`));
+    thread.appendChild(branchButtonEl(sid));
+  }
+  renderSessionList();
+  scrollThread();
+}
+
+// ---- history sidebar (client transcripts merged with server branch truth) ----
+function sessionOrder(){
+  const ids = new Set([...Object.keys(SESSIONS), ...Object.keys(SERVER_SESSIONS)]);
+  return [...ids].map((id) => ({
+    id,
+    query: (SESSIONS[id] && SESSIONS[id].query) || (SERVER_SESSIONS[id] && SERVER_SESSIONS[id].query) || "Untitled research",
+    createdAt: (SESSIONS[id] && SESSIONS[id].createdAt) || 0,
+    n_papers: (SERVER_SESSIONS[id] && SERVER_SESSIONS[id].n_papers) || 0,
+    n_claims: (SERVER_SESSIONS[id] && (SERVER_SESSIONS[id].claims || []).length) || 0,
+  })).sort((a, b) => b.createdAt - a.createdAt);
+}
+function renderSessionList(){
+  const box = $("rs-list"); if (!box) return;
+  const rows = sessionOrder();
+  if (!rows.length){ box.innerHTML = `<div class="rs-empty">Your peptide research sessions appear here.</div>`; return; }
+  box.innerHTML = rows.map((r) => {
+    const bits = [];
+    if (r.n_papers) bits.push(`${r.n_papers} paper${r.n_papers === 1 ? "" : "s"}`);
+    if (r.n_claims) bits.push(`${r.n_claims} claim${r.n_claims === 1 ? "" : "s"}`);
+    const meta = bits.length ? bits.map(esc).join('<span class="dot"></span>') : "no belief moved";
+    return `<div class="rs-item${r.id === CUR_SESSION ? " active" : ""}" data-sid="${esc(r.id)}">`
+      + `<div class="q">${esc(r.query)}</div><div class="meta">${meta}</div></div>`;
+  }).join("");
+  box.querySelectorAll(".rs-item").forEach((el) => el.onclick = () => openSession(el.dataset.sid));
+}
+
+// ---- item rendering (one DOM node per transcript item) ----
+function elFromHTML(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+
+function verdictClass(v){ return v === "reject" ? "reject" : v === "flag" ? "flag" : "commit"; }
+function verdictLabel(v){ return v === "reject" ? "Refused" : v === "flag" ? "Flagged OOD" : "Committed"; }
+
+function paperCardEl(p){
+  const v = verdictClass(p.verdict);
+  const flags = (p.red_flags && p.red_flags.length)
+    ? `<div class="rp-flags">${p.red_flags.map((f) => `<span class="flag-chip">${esc(f)}</span>`).join("")}</div>` : "";
+  const el = elFromHTML(
+    `<div class="rpaper v-${v}">`
+    + `<div class="rp-top"><span class="rp-v ${v}">${verdictLabel(p.verdict)}</span></div>`
+    + `<div class="rp-title">${esc(p.title || "(untitled)")}</div>`
+    + `<div class="rp-meta">${esc(p.journal || "")}${p.year ? " · " + esc(p.year) : ""}${sourceLinkHTML(p, " · ")}</div>`
+    + flags + `</div>`);
+  if (p.idx != null){ const t = el.querySelector(".rp-title"); if (t) t.onclick = () => openPaper(p.idx); }
+  return el;
+}
+function claimCardEl(c){
+  const conf = c.confidence == null ? PRIOR : c.confidence;
+  const pct = clamp01(conf) * 100;
+  return elFromHTML(
+    `<div class="rclaim">`
+    + `<div class="rc-text">${esc(c.claim || "")}</div>`
+    + `<div class="rc-bar"><span class="fill" style="width:${pct}%;background:${confColor(conf)}"></span></div>`
+    + `<div class="rc-nums"><span>confidence <b>${conf.toFixed(2)}</b></span>`
+    + `<span>r ${c.supporting || 0} · s ${c.contradicting || 0}</span>`
+    + `<span class="rc-stance">${esc(c.stance || "")}</span></div></div>`);
+}
+function branchButtonEl(sid){
+  const el = elFromHTML(`<button class="rs-branchbtn">`
+    + `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 8.5v7M8.4 6.6C13 6.6 15.5 8 15.5 9"/></svg>`
+    + `View this branch in the graph</button>`);
+  el.onclick = () => viewBranch(sid);
+  return el;
+}
+
+function renderItem(it){
+  if (it.kind === "user")
+    return elFromHTML(`<div class="msg user"><div class="bubble">${esc(it.text)}</div></div>`);
+  if (it.kind === "assistant"){
+    const el = elFromHTML(`<div class="msg assistant"><div class="who">Cortesol</div>`
+      + `<div class="bubble"><span class="txt"></span></div></div>`);
+    it._txt = el.querySelector(".txt");
+    it._txt.innerHTML = mdInline(it.text || "");
+    return el;
+  }
+  if (it.kind === "tool"){
+    const el = elFromHTML(`<div class="tool-act${it.done ? " done" : ""}">`
+      + (it.done ? `<span class="chk">✓</span>` : `<span class="sp"></span>`)
+      + `<span class="lbl"></span></div>`);
+    el.querySelector(".lbl").textContent = it.done ? (it.summary || toolLabel(it)) : toolLabel(it);
+    return el;
+  }
+  if (it.kind === "papers"){
+    const el = elFromHTML(`<div class="rs-cards"><div class="rs-block-lbl">Papers assessed through the engine</div></div>`);
+    (it.items || []).forEach((p) => el.appendChild(paperCardEl(p)));
+    return el;
+  }
+  if (it.kind === "assessment"){
+    const el = elFromHTML(`<div class="rs-cards"><div class="rs-block-lbl">What the belief graph now holds</div></div>`);
+    (it.items || []).forEach((c) => el.appendChild(claimCardEl(c)));
+    return el;
+  }
+  if (it.kind === "branch") return branchButtonEl(it.sid);
+  if (it.kind === "error")
+    return elFromHTML(`<div class="msg err"><div class="bubble">${esc(it.text)}</div></div>`);
+  return null;
+}
+function toolLabel(it){
+  if (it.name === "find_papers"){ const q = (it.args && (it.args.query || it.args.peptide)) || ""; return q ? `Searching PubMed for “${q}”…` : "Searching PubMed…"; }
+  if (it.name === "add_to_belief_graph") return "Running papers through the belief engine…";
+  return it.name || "Working…";
+}
+// append an item to the current session + DOM; returns the item (with _el)
+function pushItem(it){
+  const s = curSession(); if (!s) return it;
+  s.items.push(it);
+  it._el = renderItem(it);
+  if (it._el){ $("rs-thread").appendChild(it._el); scrollThread(); }
+  saveSessionStore();
+  return it;
+}
+
+// ---- streaming a chat turn ----
+function apiMessages(){
+  const s = curSession(); if (!s) return [];
+  return s.items
+    .filter((it) => it.kind === "user" || (it.kind === "assistant" && it.text && it.text.trim()))
+    .map((it) => ({ role: it.kind === "user" ? "user" : "assistant", content: it.text }));
+}
+
+async function sendResearch(text){
+  text = (text || "").trim();
+  if (!text || CHATTING) return;
+  if (!GEMINI_OK){ toast("Research chat needs GEMINI_API_KEY in .env.", "err"); return; }
+  const s = ensureSession(text);
+  pushItem({ kind:"user", text });
+  const i = $("rs-input"); i.value = ""; autosize(i);
+  CHATTING = true; updateComposerState();
+  renderSessionList();
+
+  let curAsst = null;            // the assistant-text item currently accumulating tokens
+  let movedBelief = false;       // did this turn add papers / move claims?
+  const setCursor = (on) => { if (curAsst && curAsst._txt) curAsst._txt.innerHTML = mdInline(curAsst.text || "") + (on ? `<span class="cursor"></span>` : ""); };
+
+  try {
+    const resp = await fetch("/research/chat", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ messages: apiMessages(), session_id: s.id, query: s.query }),
+    });
+    if (!resp.ok || !resp.body) throw new Error("no response body");
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true){
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream:true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0){
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line) continue;
+        let evt; try { evt = JSON.parse(line); } catch(e){ continue; }
+        handleChatEvent(evt);
+      }
+    }
+    if (buf.trim()){ try { handleChatEvent(JSON.parse(buf.trim())); } catch(e){} }
+
+    function handleChatEvent(evt){
+      if (evt.type === "token"){
+        if (!curAsst) curAsst = pushItem({ kind:"assistant", text:"" });
+        curAsst.text += evt.text; setCursor(true); scrollThread();
+      } else if (evt.type === "tool_start"){
+        setCursor(false); curAsst = null;
+        pushItem({ kind:"tool", name:evt.name, args:evt.args || {}, done:false });
+      } else if (evt.type === "tool_end"){
+        // mark the most recent still-pending tool of this name as done
+        const s2 = curSession(); if (!s2) return;
+        for (let k = s2.items.length - 1; k >= 0; k--){
+          const it = s2.items[k];
+          if (it.kind === "tool" && !it.done && it.name === evt.name){
+            it.done = true; it.summary = evt.summary || toolLabel(it);
+            if (it._el){ it._el.classList.add("done");
+              it._el.querySelector(".sp") && it._el.querySelector(".sp").replaceWith(elFromHTML(`<span class="chk">✓</span>`));
+              it._el.querySelector(".lbl").textContent = it.summary; }
+            break;
+          }
+        }
+        saveSessionStore();
+      } else if (evt.type === "papers"){
+        setCursor(false); curAsst = null; movedBelief = true;
+        pushItem({ kind:"papers", items:evt.items || [] });
+      } else if (evt.type === "assessment"){
+        setCursor(false); curAsst = null; movedBelief = true;
+        pushItem({ kind:"assessment", items:evt.items || [] });
+      } else if (evt.type === "error"){
+        setCursor(false); curAsst = null;
+        pushItem({ kind:"error", text:evt.text || "Something went wrong." });
+      }
+      // "done" needs no work — the stream simply ends
+    }
+  } catch(e){
+    pushItem({ kind:"error", text:"Connection to the research service failed — is the server reachable?" });
+  } finally {
+    setCursor(false);
+    CHATTING = false; updateComposerState();
+    // offer the branch once the server has filed this session's claims
+    if (movedBelief && SERVER_SESSIONS[s.id] && (SERVER_SESSIONS[s.id].claims || []).length){
+      pushItem({ kind:"branch", sid:s.id });
+    }
+    renderSessionList();
+    scrollThread();
+  }
+}
+
+// ---- composer wiring ----
+function autosize(t){ t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; }
+function updateComposerState(){
+  const i = $("rs-input"), b = $("rs-send");
+  if (!i || !b) return;
+  $("rs-offline").style.display = GEMINI_OK ? "none" : "block";
+  i.disabled = !GEMINI_OK || CHATTING;
+  b.disabled = !GEMINI_OK || CHATTING || !i.value.trim();
+}
+(function bindResearch(){
+  const i = $("rs-input"), b = $("rs-send");
+  if (!i) return;
+  i.oninput = () => { autosize(i); updateComposerState(); };
+  i.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendResearch(i.value); } };
+  b.onclick = () => sendResearch(i.value);
+  $("rs-new").onclick = () => newSession();
+  $("rs-suggest").querySelectorAll(".rs-chip").forEach((c) => c.onclick = () => { newSession(); sendResearch(c.textContent); });
+  loadSessionStore();
+  renderSessionList();
+})();
+
+// ---- graph branch highlight ----
+function viewBranch(sid){
+  ACTIVE_BRANCH = sid;
+  setView("graph");
+  applyBranch();
+  // gently frame the branch: refit after the recolour settles
+  setTimeout(() => GraphStore.fit(), 360);
+}
+function clearBranch(){ ACTIVE_BRANCH = null; applyBranch(); }
+function applyBranch(){
+  const banner = $("branch-banner");
+  if (banner){
+    const s = ACTIVE_BRANCH ? SERVER_SESSIONS[ACTIVE_BRANCH] : null;
+    if (s){
+      banner.classList.add("show");
+      $("bb-q").textContent = s.query || "research query";
+      const n = (s.claims || []).length;
+      $("bb-n").textContent = `${n} claim${n === 1 ? "" : "s"}`;
+    } else {
+      banner.classList.remove("show");
+      if (ACTIVE_BRANCH && !s) ACTIVE_BRANCH = null;  // session vanished (reset) — drop it
+    }
+  }
+  refreshGraphStyles();
+}
+$("bb-x").onclick = () => clearBranch();
 
 bindGraphSearch();
 connect();
