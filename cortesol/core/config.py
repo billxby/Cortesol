@@ -14,7 +14,7 @@ from __future__ import annotations
 
 # Bump this whenever any FROZEN CONTRACT file changes. Every snapshot and eval
 # run records it so results are comparable only within a version.
-CONTRACT_VERSION = "0.2.0"
+CONTRACT_VERSION = "0.2.1"
 
 # --- Belief prior ---------------------------------------------------------
 # A splashy new finding does NOT start at the confidence its abstract asserts.

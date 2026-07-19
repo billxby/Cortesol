@@ -12,12 +12,19 @@ import os
 import re
 import urllib.error
 import urllib.request
-from copy import deepcopy
 
 from ..core.config import INJECTION_MARKERS, OUT_OF_SCOPE_MARKERS
 from ..core.context import Context, serialize_state
 from ..core.domain import MIN_PLAUSIBLE_KD_PM
-from ..core.ops import AddClaim, ApplyEvidence, FlagOOD, InvalidateEdge, ProposedOps, Reject
+from ..core.ops import (
+    AddClaim,
+    ApplyEvidence,
+    FlagOOD,
+    InvalidateEdge,
+    ProposedOps,
+    Reject,
+    ops_json_schema,
+)
 
 DEFAULT_OLLAMA_MODEL = "cortesol-proposer:plan-b"
 
@@ -83,22 +90,8 @@ def _eligible_for_event(proposal: ProposedOps, evidence_id: str) -> bool:
 
 
 def serving_json_schema() -> dict:
-    """Return the frozen contract schema with discriminators required on wire.
-
-    Pydantic gives each operation's literal ``op`` field a default, so its base
-    JSON schema does not list the discriminator as required. A discriminated
-    union cannot be parsed without that field, however. Tighten only the serving
-    copy; the shared/frozen contract remains unchanged.
-    """
-    schema = deepcopy(ProposedOps.model_json_schema())
-    for definition in schema.get("$defs", {}).values():
-        properties = definition.get("properties", {})
-        if "op" not in properties:
-            continue
-        required = definition.setdefault("required", [])
-        if "op" not in required:
-            required.insert(0, "op")
-    return schema
+    """Use the same discriminator-complete schema as training and Flash."""
+    return ops_json_schema()
 
 
 def _safety_preflight(input_text: str, evidence_id: str) -> ProposedOps | None:

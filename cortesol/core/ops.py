@@ -18,6 +18,7 @@ because there is no symbol for it. (Prompt Injection Defense §Layer-3/4.)
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
@@ -110,4 +111,17 @@ def ops_json_schema() -> dict[str, Any]:
     structured_outputs` (GRPO + OPD) and to the serving `response_format` so the
     model literally cannot emit anything outside the vocabulary. One schema,
     train and serve. (Prompt Injection Defense §Layer-3.)"""
-    return ProposedOps.model_json_schema()
+    schema = deepcopy(ProposedOps.model_json_schema())
+    # Pydantic omits fields with constructor defaults from ``required``.  That
+    # is convenient for Python callers (``ApplyEvidence(...)``), but invalid on
+    # the model wire: the discriminated union cannot parse an operation without
+    # its literal ``op`` tag.  Training and serving must therefore constrain the
+    # tag explicitly while preserving the ergonomic constructor defaults.
+    for definition in schema.get("$defs", {}).values():
+        properties = definition.get("properties", {})
+        if "op" not in properties:
+            continue
+        required = definition.setdefault("required", [])
+        if "op" not in required:
+            required.insert(0, "op")
+    return schema
