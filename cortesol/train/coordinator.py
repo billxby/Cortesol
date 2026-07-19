@@ -50,7 +50,17 @@ def _load_local_credentials() -> None:
 
 
 def _run(command: Sequence[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+    resolved = list(command)
+    # The coordinator may be launched with the Conda interpreter by absolute
+    # path (for example from a monitor or system service) without activating
+    # that environment in PATH.  Flash is installed beside that interpreter;
+    # resolve it there so best-effort cleanup cannot mask completed evaluation
+    # metrics with FileNotFoundError.
+    if resolved and resolved[0] == "flash":
+        conda_flash = Path(sys.executable).with_name("flash")
+        if conda_flash.is_file():
+            resolved[0] = str(conda_flash)
+    result = subprocess.run(resolved, cwd=ROOT, capture_output=True, text=True, check=False)
     if check and result.returncode:
         detail = (result.stderr or result.stdout).strip()
         raise RuntimeError(f"command failed ({' '.join(command)}): {detail}")
