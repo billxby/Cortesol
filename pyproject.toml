@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "sse-starlette>=2.1",
+    "openai>=1.40",  # Gemini research agent (OpenAI-compatible endpoint) + Flash extractor client
 ]
 
 [project.optional-dependencies]

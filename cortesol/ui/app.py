@@ -58,6 +58,10 @@ _PAPERS_PATH = _HERE.parents[1] / "data" / "papers" / "raw_papers.jsonl"
 _ROBUSTNESS_PATH = _HERE.parents[1] / "data" / "papers" / "robustness_pack.jsonl"
 _PER_PEPTIDE = 3  # foundation size per peptide (mirrors `make bootstrap`)
 _DEMO_SEED = 42
+# Server-side pace between papers during "Ingest all papers" autoplay. The loop runs
+# on the server (no per-paper browser round-trip), so this is the ONLY throttle and
+# it's purely for watchability — set to 0.0 to rip through as fast as the engine allows.
+_PLAY_PACE_S = 0.1
 
 
 def _load_robustness() -> list[RawEvent]:
@@ -141,6 +145,11 @@ class DemoState:
         self.extractor_kind = "freesolo"
         self.lock = asyncio.Lock()
         self.subscribers: set[asyncio.Queue] = set()
+        # "Ingest all papers" runs as a server-side background loop (no per-paper
+        # browser round-trip). `autoplay` is the stop flag the loop checks BETWEEN
+        # events, so pausing/switching never tears a half-committed event.
+        self.autoplay = False
+        self.play_task: asyncio.Task | None = None
         # Story-arc phase boundaries over the papers stream (see reset()):
         #   [0, n_foundation)         Act 1 — the chosen "ground truth" papers
         #   [n_foundation, n_corpus)  Act 2 — the rest of the corpus (corroboration)
@@ -708,31 +717,90 @@ def _process_resilient(event: RawEvent) -> tuple[EventResult, bool, dict]:
     return result, used_fallback, reasoning
 
 
-@app.post("/event")
-async def next_event() -> dict:
+def _process_offline(event: RawEvent) -> tuple[EventResult, dict]:
+    """Deterministic, network-free processing for bulk autoplay — the offline
+    proposer reads the abstract and proposes ops; the engine disposes (belief still
+    moves only through the engine). No live model call, so 'Ingest all papers' rips
+    through the corpus instead of waiting ~seconds per paper on the network. Mirrors
+    what `_build_foundation_sync` does for the foundation replay."""
+    ctx = pipeline.prepare_event(STATE.kb, event)
+    proposed = STATE.fallback.extract(ctx)
+    reasoning: dict = {}
+    result = pipeline.commit_proposal(STATE.kb, ctx, proposed, reasoning=reasoning)
+    reasoning["model"] = "offline heuristic (bulk ingest)"
+    reasoning["live"] = False
+    return result, reasoning
+
+
+async def _advance_one(fast: bool = False) -> dict:
+    """Process the next stream event through the real lifecycle and broadcast it.
+    Shared write path for both ingest controls. `fast=False` (single-step 'Ingest
+    next paper') uses the live model with an offline fallback; `fast=True` (bulk
+    autoplay) uses the deterministic offline proposer so it doesn't crawl through a
+    per-paper network call. Either way, belief moves ONLY through the engine."""
     async with STATE.lock:
         if STATE.cursor >= STATE.stream_len:
             return {"status": "done", "cursor": STATE.cursor}
         event = STATE.events[STATE.cursor]
-        # the live model call is blocking network I/O — run it off the event loop
-        # so SSE pings and other requests stay responsive while the model thinks
-        result, used_fallback, reasoning = await asyncio.to_thread(_process_resilient, event)
-        # Reflect per-event reality: only flip to "offline" when THIS event actually
-        # fell back. If the live checkpoint answered (e.g. it warmed up), flip back to
-        # "freesolo" so the badge stops lying. Purely-offline runs (no creds) keep
-        # whatever _build_extractor decided.
-        if isinstance(STATE.extractor, FreesoloExtractor):
-            STATE.extractor_kind = "offline" if used_fallback else "freesolo"
+        # blocking work runs off the event loop so SSE pings / other requests stay live
+        if fast:
+            result, reasoning = await asyncio.to_thread(_process_offline, event)
+        else:
+            result, used_fallback, reasoning = await asyncio.to_thread(_process_resilient, event)
+            # Reflect per-event reality: only flip to "offline" when THIS event actually
+            # fell back. If the live checkpoint answered, flip back to "freesolo" so the
+            # badge stops lying. (Bulk ingest is deterministic-by-design, not a fallback,
+            # so it deliberately leaves the badge alone.)
+            if isinstance(STATE.extractor, FreesoloExtractor):
+                STATE.extractor_kind = "offline" if used_fallback else "freesolo"
         STATE.cursor += 1
         STATE.reveal(result.dirty_claims)  # committed claims join the graph
         message = _event_message(event, result, reasoning)
         await STATE.broadcast(message, remember=True)
-        return {
-            "status": "ok",
-            "cursor": STATE.cursor,
-            "event_id": event.id,
-            "fallback": used_fallback,
-        }
+        return {"status": "ok", "cursor": STATE.cursor, "event_id": event.id}
+
+
+@app.post("/event")
+async def next_event() -> dict:
+    """Ingest the next single paper — the 'Ingest next paper' button (live model)."""
+    return await _advance_one(fast=False)
+
+
+async def _autoplay_loop() -> None:
+    """Drain the remaining stream server-side, broadcasting each event over SSE so
+    the graph animates with NO per-paper browser round-trip. `autoplay` is checked
+    only BETWEEN events, so a pause / source-switch never interrupts a half-committed
+    event — belief and cursor stay consistent."""
+    try:
+        while STATE.autoplay:
+            r = await _advance_one(fast=True)  # deterministic + fast; single-step stays live
+            if r["status"] == "done" or not STATE.autoplay:
+                break
+            if _PLAY_PACE_S > 0:
+                await asyncio.sleep(_PLAY_PACE_S)
+    finally:
+        STATE.autoplay = False
+        STATE.play_task = None
+
+
+@app.post("/play")
+async def play() -> dict:
+    """Start 'Ingest all papers' as a server-side loop. Idempotent — a second call
+    while already playing is a no-op."""
+    if STATE.cursor >= STATE.stream_len:
+        return {"status": "done", "cursor": STATE.cursor}
+    if not (STATE.autoplay and STATE.play_task and not STATE.play_task.done()):
+        STATE.autoplay = True
+        STATE.play_task = asyncio.create_task(_autoplay_loop())
+    return {"status": "playing", "cursor": STATE.cursor}
+
+
+@app.post("/pause")
+async def pause() -> dict:
+    """Stop autoplay. The loop halts AFTER the current event commits (never mid-flight),
+    so nothing is left torn."""
+    STATE.autoplay = False
+    return {"status": "paused", "cursor": STATE.cursor}
 
 
 def _build_foundation_sync() -> tuple[list[str], list[dict]]:
@@ -805,6 +873,7 @@ async def set_source(payload: dict) -> dict:
     mode = (payload or {}).get("mode")
     if mode not in ("sim", "papers"):
         return {"status": "error", "reason": "mode must be 'sim' or 'papers'"}
+    STATE.autoplay = False  # stop any running autoplay before rebuilding the stream/KB
     async with STATE.lock:
         STATE.data_source = mode
         STATE.reset()
@@ -824,6 +893,7 @@ async def set_extractor(payload: dict) -> dict:
         return {"status": "error", "reason": "FLASH_API_KEY not set"}
     if kind == "flash_tuned" and not _env("FLASH_MODEL_TUNED"):
         return {"status": "error", "reason": "FLASH_MODEL_TUNED not set"}
+    STATE.autoplay = False  # stop any running autoplay before rebuilding the KB
     async with STATE.lock:
         STATE.extractor_kind = kind
         STATE.reset()

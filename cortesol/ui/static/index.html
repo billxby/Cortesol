@@ -177,7 +177,9 @@
 
   /* ---------------- library view ---------------- */
   #library { overflow:hidden; }
-  .lib-head { flex:0 0 auto; padding:26px 32px 18px; max-width:1180px; width:100%; margin:0 auto; }
+  /* 1244 = the 1180 content column (matching .grid-wrap) + 2×32 side padding, so the
+     header/stepper/search line up edge-for-edge with the card grid below. */
+  .lib-head { flex:0 0 auto; padding:26px 32px 18px; max-width:1244px; width:100%; margin:0 auto; }
   .lib-head h1 { font-family:var(--serif); font-size:30px; letter-spacing:-.6px; color:var(--ink);
     margin:0 0 4px; }
   .lib-head .sub { color:var(--muted); font-size:14px; margin:0 0 18px; max-width:620px; }
@@ -768,7 +770,7 @@
         <div class="rs-side-head">
           <button id="rs-new" class="rs-new">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            New research
+            New conversation
           </button>
         </div>
         <div class="rs-side-lbl">History</div>
@@ -791,7 +793,7 @@
         </div>
         <div class="rs-composer">
           <div class="rs-offline" id="rs-offline" style="display:none">
-            Research chat needs a Gemini API key — set <b>GEMINI_API_KEY</b> in <b>.env</b>, then reload.
+            Research conversation needs a Gemini API key: set <b>GEMINI_API_KEY</b> in <b>.env</b>, then reload.
           </div>
           <div class="rs-inputwrap">
             <textarea id="rs-input" rows="1" placeholder="Ask about a peptide, its target, efficacy, safety…" autocomplete="off"></textarea>
@@ -799,7 +801,7 @@
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
             </button>
           </div>
-          <div class="rs-hint">Answers are grounded in the engine-earned belief graph. Papers you research are added to the Library and graph.</div>
+          <div class="rs-hint">Answers are grounded in the engine-earned belief graph. Papers you research are added to both the library and the graph.</div>
         </div>
       </div>
     </section>
@@ -1166,6 +1168,11 @@ function docsInScope(){
 $("steps-bar").querySelectorAll(".stepbtn").forEach((b) => b.onclick = () => {
   const sc = b.dataset.scope;
   SCOPE = (SCOPE === sc) ? "all" : sc;   // click the active stage again to see all papers
+  // Switching stage clears the status filter so a stale one (e.g. Pending) never strands
+  // you on an empty view — e.g. Stress-test's papers are all handled, so Pending ∩ stress
+  // is empty. You always land on the stage's full set; filter within it afterward.
+  FILTER = "all";
+  $("chips").querySelectorAll(".chip").forEach((x) => x.classList.toggle("active", x.dataset.filter === "all"));
   updateSteps(); renderGrid();
 });
 
@@ -1475,7 +1482,7 @@ function syncToggles(g){
   IS_PAPERS = g.data_source === "papers";
   $("corpus-seg").querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.src === g.data_source));
   $("step").textContent = IS_PAPERS ? "Ingest next paper ▸" : "Ingest next ▸";
-  if (!playTimer) $("play").textContent = playIdleLabel();
+  if (!playing) $("play").textContent = playIdleLabel();
   if (!WARMING) {
     const badge = $("model-badge");
     if (g.extractor_kind === "freesolo") { badge.textContent = "Freesolo · live"; badge.className = "model-badge live";
@@ -1827,11 +1834,16 @@ $("warm").onclick = async () => {
   }
 };
 
-let playTimer=null;
+let playing=false;
 function playIdleLabel(){ return IS_PAPERS ? "Ingest all papers ▸" : "Auto-play"; }
-function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; } $("play").textContent=playIdleLabel(); $("play").classList.remove("on"); }
-function startPlay(){ $("play").textContent="Pause"; $("play").classList.add("on");
-  playTimer=setInterval(async ()=>{ const r=await post("/event"); if(r.status==="done") stopPlay(); }, 950); }
+// `playing` mirrors the server-side autoplay loop. The graph, progress and this
+// button are all driven off the SSE stream: when the server finishes the run,
+// updateFlowControls() sees cursor>=total and calls stopPlay() to settle the button.
+function reflectPlay(on){ playing=on; $("play").textContent = on ? "Pause" : playIdleLabel(); $("play").classList.toggle("on", on); }
+async function startPlay(){ if(playing) return; reflectPlay(true);
+  const r = await post("/play");
+  if(!r || r.status !== "playing") reflectPlay(false); }   // nothing left to ingest / error
+async function stopPlay(){ if(!playing) return; reflectPlay(false); await post("/pause"); }
 function resetLog(msg){ stopPlay(); $("log").innerHTML=`<div class="empty">${msg}</div>`; LOGN=0; updateInspCount();
   const lt=$("insp-tabs").querySelector('[data-panel="log"]'); if(lt) lt.classList.remove("has-new");
   VERDICTS={}; firstIngestSeen=false; SCOPE="all"; }
@@ -1845,8 +1857,8 @@ $("build").onclick = async () => {
     else toast(r.reason || "Nothing to build.", "");
   } finally { b.disabled = false; b.innerHTML = "Establish base &#9656;"; }
 };
-$("step").onclick = () => post("/event");
-$("play").onclick = () => (playTimer?stopPlay():startPlay());
+$("step").onclick = async () => { if(playing) await stopPlay(); post("/event"); };
+$("play").onclick = () => (playing?stopPlay():startPlay());
 $("discredit").onclick = () => { const s=$("discredit-src").value; if(s){ post("/discredit",{source_id:s}); closeTools(); setView("graph"); } };
 $("reset").onclick = async () => {
   const alsoChats = $("reset-chats") && $("reset-chats").checked;
