@@ -103,6 +103,11 @@
   .phase-chip.p-foundation { background:var(--blue-soft); border-color:#b6cfe8; color:var(--blue); }
   .phase-chip.p-corroboration { background:var(--good-soft); border-color:#bfe0cd; color:var(--good); }
   .phase-chip.p-robustness { background:var(--accent-soft); border-color:#e6bcc0; color:var(--accent); }
+  .phase-chip.p-ready { background:var(--good-soft); border-color:#bfe0cd; color:var(--good); }
+  .ready-badge { display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600;
+    color:var(--good); background:var(--good-soft); border:1px solid #bfe0cd; border-radius:999px;
+    padding:7px 15px; white-space:nowrap; }
+  .ready-badge::before { content:"✓"; font-weight:700; }
   #build.primary { background:var(--blue); border-color:var(--blue); }
   #build.primary:hover:not(:disabled) { background:#0a4e93; }
 
@@ -172,7 +177,7 @@
     margin:0 0 4px; }
   .lib-head .sub { color:var(--muted); font-size:14px; margin:0 0 18px; max-width:620px; }
   /* two-step control (Ground truth | Ingest) — doubles as a scope switcher */
-  .steps-bar { display:flex; align-items:stretch; gap:10px; margin:2px 0 20px; max-width:720px; }
+  .steps-bar { display:flex; align-items:stretch; gap:10px; margin:2px 0 20px; max-width:940px; }
   .steparrow { align-self:center; color:var(--faint); font-size:18px; flex:0 0 auto; }
   .stepbtn { flex:1; display:flex; align-items:center; gap:13px; text-align:left; padding:13px 16px;
     border:1px solid var(--line); border-radius:var(--r); background:var(--panel); cursor:pointer;
@@ -231,24 +236,46 @@
   .phase-tag.foundation { color:var(--blue); background:var(--blue-soft); border:1px solid #b6cfe8; }
   .phase-tag.robustness { color:var(--accent); background:var(--accent-soft); border:1px solid #e6bcc0; }
   .pcard.is-foundation { border-left:3px solid var(--blue); }
-  .pcard.is-robustness { border-left:3px solid var(--accent); }
+  .pcard.is-robustness, .pcard.is-research { border-left:3px solid var(--accent); }
   .pcard .ptags { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
   .tag { font-size:11px; color:#3d4c63; background:var(--wash); border:1px solid var(--line);
     border-radius:5px; padding:2px 8px; }
   .no-results { text-align:center; color:var(--muted); padding:60px 20px; font-style:italic; }
 
+  /* provenance chip — where a paper came from: the preset library vs. researched live */
+  .pcard .prov { position:absolute; top:14px; right:14px; font-size:9.5px; font-weight:700;
+    letter-spacing:.4px; text-transform:uppercase; padding:3px 8px; border-radius:999px; }
+  .prov.preloaded { color:var(--muted); background:var(--wash2); border:1px solid var(--line); }
+  .prov.researched { color:var(--blue); background:var(--blue-soft); border:1px solid #b6cfe8; }
+
+  /* stage sections in the "all papers" view — the base → enrich → research workflow */
+  .lib-section { margin-bottom:30px; }
+  .lib-section:last-child { margin-bottom:8px; }
+  .sec-head { display:flex; align-items:center; gap:10px; margin:4px 0 14px; padding-bottom:9px;
+    border-bottom:1px solid var(--line); }
+  .sec-num { flex:0 0 auto; width:20px; height:20px; border-radius:50%; background:var(--ink); color:#fff;
+    font-family:ui-monospace, Menlo, monospace; font-size:11px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; }
+  .sec-title { font-family:var(--serif); font-size:18px; color:var(--ink); letter-spacing:-.3px; }
+  .sec-note { font-size:12.5px; color:var(--muted); }
+  .sec-count { margin-left:auto; font-size:12px; color:var(--faint); font-variant-numeric:tabular-nums; }
+
   /* ---------------- graph view ---------------- */
   #stage { position:relative; min-height:0; overflow:hidden;
-    background:radial-gradient(ellipse at 50% 42%, #1e293b 0%, #0f172a 62%, #0b1120 100%); }
+    background-color:#fcfcfd;
+    background-image:
+      linear-gradient(rgba(11,16,32,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(11,16,32,.035) 1px, transparent 1px);
+    background-size:34px 34px; }
   #net { position:absolute; inset:0; }
   #stagehint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     pointer-events:none; padding:30px; }
-  #stagehint .box { text-align:center; color:#94a3b8; max-width:380px; }
-  #stagehint .box .big { font-family:var(--serif); font-size:20px; color:#e2e8f0; margin-bottom:8px; display:block; }
-  #legend { position:absolute; left:16px; bottom:16px; background:rgba(15,23,42,.82);
-    backdrop-filter:blur(6px); border:1px solid #334155; border-radius:var(--r-sm);
-    padding:12px 14px; font-size:11px; color:#94a3b8; max-width:260px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
-  #legend b { color:#f1f5f9; }
+  #stagehint .box { text-align:center; color:var(--muted); max-width:380px; }
+  #stagehint .box .big { font-family:var(--serif); font-size:20px; color:var(--ink); margin-bottom:8px; display:block; }
+  #legend { position:absolute; left:16px; bottom:16px; background:rgba(255,255,255,.92);
+    backdrop-filter:blur(6px); border:1px solid var(--ink); border-radius:var(--r-sm);
+    padding:12px 14px; font-size:11px; color:var(--muted); max-width:260px; box-shadow:var(--shadow-md); }
+  #legend b { color:var(--ink); }
   .cbar { height:8px; border-radius:4px; margin:7px 0 3px;
     background:linear-gradient(90deg,#f87171,#fbbf24,#34d399); }
   .cbar-labels { display:flex; justify-content:space-between; }
@@ -260,55 +287,37 @@
   #inspector { background:var(--panel); border-left:1px solid var(--line); min-height:0;
     display:flex; flex-direction:column; }
   .insp-head { flex:0 0 auto; display:flex; align-items:center; gap:10px;
-    padding:12px 16px; border-bottom:1px solid var(--line); }
-  .insp-tabs { display:inline-flex; background:var(--wash2); border-radius:999px; padding:3px; gap:2px; }
-  .insp-tabs button { border:none; background:none; font-family:var(--sans); font-size:12.5px; font-weight:550;
-    color:var(--muted); padding:5px 14px; border-radius:999px; cursor:pointer; transition:.14s; }
-  .insp-tabs button:hover { color:var(--ink); border-color:transparent; }
-  .insp-tabs button.active { background:var(--panel); color:var(--ink); box-shadow:var(--shadow-sm); }
-  .insp-head .count { color:var(--faint); font-size:12px; margin-left:auto; }
-  .insp-panel { overflow-y:auto; flex:1; }
-  #log { padding:14px 16px 28px; }
+    padding:13px 16px; border-bottom:1px solid var(--line); }
+  .insp-head h2 { font-family:var(--serif); font-size:16px; color:var(--ink); margin:0; }
+  .insp-head .count { color:var(--faint); font-size:12px; margin-left:auto; white-space:nowrap; }
+  #log { overflow-y:auto; padding:14px 16px 28px; flex:1; }
   .empty { color:var(--muted); font-style:italic; padding:12px 2px; }
 
-  /* ---- Ask the belief graph ---- */
-  #askpanel { padding:16px; display:flex; flex-direction:column; }
-  .askbox { display:flex; gap:8px; }
-  .askbox input { flex:1; padding:9px 13px; border-radius:var(--r-sm); font-size:13.5px; }
-  .askbox input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
-  .askhint { font-size:11.5px; color:var(--muted); line-height:1.45; margin-top:9px; }
-  .askex { display:flex; flex-wrap:wrap; gap:6px; margin-top:11px; }
-  .askex button { font-size:11.5px; color:var(--muted); background:var(--wash); border:1px solid var(--line);
-    border-radius:999px; padding:5px 11px; cursor:pointer; }
-  .askex button:hover { border-color:#c3cad4; color:var(--ink); }
-  #askresults { margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+  /* inspector tabs — toggle the reasoning log <-> a live search over the graph */
+  .seg-insp { display:inline-flex; background:var(--wash2); border-radius:999px; padding:3px; gap:2px; }
+  .seg-insp button { border:none; background:none; font-family:var(--sans); font-size:12.5px;
+    font-weight:550; color:var(--muted); padding:5px 12px; border-radius:999px; cursor:pointer;
+    transition:.14s; white-space:nowrap; position:relative; }
+  .seg-insp button:hover { color:var(--ink); border-color:transparent; }
+  .seg-insp button.active { background:var(--panel); color:var(--ink); box-shadow:var(--shadow-sm); }
+  .seg-insp button.has-new::after { content:""; position:absolute; top:4px; right:5px; width:6px; height:6px;
+    border-radius:50%; background:var(--accent); box-shadow:0 0 5px var(--accent); animation:blink 1.1s infinite; }
 
-  .acard { border:1px solid var(--line); border-left:3px solid var(--line); border-radius:var(--r-sm);
-    padding:14px; box-shadow:var(--shadow-sm); }
-  .acard.s-strong { border-left-color:var(--good); }
-  .acard.s-yes    { border-left-color:#4a9d6e; }
-  .acard.s-unsure { border-left-color:var(--warn); }
-  .acard.s-no     { border-left-color:var(--bad); }
-  .acard .aclaim { font-family:var(--serif); font-size:15px; line-height:1.35; color:var(--ink); margin-bottom:10px; }
-  .acard .astance { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:7px; }
-  .astance .slbl { font-size:12px; font-weight:650; }
-  .s-strong .slbl, .s-yes .slbl { color:var(--good); }
-  .s-unsure .slbl { color:var(--warn); }
-  .s-no .slbl { color:var(--bad); }
-  .astance .sconf { font-family:ui-monospace, Menlo, monospace; font-size:15px; font-weight:600; color:var(--ink);
-    font-variant-numeric:tabular-nums; }
-  .acard .abar { height:6px; border-radius:999px; background:var(--wash2); overflow:hidden; margin-bottom:11px; }
-  .acard .abar span { display:block; height:100%; border-radius:inherit; }
-  .acard .aline { font-size:12.5px; line-height:1.5; color:var(--body); }
-  .acard .ameta { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:9px; font-size:11.5px; color:var(--muted); }
-  .acard .ameta b { color:var(--ink); font-weight:600; }
-  .acard .asrc { margin-top:9px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-  .acard .asrc .slab2 { font-size:10px; font-weight:650; letter-spacing:.6px; text-transform:uppercase; color:var(--faint); }
-  .acard .asrc .schip { font-size:11px; color:#3d4c63; background:var(--wash); border:1px solid var(--line);
-    border-radius:5px; padding:2px 8px; }
-  .acard .afoot { margin-top:11px; padding-top:9px; border-top:1px solid var(--hair); font-size:11px;
-    color:var(--faint); font-style:italic; }
-  .askempty { color:var(--muted); font-style:italic; font-size:13px; padding:8px 2px; }
+  /* graph-search panel (shares the inspector body with #log) */
+  #search-panel { flex:1; min-height:0; flex-direction:column; }
+  .gsearch { flex:0 0 auto; padding:12px 16px 10px; border-bottom:1px solid var(--line-soft); }
+  .gsearch-box { position:relative; }
+  .gsearch-box svg { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--faint); pointer-events:none; }
+  .gsearch-box input { width:100%; padding:8px 12px 8px 34px; border-radius:var(--r-sm);
+    background:var(--panel); font-size:13.5px; }
+  .gsearch-box input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  #graph-results { flex:1; min-height:0; overflow-y:auto; padding:10px 12px 26px; }
+  .gres { border:1px solid transparent; border-radius:var(--r-sm); padding:9px 11px 10px; cursor:pointer; transition:.12s; }
+  .gres:hover { background:var(--wash); border-color:var(--line); }
+  .gres.sel { background:var(--blue-soft); border-color:#b6cfe8; }
+  .gres + .gres { margin-top:2px; }
+  .gres .gstatus { font-size:10.5px; color:var(--faint); margin-top:6px; text-transform:capitalize;
+    font-family:ui-monospace, Menlo, monospace; }
 
   .card { position:relative; border:1px solid var(--line); border-left:3px solid var(--line);
     border-radius:var(--r-sm); margin-bottom:12px; background:var(--panel); overflow:hidden; box-shadow:var(--shadow-sm); }
@@ -480,11 +489,12 @@
       <div class="track"><div class="fill" id="prog-fill"></div></div>
       <span class="count" id="progress"><b>0</b> / 0 appraised</span>
     </div>
-    <span id="phase-chip" class="phase-chip p-foundation"><span class="actnum">ACT 1</span><span id="phase-label">Establish ground truth</span></span>
+    <span id="phase-chip" class="phase-chip p-foundation"><span class="actnum">STEP 1</span><span id="phase-label">Establish base</span></span>
     <div class="spacer"></div>
-    <button id="build" class="primary" title="Replay the chosen ground-truth papers through the engine to build the initial belief graph">Establish ground truth &#9656;</button>
+    <button id="build" class="primary" title="Replay the chosen ground-truth papers through the engine to build the initial belief graph">Establish base &#9656;</button>
     <button id="step" class="primary">Ingest next &#9656;</button>
-    <button id="play">Auto-play</button>
+    <button id="play" title="Ingest every remaining paper in sequence">Ingest all papers &#9656;</button>
+    <span id="ready" class="ready-badge" style="display:none">Model ready for research &amp; verification</span>
     <div class="sep"></div>
     <div class="menu-wrap">
       <button id="tools-btn" class="ghost icon-btn" title="Corpus, retraction &amp; more" aria-haspopup="true" aria-expanded="false">
@@ -527,18 +537,23 @@
     <section id="library" class="view">
       <div class="lib-head">
         <h1 id="lib-title">Papers</h1>
-        <p class="sub" id="lib-sub">Peer-reviewed abstracts awaiting appraisal. Click a card to read it; ingest them one at a time to build the belief graph.</p>
         <div class="steps-bar" id="steps-bar">
-          <button class="stepbtn active" data-scope="foundation">
+          <button class="stepbtn" data-scope="foundation">
             <span class="stepnum">1</span>
-            <span class="steptext"><span class="steptitle">Establish ground truth</span>
+            <span class="steptext"><span class="steptitle">Establish base</span>
               <span class="stepmeta" id="step1-meta">curated papers</span></span>
           </button>
           <span class="steparrow">&rarr;</span>
-          <button class="stepbtn" data-scope="ingest">
+          <button class="stepbtn" data-scope="enrich">
             <span class="stepnum">2</span>
-            <span class="steptext"><span class="steptitle">Ingest new results</span>
-              <span class="stepmeta" id="step2-meta">the rest of the corpus</span></span>
+            <span class="steptext"><span class="steptitle">Enrich model</span>
+              <span class="stepmeta" id="step2-meta">expand the model&rsquo;s knowledge</span></span>
+          </button>
+          <span class="steparrow">&rarr;</span>
+          <button class="stepbtn" data-scope="research">
+            <span class="stepnum">3</span>
+            <span class="steptext"><span class="steptitle">Research &amp; verify</span>
+              <span class="stepmeta" id="step3-meta">find &amp; check new results</span></span>
           </button>
         </div>
         <div class="lib-tools">
@@ -549,7 +564,7 @@
           <div class="chips" id="chips">
             <button class="chip active" data-filter="all">All <span class="n" data-c="all"></span></button>
             <button class="chip" data-filter="pending">Pending <span class="n" data-c="pending"></span></button>
-            <button class="chip" data-filter="done">Appraised <span class="n" data-c="done"></span></button>
+            <button class="chip" data-filter="done">Done <span class="n" data-c="done"></span></button>
             <button class="chip" data-filter="flagged">Flagged <span class="n" data-c="flagged"></span></button>
             <button class="chip" data-filter="refused">Refused <span class="n" data-c="refused"></span></button>
           </div>
@@ -566,9 +581,9 @@
         <div id="net"></div>
         <div id="stagehint"><div class="box">
           <span class="big">Start from nothing.</span>
-          Hit <b>Establish ground truth</b> to replay the chosen papers through the engine and
-          build the initial belief graph. Then ingest the rest to corroborate it, and run the
-          stress-test pack to see it revise, hold firm, or refuse — every move recorded at right.
+          Hit <b>Establish base</b> to replay the ground-truth papers and form the initial graph.
+          Then <b>enrich</b> it with more papers, and finally <b>research &amp; verify</b> new
+          results — watch it revise, hold firm, or refuse. Every move is recorded at right.
         </div></div>
         <div id="legend">
           <b>Node colour</b> — confidence (<span id="prior-note">prior</span>)
@@ -576,34 +591,30 @@
           <div class="cbar-labels"><span>refuted</span><span>uncertain</span><span>established</span></div>
           <div style="margin-top:9px"><b>Node size</b> — downstream influence</div>
           <div class="etypes"><b>Relations</b><br/>
-            <span><i class="swatch" style="border-color:#94a3b8"></i>supports</span>
-            <span><i class="swatch" style="border-color:#cbd5e1"></i>replicates</span>
-            <span><i class="swatch" style="border-color:#64748b"></i>depends on</span>
-            <span><i class="swatch" style="border-color:#fb7185"></i>contradicts</span>
+            <span><i class="swatch" style="border-color:#64748b"></i>supports</span>
+            <span><i class="swatch" style="border-color:#94a3b8"></i>replicates</span>
+            <span><i class="swatch" style="border-color:#334155"></i>depends on</span>
+            <span><i class="swatch" style="border-color:#e11d48"></i>contradicts</span>
           </div>
         </div>
       </div>
       <aside id="inspector">
         <div class="insp-head">
-          <div class="insp-tabs" id="insp-tabs">
-            <button data-tab="log" class="active">Live log</button>
-            <button data-tab="ask">Ask</button>
+          <div class="seg-insp" id="insp-tabs" role="tablist">
+            <button data-panel="log" class="active" role="tab">Reasoning log</button>
+            <button data-panel="search" role="tab">Search graph</button>
           </div>
-          <span class="count" id="log-count"></span>
+          <span class="count" id="insp-count"></span>
         </div>
-        <div id="log" class="insp-panel"><div class="empty">Awaiting the first ingested paper…</div></div>
-        <div id="askpanel" class="insp-panel" hidden>
-          <div class="askbox">
-            <input id="askq" type="search" placeholder="Ask about a peptide…" autocomplete="off" />
-            <button id="askbtn" class="primary">Ask</button>
+        <div id="log"><div class="empty">Awaiting the first ingested paper…</div></div>
+        <div id="search-panel" style="display:none">
+          <div class="gsearch">
+            <div class="gsearch-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input id="graph-search" type="search" placeholder="Search claims, peptides, targets…" autocomplete="off" />
+            </div>
           </div>
-          <div class="askhint">Answered straight from the belief ledger — confidence, evidence and provenance, never generated prose.</div>
-          <div class="askex" id="askex">
-            <button data-q="Does semaglutide bind GLP1R?">semaglutide → GLP1R?</button>
-            <button data-q="Is tirzepatide efficacious in obesity?">tirzepatide in obesity?</button>
-            <button data-q="Does retatrutide bind GCGR?">retatrutide → GCGR?</button>
-          </div>
-          <div id="askresults"></div>
+          <div id="graph-results"><div class="empty">Build the graph, then search its claims here.</div></div>
         </div>
       </aside>
     </section>
@@ -637,18 +648,53 @@ function confColor(c) {
   return `rgb(${m[0]},${m[1]},${m[2]})`;
 }
 const EDGE_STYLE = {
-  supports:{color:"#94a3b8"}, replicates:{color:"#cbd5e1"},
-  depends_on:{color:"#64748b"}, contradicts:{color:"#fb7185"},
+  supports:{color:"#64748b"}, replicates:{color:"#94a3b8"},
+  depends_on:{color:"#334155"}, contradicts:{color:"#e11d48"},
 };
 
 // ---------- 3d-force-graph engine (vanilla library; read-only view of the ledger) ----------
-// node size by downstream impact (swells when it just moved); colour by confidence
-function nodeVal(n){ return 2.4 + Math.sqrt(Math.max(0, n.impact || 0)) * 3.2 + (n.moved ? 1.6 : 0); }
+// ---- selection: click a node for a light-touch highlight; click empty space (or the
+// node again) to deselect. No camera moves and no re-colouring — the orbit always stays
+// centred on the whole graph. ----
+let FOCUS = null;                       // selected node id (null = nothing selected)
+let HL_LINKS = new Set();               // edges incident to the selected node
+
+function nodeBase(n){ return 2.4 + Math.sqrt(Math.max(0, n.impact || 0)) * 3.2 + (n.moved ? 1.6 : 0); }
+// node size by downstream impact (swells when it just moved); the selected node grows a touch.
+function nodeVal(n){ const v = nodeBase(n); return (FOCUS && n.id === FOCUS) ? v * 1.6 : v; }
+// colour is ALWAYS confidence — selection never changes the colour scheme.
 function nodeColor(n){ return confColor(n.c == null ? PRIOR : n.c); }
-// typed link colour (translucent via linkOpacity); particles stream along any edge
-// touching a claim that just moved.
 function linkColor(l){ return (EDGE_STYLE[l.type] || {}).color || "#98a2b3"; }
-function linkParticles(l){ return ((l.source && l.source.moved) || (l.target && l.target.moved)) ? 3 : 0; }
+function linkWidth(l){
+  const w = 1.3 + Math.abs(l.weight || 1) * 1.7;
+  return (FOCUS && HL_LINKS.has(l)) ? w * 1.6 : w;
+}
+// particles stream along the selected node's edges, or any edge touching a claim that
+// just moved during ingestion.
+function linkParticles(l){
+  if (FOCUS && HL_LINKS.has(l)) return 4;
+  return ((l.source && l.source.moved) || (l.target && l.target.moved)) ? 3 : 0;
+}
+
+function refreshGraphStyles(){
+  if (!GRAPH) return;
+  GRAPH.nodeVal(nodeVal).linkWidth(linkWidth).linkDirectionalParticles(linkParticles);
+}
+// Select a node: note its incident edges and gently emphasise them. No camera motion,
+// so rotation keeps orbiting the graph's centre.
+function focusNode(node){
+  FOCUS = node ? node.id : null;
+  HL_LINKS = new Set();
+  if (node && GRAPH){
+    GRAPH.graphData().links.forEach((l) => {
+      const s = l.source.id != null ? l.source.id : l.source;
+      const t = l.target.id != null ? l.target.id : l.target;
+      if (s === node.id || t === node.id) HL_LINKS.add(l);
+    });
+  }
+  refreshGraphStyles();
+  syncSearchSel();
+}
 
 let GRAPH = null, GRAPH_FITTED = false;
 function sizeGraph(){
@@ -668,12 +714,15 @@ function initGraph(){
   GRAPH = window.ForceGraph3D({ controlType: "orbit" })($("net"))
     .backgroundColor("rgba(0,0,0,0)")
     .showNavInfo(false)
-    .nodeRelSize(4).nodeVal(nodeVal).nodeColor(nodeColor).nodeOpacity(0.95).nodeResolution(14)
+    .nodeRelSize(4).nodeVal(nodeVal).nodeColor(nodeColor).nodeOpacity(0.95).nodeResolution(16)
     .nodeLabel(htmlLabel)
-    .linkColor(linkColor).linkWidth((l) => 2.2 + Math.abs(l.weight || 1) * 2.6).linkOpacity(0.45)
-    .linkDirectionalParticles(linkParticles).linkDirectionalParticleWidth(1.8)
+    .onNodeClick((n) => focusNode(FOCUS === n.id ? null : n))
+    .onBackgroundClick(() => focusNode(null))
+    .onNodeHover((n) => { $("net").style.cursor = n ? "pointer" : ""; })
+    .linkColor(linkColor).linkWidth(linkWidth).linkOpacity(0.6)
+    .linkDirectionalParticles(linkParticles).linkDirectionalParticleWidth(1.6)
     .linkDirectionalParticleSpeed(0.006)
-    .linkDirectionalArrowLength(2.6).linkDirectionalArrowRelPos(1)
+    .linkDirectionalArrowLength(2.0).linkDirectionalArrowRelPos(1)
     .d3AlphaDecay(0.032).d3VelocityDecay(0.32).cooldownTicks(120)
     .onEngineStop(() => { if (!GRAPH_FITTED && GRAPH.graphData().nodes.length){ GRAPH_FITTED = true; try { GRAPH.zoomToFit(600, 80); } catch (e) {} } });
   // Bound the inverse-square charge so distant nodes stop repelling across the whole
@@ -727,42 +776,73 @@ let FILTER = "all", QUERY = "";
 let IS_PAPERS = true;
 let firstIngestSeen = false;
 let PHASE = "foundation", N_FOUND = 0, N_CORPUS = 0, FOUNDATION_BUILT = false;
-let SCOPE = "foundation";        // which pool the Library shows: foundation | ingest
-let _autoScoped = false;         // only auto-jump to step 2 once, on first build
+let SCOPE = "all";               // which pool the Library shows: all | foundation | enrich | research
+let INSP_PANEL = "log";          // inspector sidebar: "log" (reasoning) | "search" (graph search)
+let GSEARCH_Q = "", GSEARCH_N = 0;   // graph-search query + last result count
 
 const PHASE_META = {
-  foundation:    { act: "STEP 1", label: "Establish ground truth" },
-  corroboration: { act: "STEP 2", label: "Ingest new results" },
-  robustness:    { act: "STEP 2", label: "Stress-test robustness" },
+  foundation:    { act: "STEP 1", label: "Establish base" },
+  corroboration: { act: "STEP 2", label: "Enrich model" },
+  robustness:    { act: "STEP 3", label: "Research & verify" },
 };
-const PHASE_TAG = { foundation: "Ground truth", robustness: "Stress test" };
 
-// The two Library pools are disjoint: step 1 is ONLY the curated ground-truth
-// papers; step 2 is everything we ingest afterwards (corroboration + stress test).
-function docPool(d){ return d.phase === "foundation" ? "foundation" : "ingest"; }
+// The Library pools map onto the three workflow stages: step 1 is the curated
+// ground-truth base, step 2 is corroborating papers that enrich the model, step 3
+// is the adversarial "research & verify" pack we find and check afterwards.
+function docPool(d){
+  if (d.phase === "foundation") return "foundation";
+  if (d.phase === "robustness") return "research";
+  return "enrich";
+}
+// provenance shown on each card: the preset library vs. fetched live via research
+function provOf(d){
+  const researched = d.source_kind === "researched" || d.phase === "robustness";
+  return researched ? { cls: "researched", label: "Researched" } : { cls: "preloaded", label: "Preloaded" };
+}
+const clampInt = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+// per-stage progress (done / total), read off the global ingestion cursor
+function stageCounts(scope){
+  if (scope === "foundation") return { done: FOUNDATION_BUILT ? N_FOUND : 0, total: N_FOUND };
+  if (scope === "enrich")     return { done: clampInt(CURSOR - N_FOUND, 0, N_CORPUS - N_FOUND), total: Math.max(0, N_CORPUS - N_FOUND) };
+  if (scope === "research")   return { done: clampInt(CURSOR - N_CORPUS, 0, TOTAL - N_CORPUS), total: Math.max(0, TOTAL - N_CORPUS) };
+  return { done: 0, total: 0 };
+}
 
 function updatePhase(g){
-  const wasBuilt = FOUNDATION_BUILT;
   if (g){
     if (g.phase) PHASE = g.phase;
     if (g.n_foundation != null) N_FOUND = g.n_foundation;
     if (g.n_corpus != null) N_CORPUS = g.n_corpus;
     if (g.foundation_built != null) FOUNDATION_BUILT = g.foundation_built;
   }
+  updateFlowControls();
+  updateSteps();
+}
+
+// Decide what the action bar shows: the one-shot "establish base" button during the
+// foundation phase, the per-paper ingest controls while enriching, or — once every
+// paper has been ingested — a "model ready for research" badge in their place.
+function updateFlowControls(){
+  const buildPhase = IS_PAPERS && N_FOUND > 0 && !FOUNDATION_BUILT;
+  const done = TOTAL > 0 && CURSOR >= TOTAL && !buildPhase;
   const meta = PHASE_META[PHASE] || PHASE_META.corroboration;
   const chip = $("phase-chip");
-  chip.className = `phase-chip p-${PHASE}`;
-  chip.querySelector(".actnum").textContent = meta.act;
-  $("phase-label").textContent = meta.label;
-  // In the guided papers arc, step 1 is a single "Establish ground truth" action;
-  // the per-paper Ingest/Auto-play controls take over once the foundation exists.
-  const buildPhase = IS_PAPERS && N_FOUND > 0 && !FOUNDATION_BUILT;
+  if (done){
+    chip.className = "phase-chip p-ready";
+    chip.querySelector(".actnum").textContent = "READY";
+    $("phase-label").textContent = "Model ready for research";
+  } else {
+    chip.className = `phase-chip p-${PHASE}`;
+    chip.querySelector(".actnum").textContent = meta.act;
+    $("phase-label").textContent = meta.label;
+  }
+  // step 1 is a single "establish base" action; the per-paper ingest controls take over
+  // once the base exists; both give way to the "ready" badge once everything is ingested.
   $("build").style.display = buildPhase ? "" : "none";
-  $("step").style.display = buildPhase ? "none" : "";
-  $("play").style.display = buildPhase ? "none" : "";
-  // On the first successful build, move the Library to step 2 automatically.
-  if (FOUNDATION_BUILT && !wasBuilt && !_autoScoped){ _autoScoped = true; SCOPE = "ingest"; }
-  updateSteps();
+  $("step").style.display = (buildPhase || done) ? "none" : "";
+  $("play").style.display = (buildPhase || done) ? "none" : "";
+  $("ready").style.display = done ? "" : "none";
+  if (done) stopPlay();
 }
 
 function ingestCounts(){
@@ -774,21 +854,30 @@ function updateSteps(){
   const bar = $("steps-bar");
   bar.style.display = (IS_PAPERS && N_FOUND > 0) ? "flex" : "none";
   if (bar.style.display === "none") return;
-  const ing = ingestCounts();
-  $("step1-meta").textContent = FOUNDATION_BUILT ? "established from the engine" : `${N_FOUND} curated papers`;
-  $("step2-meta").textContent = FOUNDATION_BUILT ? `${ing.done} / ${ing.total} ingested` : `${ing.total} papers · after step 1`;
+  const e = stageCounts("enrich"), r = stageCounts("research");
+  $("step1-meta").textContent = FOUNDATION_BUILT ? "ground truth established" : `${N_FOUND} curated papers`;
+  $("step2-meta").textContent = FOUNDATION_BUILT ? `${e.done} / ${e.total} ingested` : `${e.total} papers · after step 1`;
+  $("step3-meta").textContent = `${r.done} / ${r.total} checked`;
+  const done = {
+    foundation: FOUNDATION_BUILT,
+    enrich: e.total > 0 && e.done >= e.total,
+    research: r.total > 0 && r.done >= r.total,
+  };
   bar.querySelectorAll(".stepbtn").forEach((b) => {
     const sc = b.dataset.scope;
     b.classList.toggle("active", sc === SCOPE);
-    b.classList.toggle("done", sc === "foundation" && FOUNDATION_BUILT);
+    b.classList.toggle("done", !!done[sc]);
   });
 }
 function docsInScope(){
   if (!(IS_PAPERS && N_FOUND > 0)) return DOCS;   // sim / no-foundation: one flat pool
+  if (SCOPE === "all") return DOCS;
   return DOCS.filter((d) => docPool(d) === SCOPE);
 }
 $("steps-bar").querySelectorAll(".stepbtn").forEach((b) => b.onclick = () => {
-  SCOPE = b.dataset.scope; updateSteps(); renderGrid();
+  const sc = b.dataset.scope;
+  SCOPE = (SCOPE === sc) ? "all" : sc;   // click the active stage again to see all papers
+  updateSteps(); renderGrid();
 });
 
 function htmlLabel(n){
@@ -828,6 +917,7 @@ function applyGraph(g){
   updateProgress(g.cursor, g.total);
   if (g.documents) renderGrid();
   $("stagehint").style.display = g.nodes.length ? "none" : "flex";
+  renderGraphSearch();   // keep the graph-search list live as claims/confidences change
 }
 
 function updateProgress(cursor, total){
@@ -839,6 +929,7 @@ function updateProgress(cursor, total){
   $("progress").innerHTML = `<b>${ing.done}</b> / ${ing.total} ${label}`;
   $("prog-fill").style.width = ing.total ? `${(ing.done / ing.total) * 100}%` : "0%";
   $("step").disabled = CURSOR >= TOTAL;
+  updateFlowControls();
   updateSteps();
 }
 
@@ -849,7 +940,22 @@ function docStatus(idx){
   if (idx === CURSOR) return "next";
   return "pending";
 }
-const STATUS_LABEL = { pending:"Pending", next:"Next up", done:"Appraised", flagged:"Flagged OOD", refused:"Refused" };
+const STATUS_LABEL = { pending:"Pending", next:"Next up", flagged:"Flagged OOD", refused:"Refused" };
+// "done" reads differently per stage: base is established, enrichment ingested, research checked
+function doneLabel(d){
+  const p = docPool(d);
+  return p === "foundation" ? "Established" : p === "research" ? "Checked" : "Ingested";
+}
+function statusText(d, st){ return st === "done" ? doneLabel(d) : (STATUS_LABEL[st] || "Pending"); }
+function stageClass(d){
+  const p = docPool(d);
+  return p === "foundation" ? "is-foundation" : p === "research" ? "is-research" : "";
+}
+function cardClass(d, st){
+  const base = st === "next" ? "next" : st === "pending" ? "" : "done";
+  const stage = stageClass(d);
+  return `pcard ${base}${stage ? " " + stage : ""}`;
+}
 // which coarse filter bucket a status belongs to
 function bucket(st){ return st === "next" ? "pending" : st; }
 
@@ -866,23 +972,64 @@ function updateChipCounts(){
   document.querySelectorAll(".chip .n").forEach((el) => { el.textContent = counts[el.dataset.c] ?? ""; });
 }
 
+// the three workflow stages, shown as labeled sections in the "all papers" view
+const SECTIONS = [
+  { scope:"foundation", num:"1", title:"Base",       note:"Ground-truth foundation" },
+  { scope:"enrich",     num:"2", title:"Enrichment", note:"Expanding the model’s knowledge" },
+  { scope:"research",   num:"3", title:"Research",   note:"Newly found & verified results" },
+];
+const passDoc = (d) => (FILTER === "all" || bucket(docStatus(d.idx)) === FILTER) && matchesQuery(d);
+function cardsFrag(docs){
+  const frag = document.createDocumentFragment();
+  docs.forEach((d) => frag.appendChild(paperCard(d)));
+  return frag;
+}
+function noResultsHTML(){
+  return `<div class="no-results" style="grid-column:1/-1">No papers match “${esc(QUERY)}”${FILTER!=="all"?` in ${FILTER}`:""}.</div>`;
+}
+
 // full render — used on load, source switch, filter/search change
 function renderGrid(){
   $("lib-title").textContent = IS_PAPERS ? "Papers" : "Incoming results";
-  $("lib-sub").textContent = IS_PAPERS
-    ? "Two separate steps. Step 1 establishes the graph from a curated ground-truth set; step 2 ingests everything else — corroborating papers and a small adversarial pack (red) that stress-tests it."
-    : "Simulated experimental results streaming in one at a time. Ingest them to drive the belief engine.";
   updateChipCounts();
-
   const grid = $("paper-grid");
-  const shown = docsInScope().filter((d) => (FILTER === "all" || bucket(docStatus(d.idx)) === FILTER) && matchesQuery(d));
-  if (!shown.length){
-    grid.innerHTML = `<div class="no-results" style="grid-column:1/-1">No papers match “${esc(QUERY)}”${FILTER!=="all"?` in ${FILTER}`:""}.</div>`;
+  const grouped = IS_PAPERS && N_FOUND > 0 && SCOPE === "all";
+
+  // flat view — sim mode, or a single stage scoped from the steps bar
+  if (!grouped){
+    const shown = docsInScope().filter(passDoc);
+    grid.className = "grid";
+    if (!shown.length){ grid.innerHTML = noResultsHTML(); return; }
+    grid.replaceChildren(cardsFrag(shown));
     return;
   }
-  // reuse a DocumentFragment so the grid is committed to the DOM in one reflow
+
+  // "all papers" — the whole library, grouped into the three workflow stages
+  grid.className = "";
   const frag = document.createDocumentFragment();
-  shown.forEach((d) => frag.appendChild(paperCard(d)));
+  let any = false;
+  SECTIONS.forEach((sec) => {
+    const docs = DOCS.filter((d) => docPool(d) === sec.scope).filter(passDoc);
+    if (!docs.length) return;
+    any = true;
+    const total = stageCounts(sec.scope).total;
+    const section = document.createElement("section");
+    section.className = "lib-section";
+    const head = document.createElement("div");
+    head.className = "sec-head";
+    head.innerHTML =
+        `<span class="sec-num">${sec.num}</span>`
+      + `<span class="sec-title">${sec.title}</span>`
+      + `<span class="sec-note">${sec.note}</span>`
+      + `<span class="sec-count">${total} paper${total === 1 ? "" : "s"}</span>`;
+    const g = document.createElement("div");
+    g.className = "grid";
+    g.appendChild(cardsFrag(docs));
+    section.appendChild(head);
+    section.appendChild(g);
+    frag.appendChild(section);
+  });
+  if (!any){ grid.className = "grid"; grid.innerHTML = noResultsHTML(); return; }
   grid.replaceChildren(frag);
 }
 
@@ -890,10 +1037,11 @@ function renderGrid(){
 function refreshCard(idx){
   const card = $("paper-grid").querySelector(`.pcard[data-idx="${idx}"]`);
   if (!card) return;
+  const d = DOCS.find((x) => x.idx === idx); if (!d) return;
   const st = docStatus(idx);
-  card.className = `pcard ${st === "next" ? "next" : st === "pending" ? "" : "done"}`;
+  card.className = cardClass(d, st);
   const stEl = card.querySelector(".st");
-  if (stEl){ stEl.className = `st ${st}`; stEl.textContent = STATUS_LABEL[st]; }
+  if (stEl){ stEl.className = `st ${st}`; stEl.textContent = statusText(d, st); }
 }
 
 // an ingest only changes two cards (the appraised one + the new "next"). Touch
@@ -907,13 +1055,13 @@ function updateGridForEvent(idx){
 
 function paperCard(d){
   const st = docStatus(d.idx);
-  const ph = d.phase && d.phase !== "corroboration" ? d.phase : "";
+  const prov = provOf(d);
   const card = document.createElement("div");
-  card.className = `pcard ${st === "next" ? "next" : st === "pending" ? "" : "done"}${ph ? ` is-${ph}` : ""}`;
+  card.className = cardClass(d, st);
   card.dataset.idx = d.idx;
   card.innerHTML =
-    (ph ? `<span class="phase-tag ${ph}">${PHASE_TAG[ph] || ""}</span>` : "")
-    + `<span class="st ${st}">${STATUS_LABEL[st]}</span>`
+      `<span class="prov ${prov.cls}">${prov.label}</span>`
+    + `<span class="st ${st}">${statusText(d, st)}</span>`
     + `<div class="ptitle">${esc(d.title)}</div>`
     + (d.authors ? `<div class="pauth">${esc(d.authors)}</div>` : "")
     + `<div class="pmeta"><span class="j">${esc(d.journal)}</span>${d.year ? ` · ${esc(d.year)}` : ""}</div>`
@@ -940,8 +1088,9 @@ async function openPaper(idx){
   const r = await fetch(`/paper/${idx}`); const p = await r.json();
   if (p.error) return;
   const st = docStatus(idx);
+  const d = DOCS.find((x) => x.idx === idx);
   const sEl = $("m-status");
-  sEl.className = `st ${st} m-st`; sEl.textContent = STATUS_LABEL[st];
+  sEl.className = `st ${st} m-st`; sEl.textContent = d ? statusText(d, st) : (STATUS_LABEL[st] || "Pending");
   $("m-title").textContent = p.title;
   $("m-authors").textContent = (p.authors || []).join(", ");
   $("m-jmeta").innerHTML = `<span class="j">${esc(p.journal)}</span>${p.year ? ` · ${esc(p.year)}` : ""}`
@@ -961,6 +1110,7 @@ function syncToggles(g){
   IS_PAPERS = g.data_source === "papers";
   $("corpus-seg").querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.src === g.data_source));
   $("step").textContent = IS_PAPERS ? "Ingest next paper ▸" : "Ingest next ▸";
+  if (!playTimer) $("play").textContent = playIdleLabel();
   if (!WARMING) {
     const badge = $("model-badge");
     if (g.extractor_kind === "freesolo") { badge.textContent = "Freesolo · live"; badge.className = "model-badge live";
@@ -1149,13 +1299,98 @@ function cascadeCard(m){
 function pushCard(card){
   const log=$("log"); const e=log.querySelector(".empty"); if(e) e.remove();
   log.insertBefore(card, log.firstChild);
-  LOGN++; $("log-count").textContent = `${LOGN} step${LOGN===1?"":"s"}`;
+  LOGN++; updateInspCount();
+  // if the log isn't the active inspector panel, flag the tab with an unread dot
+  if (INSP_PANEL !== "log"){ const lt=$("insp-tabs").querySelector('[data-panel="log"]'); if(lt) lt.classList.add("has-new"); }
   applyReveal();
   // if the user isn't watching the graph, flag that there's new activity
   if (document.body.dataset.view !== "graph")
     $("nav").querySelector('[data-view="graph"]').classList.add("has-activity");
 }
 function applyReveal(){ document.querySelectorAll(".reveal-only").forEach((el)=>{ el.style.display = REVEAL?"inline-block":"none"; }); }
+
+// ---------- graph search (shares the inspector with the reasoning log) ----------
+// The inspector header toggles between the running reasoning log and a live, filterable
+// index of every claim in the graph. Selecting a result focuses it in the 3D view — the
+// same highlight you get clicking the node itself, so orbit stays put (no camera hijack).
+function setInspPanel(panel){
+  INSP_PANEL = panel;
+  $("insp-tabs").querySelectorAll("button").forEach((b)=>b.classList.toggle("active", b.dataset.panel===panel));
+  $("log").style.display = panel==="log" ? "" : "none";
+  $("search-panel").style.display = panel==="search" ? "flex" : "none";
+  if (panel==="log"){ const lt=$("insp-tabs").querySelector('[data-panel="log"]'); if(lt) lt.classList.remove("has-new"); }
+  if (panel==="search"){ renderGraphSearch(); const inp=$("graph-search"); if(inp) setTimeout(()=>inp.focus(), 30); }
+  updateInspCount();
+}
+
+// one context-aware counter in the header: "N steps" for the log, "M of N" while searching
+function updateInspCount(){
+  const el=$("insp-count"); if(!el) return;
+  if (INSP_PANEL==="search"){
+    const total=GraphStore.data.nodes.length;
+    if (!total){ el.textContent=""; return; }
+    el.textContent = GSEARCH_Q ? `${GSEARCH_N} of ${total}` : `${total} claim${total===1?"":"s"}`;
+  } else {
+    el.textContent = LOGN ? `${LOGN} step${LOGN===1?"":"s"}` : "";
+  }
+}
+
+// keep the results list's selected row in sync with the focused graph node
+function syncSearchSel(){
+  if (INSP_PANEL!=="search") return;
+  document.querySelectorAll("#graph-results .gres").forEach((el)=>{
+    el.classList.toggle("sel", !!FOCUS && el.dataset.id===FOCUS);
+  });
+}
+
+// rank claims highest-confidence first — mirrors the "ground truth established" panel
+function graphSearchResults(){
+  const q=GSEARCH_Q;
+  let nodes=GraphStore.data.nodes.slice();
+  if (q) nodes=nodes.filter((n)=>{
+    const hay=`${n.text||""} ${n.label||""} ${n.id||""} ${n.status||""}${REVEAL&&n.truth?` ${n.truth}`:""}`.toLowerCase();
+    return hay.includes(q);
+  });
+  nodes.sort((a,b)=>((b.c==null?PRIOR:b.c)-(a.c==null?PRIOR:a.c)));
+  return nodes;
+}
+
+function graphResultRow(n){
+  const c = n.c==null?PRIOR:n.c;
+  const pct = clamp01(c)*100;
+  const name = esc(n.text || claimLabel(n.id));
+  const sel = (FOCUS && n.id===FOCUS) ? " sel" : "";
+  return `<div class="gres${sel}" data-id="${esc(n.id)}" title="Highlight in the belief graph">`
+    + `<div class="drow"><span class="dname">${name}</span>`
+    + `<span class="dnums"><span class="to">c=${c.toFixed(2)}</span>`
+    + `<span class="dchip flat">r${n.r||0} · s${n.s||0}</span></span>`
+    + `<span class="track2"><span class="seg base" style="width:${pct}%;background:${confColor(c)}"></span></span></div>`
+    + (n.status ? `<div class="gstatus">${esc(n.status)}</div>` : "")
+    + `</div>`;
+}
+
+function renderGraphSearch(){
+  if (INSP_PANEL!=="search") return;
+  const box=$("graph-results"); if(!box) return;
+  const total=GraphStore.data.nodes.length;
+  if (!total){ box.innerHTML=`<div class="empty">Build the graph, then search its claims here.</div>`; GSEARCH_N=0; updateInspCount(); return; }
+  const res=graphSearchResults(); GSEARCH_N=res.length;
+  box.innerHTML = res.length
+    ? res.map(graphResultRow).join("")
+    : `<div class="empty">No claims match &ldquo;${esc(GSEARCH_Q)}&rdquo;.</div>`;
+  updateInspCount();
+}
+
+let gsearchTimer=null;
+function bindGraphSearch(){
+  $("insp-tabs").querySelectorAll("button").forEach((b)=> b.onclick = ()=> setInspPanel(b.dataset.panel));
+  const inp=$("graph-search");
+  if (inp) inp.oninput = (e)=>{ const v=e.target.value.trim().toLowerCase();
+    clearTimeout(gsearchTimer); gsearchTimer=setTimeout(()=>{ GSEARCH_Q=v; renderGraphSearch(); }, 120); };
+  const box=$("graph-results");
+  if (box) box.onclick = (e)=>{ const row=e.target.closest(".gres"); if(!row) return;
+    const node=GraphStore.byId.get(row.dataset.id); if(node) focusNode(node); };
+}
 
 // ---------- SSE ----------
 function connect(){
@@ -1228,11 +1463,13 @@ $("warm").onclick = async () => {
 };
 
 let playTimer=null;
-function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; $("play").textContent="Auto-play"; $("play").classList.remove("on"); } }
+function playIdleLabel(){ return IS_PAPERS ? "Ingest all papers ▸" : "Auto-play"; }
+function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; } $("play").textContent=playIdleLabel(); $("play").classList.remove("on"); }
 function startPlay(){ $("play").textContent="Pause"; $("play").classList.add("on");
   playTimer=setInterval(async ()=>{ const r=await post("/event"); if(r.status==="done") stopPlay(); }, 950); }
-function resetLog(msg){ stopPlay(); $("log").innerHTML=`<div class="empty">${msg}</div>`; LOGN=0; $("log-count").textContent="";
-  VERDICTS={}; firstIngestSeen=false; SCOPE="foundation"; _autoScoped=false; }
+function resetLog(msg){ stopPlay(); $("log").innerHTML=`<div class="empty">${msg}</div>`; LOGN=0; updateInspCount();
+  const lt=$("insp-tabs").querySelector('[data-panel="log"]'); if(lt) lt.classList.remove("has-new");
+  VERDICTS={}; firstIngestSeen=false; SCOPE="all"; }
 
 $("build").onclick = async () => {
   const b = $("build"); b.disabled = true; b.textContent = "Establishing…";
@@ -1241,7 +1478,7 @@ $("build").onclick = async () => {
     const r = await post("/build-foundation");
     if (r.status === "ok") toast(`Ground truth established — ${r.n_established} claims earned from ${r.n_foundation} papers.`, "ok");
     else toast(r.reason || "Nothing to build.", "");
-  } finally { b.disabled = false; b.innerHTML = "Establish ground truth &#9656;"; }
+  } finally { b.disabled = false; b.innerHTML = "Establish base &#9656;"; }
 };
 $("step").onclick = () => post("/event");
 $("play").onclick = () => (playTimer?stopPlay():startPlay());
@@ -1265,59 +1502,7 @@ $("corpus-seg").querySelectorAll("button").forEach((b) => b.onclick = async () =
   await post("/source",{mode});
 });
 
-// ---------- Ask the belief graph ----------
-$("insp-tabs").querySelectorAll("button").forEach((b) => b.onclick = () => {
-  const tab = b.dataset.tab;
-  $("insp-tabs").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
-  $("log").hidden = tab !== "log";
-  $("askpanel").hidden = tab !== "ask";
-  $("log-count").style.display = tab === "log" ? "" : "none";
-  if (tab === "ask") $("askq").focus();
-});
-const STANCE_CLS = { "Strongly supported":"s-strong", "Supported":"s-yes", "Uncertain":"s-unsure", "Doubtful":"s-no", "Refuted":"s-no" };
-// journal ids arrive as "venue_the_lancet__diabetes___endocrinology" — make them readable
-function prettySource(s){
-  let t = String(s).replace(/^venue_/, "").replace(/_+/g, " ").trim();
-  t = t.replace(/\b\w/g, (m) => m.toUpperCase());
-  return t.length > 40 ? t.slice(0, 38) + "…" : t;
-}
-function askCard(a){
-  const pct = Math.round(clamp01(a.confidence)*100);
-  const cls = STANCE_CLS[a.stance] || "s-unsure";
-  const line = a.moves
-    ? `Confidence moved from <b>${Math.round(clamp01(a.c_start)*100)}%</b> to <b>${pct}%</b> across ${a.moves} update${a.moves===1?"":"s"} through the engine.`
-    : `No evidence has moved this claim yet — it sits at the skeptical prior.`;
-  const status = a.status && a.status !== "active" ? `<span>status <b>${esc(a.status)}</b></span>` : "";
-  const srcs = (a.sources && a.sources.length)
-    ? `<div class="asrc"><span class="slab2">Evidence from</span>${a.sources.map(s=>`<span class="schip">${esc(prettySource(s))}</span>`).join("")}</div>` : "";
-  return `<div class="acard ${cls}">`
-    + `<div class="aclaim">${esc(a.text)}</div>`
-    + `<div class="astance"><span class="slbl">${esc(a.stance)}</span><span class="sconf">${pct}%</span></div>`
-    + `<div class="abar"><span style="width:${pct}%;background:${confColor(a.confidence)}"></span></div>`
-    + `<div class="aline">${line}</div>`
-    + `<div class="ameta"><span><b>${a.r}</b> supporting · <b>${a.s}</b> contradicting</span>`
-    + `<span>uncertainty <b>${a.uncertainty.toFixed(2)}</b></span>${status}</div>`
-    + srcs
-    + `<div class="afoot">Answered from the belief ledger — not written by the model.</div></div>`;
-}
-async function runAsk(q){
-  const box = $("askresults");
-  box.innerHTML = `<div class="askempty">Searching the belief graph…</div>`;
-  try {
-    const r = await post("/ask", { question: q });
-    if (!r.answers || !r.answers.length){
-      box.innerHTML = `<div class="askempty">No claim in the graph matches that yet. Try a peptide and its target, e.g. “semaglutide GLP1R”.</div>`;
-      return;
-    }
-    box.innerHTML = r.answers.map(askCard).join("");
-  } catch(e){
-    box.innerHTML = `<div class="askempty">Couldn't reach the belief graph. Is the server running?</div>`;
-  }
-}
-$("askbtn").onclick = () => { const q = $("askq").value.trim(); if (q) runAsk(q); };
-$("askq").addEventListener("keydown", (e) => { if (e.key === "Enter"){ const q = e.target.value.trim(); if (q) runAsk(q); } });
-$("askex").querySelectorAll("button").forEach((b) => b.onclick = () => { $("askq").value = b.dataset.q; runAsk(b.dataset.q); });
-
+bindGraphSearch();
 connect();
 </script>
 </body>
