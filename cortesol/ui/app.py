@@ -37,6 +37,7 @@ from ..core.config import EDGE_INFLUENCE, PRIOR_C_0
 from ..core.kb import KB
 from ..core.mathx import sigmoid
 from ..core.results import EventResult
+from ..core.assessment import EvidenceAssessment
 from ..core.schema import Edge, EdgeType, RawEvent
 from ..eval.replay import seed_kb
 from ..ingest.extract import (
@@ -699,7 +700,14 @@ def _process_resilient(event: RawEvent) -> tuple[EventResult, bool, dict]:
         used_fallback = True
         proposed = STATE.fallback.extract(ctx)
     reasoning: dict = {}
-    result = pipeline.commit_proposal(STATE.kb, ctx, proposed, reasoning=reasoning)
+    # The tuned live model emits a neutral EvidenceAssessment that a deterministic
+    # judge compiles into ops; the offline fallback proposes ProposedOps directly.
+    # Dispatch on type so both the live checkpoint and the fallback drive the same
+    # ledger — belief still moves ONLY through the engine.
+    if isinstance(proposed, EvidenceAssessment):
+        result = pipeline.commit_assessment(STATE.kb, ctx, proposed, reasoning=reasoning)
+    else:
+        result = pipeline.commit_proposal(STATE.kb, ctx, proposed, reasoning=reasoning)
     live = isinstance(STATE.extractor, FreesoloExtractor) and not used_fallback
     reasoning["model"] = (
         f"Freesolo {STATE.extractor.run_id}" if live else "offline heuristic (fallback)"
