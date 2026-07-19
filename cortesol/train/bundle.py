@@ -15,10 +15,12 @@ FIXED_MTIME = 946_684_800
 RUNTIME_FILES = (
     "cortesol/__init__.py",
     "cortesol/core/__init__.py",
+    "cortesol/core/assessment.py",
     "cortesol/core/config.py",
     "cortesol/core/context.py",
     "cortesol/core/domain.py",
     "cortesol/core/engine.py",
+    "cortesol/core/judge.py",
     "cortesol/core/kb.py",
     "cortesol/core/mathx.py",
     "cortesol/core/ops.py",

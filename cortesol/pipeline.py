@@ -8,9 +8,9 @@ runs today with FakeExtractor and the real engine.
 The lifecycle (System Architecture §update-lifecycle):
   1. quarantine   event.untrusted_view() -> Evidence            (area A)
   2. retrieve     top-k claims + neighborhood -> Context        (area C)
-  3. extract      Context -> ProposedOps                        (area B, the model)
-  4. screen       deterministic red flags -> evidence.red_flags (area A)
-  5. validate     ProposedOps -> accepted / rejected            (area A, the gate)
+  3. extract      paper -> EvidenceAssessment form              (area B, the model)
+  4. judge        form -> ProposedOps + deterministic flags      (area A)
+  5. validate     ProposedOps -> accepted / rejected             (area A, the gate)
   6. commit+propagate  engine.apply + propagate over dirty set  (area A)
   7. publish      diff -> audit log -> SSE -> UI, snapshot KB    (area C)
 """
@@ -22,7 +22,9 @@ import os
 from pathlib import Path
 
 from .core import config, engine, propagate, validator
+from .core.assessment import EvidenceAssessment
 from .core.context import Context
+from .core.judge import apply_assessment, judge
 from .core.kb import KB
 from .core.ops import (
     AddClaim,
@@ -190,13 +192,45 @@ def commit_proposal(
     )
 
 
+def commit_assessment(
+    kb: KB,
+    ctx: Context,
+    assessment: EvidenceAssessment,
+    *,
+    snapshot_dir=None,
+    reasoning: dict | None = None,
+) -> EventResult:
+    """Compile the model's neutral form with deterministic policy, then commit."""
+
+    apply_assessment(ctx, assessment)
+    screen(ctx.evidence, kb)
+    proposed = judge(kb, ctx, assessment)
+    judge_reasoning: dict = {}
+    result = commit_proposal(
+        kb,
+        ctx,
+        proposed,
+        snapshot_dir=snapshot_dir,
+        reasoning=judge_reasoning if reasoning is not None else None,
+    )
+    if reasoning is not None:
+        reasoning["assessment"] = assessment.model_dump(mode="json")
+        reasoning["raw_json"] = json.dumps(reasoning["assessment"], indent=2)
+        reasoning["deterministic_ops"] = judge_reasoning.get("proposed_ops", [])
+        reasoning["steps"] = judge_reasoning.get("steps", [])
+        reasoning["red_flags"] = list(ctx.evidence.red_flags)
+    return result
+
+
 def process_event(kb: KB, event: RawEvent, extractor=None, snapshot_dir=None) -> EventResult:
     """Run one event through the 7-step lifecycle and return its EventResult.
     `extractor` defaults to FakeExtractor so the loop runs with no model."""
     extractor = extractor or _default_extractor()
     ctx = prepare_event(kb, event)
-    proposed = extractor.extract(ctx) if hasattr(extractor, "extract") else extractor(ctx)
-    return commit_proposal(kb, ctx, proposed, snapshot_dir=snapshot_dir)
+    extracted = extractor.extract(ctx) if hasattr(extractor, "extract") else extractor(ctx)
+    if isinstance(extracted, EvidenceAssessment):
+        return commit_assessment(kb, ctx, extracted, snapshot_dir=snapshot_dir)
+    return commit_proposal(kb, ctx, extracted, snapshot_dir=snapshot_dir)
 
 
 def replay_stream(kb: KB, events: list[RawEvent], extractor=None) -> list[EventResult]:

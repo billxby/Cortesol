@@ -1,16 +1,17 @@
 """Offline tests for the real Flash extractor seam (`ingest/extract.py::extract`).
 
 No network: the OpenAI client is monkeypatched with a fake that returns canned
-content. Asserts (1) a valid reply parses into ProposedOps, (2) the op schema is
-passed as the constrained-decoding response_format, (3) a malformed reply or a
-missing model is FAIL-SAFE (zero ops, never raises)."""
+content. Asserts (1) a valid reply parses into an EvidenceAssessment, (2) the
+assessment schema is passed as the constrained-decoding response_format, (3) a
+malformed reply or a missing model is FAIL-SAFE — it returns `_empty_assessment`
+(a valid neutral form the judge compiles to a safe FLAG_OOD), never raising."""
 
 from __future__ import annotations
 
 import types
 
+from cortesol.core.assessment import EvidenceAssessment, assessment_json_schema
 from cortesol.core.context import Context
-from cortesol.core.ops import ApplyEvidence, ProposedOps, ops_json_schema
 from cortesol.core.schema import Claim, Evidence, RawEvent
 from cortesol.ingest import extract as ex
 
@@ -25,6 +26,35 @@ def _ctx() -> Context:
         sources=[],
         edges=[],
     )
+
+
+def _valid_assessment_json() -> str:
+    return EvidenceAssessment(
+        schema_version="1.0",
+        evidence_id="e0",
+        scope="peptide",
+        instruction_attack=False,
+        document_type="primary_research",
+        study_type="binding",
+        peptide="P1",
+        target_or_indication="MC4R",
+        property="binding_affinity",
+        assay="SPR",
+        endpoint="Kd",
+        finding="observed",
+        value=12.0,
+        value_relation="approximately",
+        units="nM",
+        sample_size=3,
+        replicate_count=3,
+        p_value=0.001,
+        randomized=None,
+        blinded=None,
+        controlled=True,
+        preregistered=True,
+        control_peptide=True,
+        purity_pct=98.0,
+    ).model_dump_json()
 
 
 class _FakeResp:
@@ -47,46 +77,43 @@ def _fake_client(content: str, captured: dict):
     )
 
 
-def test_valid_reply_parses_and_passes_the_op_schema(monkeypatch):
+def test_valid_reply_parses_and_passes_the_assessment_schema(monkeypatch):
     captured: dict = {}
-    good = ProposedOps(
-        think="clean binding result",
-        ops=[
-            ApplyEvidence(
-                claim_id="c_bind_P1_MC4R",
-                direction="+",
-                strength="strong",
-                evidence_id="e0",
-            )
-        ],
-    ).model_dump_json()
-    monkeypatch.setattr(ex, "_get_client", lambda: _fake_client(good, captured))
+    monkeypatch.setattr(ex, "_get_client", lambda: _fake_client(_valid_assessment_json(), captured))
 
     out = ex.extract(_ctx(), model="test-model")
 
-    assert isinstance(out, ProposedOps)
-    assert len(out.ops) == 1 and out.ops[0].op == "APPLY_EVIDENCE"
-    # constrained decoding: the exact op schema is the response_format
+    assert isinstance(out, EvidenceAssessment)
+    assert out.evidence_id == "e0"
+    assert out.scope == "peptide"
+    assert out.property == "binding_affinity"
+    # constrained decoding: the exact assessment schema is the response_format
     rf = captured["response_format"]
     assert rf["type"] == "json_schema"
-    assert rf["json_schema"]["schema"] == ops_json_schema()
+    assert rf["json_schema"]["name"] == "EvidenceAssessment"
+    assert rf["json_schema"]["schema"] == assessment_json_schema()
     assert captured["model"] == "test-model"
 
 
 def test_malformed_reply_is_fail_safe(monkeypatch):
     monkeypatch.setattr(ex, "_get_client", lambda: _fake_client("not json at all", {}))
     out = ex.extract(_ctx(), model="test-model")
-    assert isinstance(out, ProposedOps)
-    assert out.ops == []  # no belief-moving ops on a bad reply
+    # a bad reply falls back to the neutral empty form (never raises, never a claim edit)
+    assert isinstance(out, EvidenceAssessment)
+    assert out == ex._empty_assessment(_ctx())
+    assert out.scope == "unclear"
+    assert out.finding == "not_reported"
 
 
 def test_empty_reply_is_fail_safe(monkeypatch):
     monkeypatch.setattr(ex, "_get_client", lambda: _fake_client("", {}))
     out = ex.extract(_ctx(), model="test-model")
-    assert out.ops == []
+    assert isinstance(out, EvidenceAssessment)
+    assert out == ex._empty_assessment(_ctx())
 
 
-def test_no_model_configured_returns_no_ops(monkeypatch):
+def test_no_model_configured_returns_empty_assessment(monkeypatch):
     monkeypatch.setattr(ex, "_resolve_model", lambda m: None)
     out = ex.extract(_ctx())
-    assert out.ops == []
+    assert isinstance(out, EvidenceAssessment)
+    assert out == ex._empty_assessment(_ctx())
