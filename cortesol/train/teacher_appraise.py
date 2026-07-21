@@ -341,6 +341,44 @@ class StubTeacher:
         return stub_appraise(abstract, evidence_id)
 
 
+class PrelabeledAppraiser:
+    """An ``Appraiser`` backed by pre-computed appraisals produced out-of-band by a
+    strong reader (a frontier model — including this assistant's own subagents —
+    labeling each abstract into the critical-appraisal form). Every ``sample``
+    returns the same stored reading, so self-consistency is trivially satisfied and
+    the screen-agreement filter still gates quality. Only pass papers that have a
+    stored label (`has`)."""
+
+    def __init__(self, labels: dict[str, EvidenceAssessment]) -> None:
+        self._labels = dict(labels)
+
+    def has(self, evidence_id: str) -> bool:
+        return evidence_id in self._labels
+
+    def appraise(self, abstract: str, evidence_id: str, *, sample: int) -> EvidenceAssessment:
+        return self._labels[evidence_id]
+
+    @classmethod
+    def from_jsonl(cls, *paths: str | Path) -> PrelabeledAppraiser:
+        """Load {evidence_id, assessment:{...}} rows (the `assessment` object may be
+        the whole row). The stored evidence_id always wins so it matches the paper."""
+        import json as _json
+        from pathlib import Path as _Path
+
+        labels: dict[str, EvidenceAssessment] = {}
+        for path in paths:
+            for line in _Path(path).read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                row = _json.loads(line)
+                data = dict(row.get("assessment", row))
+                eid = str(row.get("evidence_id") or data.get("evidence_id"))
+                data["evidence_id"] = eid
+                labels[eid] = EvidenceAssessment.model_validate(data)
+        return cls(labels)
+
+
 # --------------------------------------------------------------------------
 # Deterministic judge/screen compilation — used both by the screen-agreement
 # filter and by tests that assert a gold appraisal compiles to the intended op.

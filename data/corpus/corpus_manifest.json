@@ -1,0 +1,17 @@
+{
+  "total_papers": 216,
+  "by_field": {
+    "biomed": 149,
+    "cs": 12,
+    "econ": 11,
+    "math": 11,
+    "physics": 12,
+    "q-bio": 12,
+    "stat": 9
+  },
+  "heldout_fields": [
+    "math",
+    "q-bio"
+  ],
+  "note": "field tag is eval-only; never shown to the model"
+}
