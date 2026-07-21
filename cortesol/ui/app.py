@@ -34,6 +34,12 @@ from ..adapters import cortex
 from ..core import propagate
 from ..core.assessment import EvidenceAssessment
 from ..core.config import EDGE_INFLUENCE, PRIOR_C_0, SOURCE_PRIORS
+from ..core.domains import (
+    get_active_domain,
+    list_domains,
+    register_domain,
+    set_active_domain,
+)
 from ..core.kb import KB
 from ..core.mathx import sigmoid
 from ..core.results import EventResult
@@ -42,13 +48,14 @@ from ..eval.replay import seed_kb
 from ..ingest.extract import (
     FakeExtractor,
     FreesoloExtractor,
+    GenericFakeExtractor,
     PaperFakeExtractor,
     _env,
     _load_dotenv,
     flash_available,
 )
 from ..sim.world import World
-from . import research
+from . import domainsmith, research
 
 app = FastAPI(title="Cortesol")
 
@@ -144,6 +151,12 @@ class DemoState:
     def __init__(self) -> None:
         self.data_source = "papers"  # landing view = the real papers database
         self.extractor_kind = "freesolo"
+        # Imported (LLM-drafted) field of knowledge: when data_source == "domain",
+        # the KB is a fresh graph seeded from `active_draft` and the ACTIVE domain is
+        # the custom one. Peptides stays the default; `/source` restores it.
+        self.domain_name = "peptides"
+        self.active_draft: domainsmith.DomainDraft | None = None
+        self._seed_report: dict = {"seeded": [], "rejected": []}
         self.lock = asyncio.Lock()
         self.subscribers: set[asyncio.Queue] = set()
         # "Ingest all papers" runs as a server-side background loop (no per-paper
@@ -165,6 +178,12 @@ class DemoState:
         the engine disposes. Reads FREESOLO_RUN_ID / FREESOLO_API_KEY / FLASH_API_URL
         from .env. Falls back to the offline heuristic only if creds are absent, so
         the demo never hard-crashes."""
+        # An imported field uses the domain-agnostic offline proposer: the live
+        # Freesolo checkpoint is peptide-trained, so it must NOT propose over a
+        # non-peptide graph. The generalist model is the faithful upgrade later.
+        if self.data_source == "domain":
+            self.extractor_kind = "offline"
+            return GenericFakeExtractor()
         _load_dotenv()
         run_id = _env("FREESOLO_RUN_ID")
         api_key = _env("FREESOLO_API_KEY")
@@ -211,6 +230,19 @@ class DemoState:
                 for i, e in enumerate(self.events):
                     e.t = i
                 self.kb = cortex.seed_kb_from_papers(self.events)
+        elif self.data_source == "domain":
+            # An imported field: a FRESH graph seeded structurally from the reviewed
+            # draft (claim NODES at the skeptical prior — belief still moves only
+            # through the engine). No preloaded event stream; evidence arrives via the
+            # Red-team paste, so the audience watches belief form from nothing.
+            self.kb = KB()
+            if self.active_draft is not None:
+                self._seed_report = domainsmith.seed_claims_into(
+                    self.kb, self.active_draft, source_id=f"curator:{self.domain_name}"
+                )
+            self.events = []
+            self.n_foundation = 0
+            self.n_corpus = 0
         else:
             self.events = [
                 RawEvent(**json.loads(line))
@@ -241,9 +273,12 @@ class DemoState:
         # model call times out or errors mid-run, we degrade to this for that one
         # event so the demo keeps flowing — belief still moves ONLY through the
         # engine, just from a deterministic proposal instead of the model's.
-        self.fallback = (
-            PaperFakeExtractor() if self.data_source == "papers" else FakeExtractor()
-        )
+        if self.data_source == "domain":
+            self.fallback = GenericFakeExtractor()
+        elif self.data_source == "papers":
+            self.fallback = PaperFakeExtractor()
+        else:
+            self.fallback = FakeExtractor()
         self.cursor = 0
         self.history: list[dict] = []  # recent event/cascade messages, replayed on connect
         # Story arc: the graph starts EMPTY and builds up. A claim node is
@@ -255,6 +290,33 @@ class DemoState:
         # seeded claim so the audience sees the foundation before stepping.
         if self._foundation_loaded:
             self.revealed = set(self.kb.claims)
+        # An imported field opens with its whole ontology visible at the prior, so
+        # the audience sees the field's claim graph immediately and then watches each
+        # pasted result earn confidence through the engine.
+        if self.data_source == "domain":
+            self.revealed = set(self.kb.claims)
+
+    def activate_domain(self, draft: domainsmith.DomainDraft) -> dict:
+        """Register + activate an LLM-drafted field, rebuild the KB around it, and
+        seed its ontology (structural NODES at the prior — never belief). Switches
+        the demo to an empty event stream driven by the offline GenericFakeExtractor.
+        Returns a summary of the now-active field. Caller holds STATE.lock."""
+        domain = domainsmith.to_domain(draft)
+        register_domain(domain)
+        set_active_domain(domain)
+        self.domain_name = domain.name
+        self.active_draft = draft
+        self.data_source = "domain"
+        self.reset()
+        return {
+            "name": domain.name,
+            "label": domain.label,
+            "entity_types": list(domain.entity_types),
+            "property_types": list(domain.property_types),
+            "seeded": list(self._seed_report.get("seeded", [])),
+            "rejected": list(self._seed_report.get("rejected", [])),
+            "n_claims": len(self.kb.claims),
+        }
 
     def reveal(self, claim_ids) -> None:
         self.revealed.update(cid for cid in claim_ids if cid in self.kb.claims)
@@ -542,6 +604,11 @@ class DemoState:
             "claims_total": len(self.kb.claims),
             "prior": PRIOR_C_0,
             "data_source": self.data_source,
+            "active_domain": {
+                "name": get_active_domain().name,
+                "label": get_active_domain().label,
+                "custom": self.data_source == "domain",
+            },
             "extractor_kind": self.extractor_kind,
             "flash_available": flash_available(),
             "flash_tuned_available": bool(_env("FLASH_MODEL_TUNED")),
@@ -1051,10 +1118,78 @@ async def set_source(payload: dict) -> dict:
         return {"status": "error", "reason": "mode must be 'sim' or 'papers'"}
     STATE.autoplay = False  # stop any running autoplay before rebuilding the stream/KB
     async with STATE.lock:
+        # Restore the peptide field whenever we return to a built-in corpus, so
+        # switching away from an imported field always brings the peptide demo back.
+        set_active_domain("peptides")
+        STATE.domain_name = "peptides"
+        STATE.active_draft = None
         STATE.data_source = mode
         STATE.reset()
         await STATE.broadcast(STATE.graph_payload())
         return {"status": "ok", "data_source": mode, "total": len(STATE.events)}
+
+
+# --------------------------------------------------------------------------
+# Import any field of knowledge — describe a field in plain English, an LLM DRAFTS
+# an ontology, the human reviews/activates it, and the SAME gated engine tracks
+# calibrated belief in the new field. A Domain is TRUSTED CONFIG authored via a
+# human-in-the-loop, NEVER belief: seed claims are structural NODES at the skeptical
+# prior (kb.add_claim), and confidence still moves only through the engine.
+# --------------------------------------------------------------------------
+
+
+@app.get("/domains")
+def domains() -> dict:
+    """List every registered field so the UI can show/switch which one is active."""
+    active = get_active_domain().name
+    return {
+        "active": active,
+        "domains": [
+            {"name": d.name, "label": d.label, "active": d.name == active}
+            for d in list_domains()
+        ],
+    }
+
+
+@app.post("/domain/draft")
+async def domain_draft(payload: dict) -> dict:
+    """DRAFT (do NOT activate) a domain ontology from a plain-English description.
+    Returns {source: 'llm'|'fallback', draft}. The LLM proposes; nothing is applied
+    and no belief is touched — the human reviews the draft before activating."""
+    description = str((payload or {}).get("description") or "").strip()
+    if not description:
+        return {"status": "error", "detail": "describe the field first"}
+    source, draft = await domainsmith.draft_domain(description)
+    return {
+        "status": "ok",
+        "source": source,
+        "draft": draft.model_dump(),
+        "problems": domainsmith.validate_draft(draft),
+        "gemini_available": research.gemini_available(),
+    }
+
+
+@app.post("/domain/activate")
+async def domain_activate(payload: dict) -> dict:
+    """Activate a reviewed draft: build the Domain, register + set it active, rebuild
+    the KB fresh, seed the draft's claims (ontology-gated: out-of-namespace tags are
+    rejected, never seeded), and switch the demo to the new field with the offline
+    GenericFakeExtractor. Broadcasts a fresh graph over SSE. READ-ONLY over belief —
+    seed claims are structural adds at the skeptical prior."""
+    raw = (payload or {}).get("draft")
+    if not isinstance(raw, dict):
+        return {"status": "error", "detail": "missing draft"}
+    try:
+        draft = domainsmith.DomainDraft.model_validate(raw)
+    except Exception as exc:  # bad shape from the editor
+        return {"status": "error", "detail": f"invalid draft: {exc}"}
+    if not draft.entity_types or not draft.property_types:
+        return {"status": "error", "detail": "declare at least one entity and one property type"}
+    STATE.autoplay = False  # stop any running autoplay before rebuilding the KB
+    async with STATE.lock:
+        summary = STATE.activate_domain(draft)
+        await STATE.broadcast(STATE.graph_payload())
+    return {"status": "ok", "domain": summary}
 
 
 @app.post("/extractor")

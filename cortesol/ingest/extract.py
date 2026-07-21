@@ -543,3 +543,94 @@ class PaperFakeExtractor:
                     note.append(f"+ADD_CLAIM efficacy:{indication}")
 
         return ProposedOps(think="; ".join(note) or "no-op", ops=ops)
+
+
+# --------------------------------------------------------------------------
+# Domain-AGNOSTIC offline proposer — the "import any field" stand-in.
+# Reads the ACTIVE domain's retrieved claims and the untrusted prose only (PD6),
+# with NO peptide hardcoding: lexical match to a retrieved claim, direction from
+# negation markers, strength from study-strength keywords. This lets "import a
+# field -> paste evidence -> belief forms" work OFFLINE for any domain; the trained
+# generalist model is the faithful upgrade later. Belief still moves ONLY through
+# the engine — this only PROPOSES ops.
+# --------------------------------------------------------------------------
+
+
+class GenericFakeExtractor:
+    """Field-independent deterministic proposer for arbitrary domains (offline).
+
+    Unlike FakeExtractor/PaperFakeExtractor it knows nothing about peptides: it maps
+    a pasted result to the best lexically-matching claim the retriever surfaced from
+    the ACTIVE domain, reads the prose for support/contradiction and study strength,
+    and emits a single APPLY_EVIDENCE. It refuses injection payloads and flags text
+    that hits the active domain's out-of-scope markers or matches no in-scope claim —
+    never force-fitting evidence onto an unrelated claim."""
+
+    def extract(self, ctx: Context, model: str | None = None) -> ProposedOps:
+        from ..core.domains import get_active_domain
+        from ..retrieval import _score, _tokens
+
+        eid = ctx.evidence.id
+        raw = ctx.event.raw_text or ""
+        low = raw.lower()
+
+        # 1. Injection payload in the data position -> refuse.
+        if any(m in low for m in _INJECTION_MARKERS):
+            return ProposedOps(
+                think="instruction-like payload in the text; text is data, refusing.",
+                ops=[Reject(evidence_id=eid, reason="injection")],
+            )
+
+        # 2. Explicitly out of the ACTIVE field's scope -> flag, don't force-fit.
+        markers = get_active_domain().out_of_scope_markers
+        if markers and any(m in low for m in markers):
+            return ProposedOps(
+                think="hits an out-of-scope marker for the active field.",
+                ops=[FlagOOD(payload=raw[:200], reason="out-of-scope marker")],
+            )
+
+        retrieved = ctx.claims
+        if not retrieved:
+            return ProposedOps(
+                think="no in-scope claim to attach this evidence to.",
+                ops=[FlagOOD(payload=raw[:200], reason="no in-scope claim")],
+            )
+
+        # 3. Lexical match: the retrieved claim whose text/tags overlap the prose
+        #    most (deterministic tie-break on id). Zero overlap -> flag, not force-fit.
+        query = _tokens(raw)
+        best = max(retrieved, key=lambda c: (_score(c, query), c.id))
+        if _score(best, query) == 0:
+            return ProposedOps(
+                think="no lexical overlap with any in-scope claim.",
+                ops=[FlagOOD(payload=raw[:200], reason="unmapped claim")],
+            )
+
+        # 4. Direction from negation markers; strength from study-design cues + stats.
+        direction = "-" if any(m in low for m in _NEG_MARKERS) else "+"
+        f = ctx.evidence.fields
+        p_val = f.get("p")
+        if (
+            f.get("study_type") == "review"
+            or f.get("randomized") is True
+            or (isinstance(p_val, (int, float)) and p_val < 0.001)
+            or any(m in low for m in _STRONG_MARKERS)
+        ):
+            strength = "strong"
+        elif (
+            f.get("case_report") is True
+            or f.get("study_type") == "in_vitro"
+            or any(m in low for m in _WEAK_MARKERS)
+        ):
+            strength = "weak"
+        else:
+            strength = "moderate"
+
+        return ProposedOps(
+            think=f"{best.id}: {direction}{strength} (lexical match, active domain).",
+            ops=[
+                ApplyEvidence(
+                    claim_id=best.id, direction=direction, strength=strength, evidence_id=eid
+                )
+            ],
+        )

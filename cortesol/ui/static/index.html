@@ -173,11 +173,13 @@
   body[data-view="redteam"] #redteam { display:flex; flex-direction:column; }
   body[data-view="calibration"] #calibration { display:flex; flex-direction:column; }
   body[data-view="report"] #report { display:flex; flex-direction:column; }
-  /* the ingest/action bar is the sim-stream driver — irrelevant to the chat, red-team, calibration & report tabs */
+  body[data-view="importfield"] #importfield { display:flex; flex-direction:column; }
+  /* the ingest/action bar is the sim-stream driver — irrelevant to the chat, red-team, calibration, report & import tabs */
   body[data-view="research"] .actionbar,
   body[data-view="redteam"] .actionbar,
   body[data-view="calibration"] .actionbar,
-  body[data-view="report"] .actionbar { display:none; }
+  body[data-view="report"] .actionbar,
+  body[data-view="importfield"] .actionbar { display:none; }
 
   /* ---------------- library view ---------------- */
   #library { overflow:hidden; }
@@ -925,6 +927,59 @@
   .rp-prose.ungrounded p { color:var(--accent); }
   @media(max-width:700px){ .rp-bar { flex-direction:column; } #rp-gen { width:100%; } }
 
+  /* ---------------- import-field view (draft a new domain ontology) ---------------- */
+  #importfield { overflow:hidden; background:var(--wash); }
+  .im-scroll { flex:1; min-height:0; overflow-y:auto; padding:30px 26px 52px; }
+  .im-wrap { max-width:820px; margin:0 auto; }
+  .im-bar { display:flex; gap:10px; align-items:flex-end; margin-bottom:8px; }
+  .im-bar .rt-field { flex:1; margin-bottom:0; }
+  #im-desc { width:100%; min-height:74px; resize:vertical; font-family:var(--sans); font-size:14px;
+    color:var(--ink); background:var(--panel); border:1px solid #d3d8e0; border-radius:var(--r-sm);
+    padding:11px 14px; box-shadow:var(--shadow-sm); }
+  #im-desc:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  #im-draft { padding:9px 22px; flex:0 0 auto; }
+  .im-presets { display:flex; flex-wrap:wrap; gap:9px; margin:0 0 22px; }
+  .im-preset { font-size:12.5px; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; padding:7px 13px; box-shadow:var(--shadow-sm); text-align:left; }
+  .im-preset:hover { border-color:var(--blue); color:var(--blue); }
+  .im-empty { color:var(--muted); font-style:italic; padding:26px 2px; }
+
+  /* the editable review form */
+  .im-review { background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+    box-shadow:var(--shadow-sm); padding:24px 26px 26px; animation:rise .25s ease; }
+  .im-review-head { display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);
+    padding-bottom:14px; margin-bottom:18px; flex-wrap:wrap; }
+  .im-review-head h2 { font-family:var(--serif); font-size:22px; letter-spacing:-.4px; color:var(--ink); margin:0; }
+  .im-srcpill { font-size:11px; font-weight:650; color:var(--muted); background:var(--wash);
+    border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+  .im-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin-bottom:16px; }
+  .im-fld { display:flex; flex-direction:column; gap:6px; }
+  .im-fld.wide { grid-column:1 / -1; }
+  .im-fld label, .im-slbl { font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase;
+    color:var(--muted); }
+  .im-fld input, .im-fld textarea { font-family:var(--sans); font-size:13.5px; color:var(--ink);
+    background:var(--panel); border:1px solid #d3d8e0; border-radius:var(--r-sm); padding:9px 12px;
+    box-shadow:var(--shadow-sm); resize:vertical; }
+  .im-fld input:focus, .im-fld textarea:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  .im-help { font-size:11px; color:var(--faint); }
+  .im-seeds { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; }
+  .im-seed { display:grid; grid-template-columns:1fr 220px auto; gap:10px; align-items:center; }
+  .im-seed input { font-family:var(--sans); font-size:13px; color:var(--ink); background:var(--panel);
+    border:1px solid #d3d8e0; border-radius:var(--r-sm); padding:8px 11px; box-shadow:var(--shadow-sm); }
+  .im-seed input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  .im-seed .im-del { flex:0 0 auto; background:var(--panel); border:1px solid var(--line); border-radius:var(--r-sm);
+    color:var(--muted); width:32px; height:32px; font-size:16px; line-height:1; cursor:pointer; }
+  .im-seed .im-del:hover { border-color:var(--accent); color:var(--accent); }
+  .im-add { font-size:12.5px; color:var(--blue); background:var(--blue-soft); border:1px solid #b6cfe8;
+    border-radius:999px; padding:6px 13px; cursor:pointer; }
+  .im-warn { font-size:12px; color:var(--accent); background:#fdf2f3; border:1px solid #e6bcc0;
+    border-radius:var(--r-sm); padding:9px 12px; margin:6px 0 0; line-height:1.5; }
+  .im-actions { display:flex; align-items:center; gap:12px; border-top:1px solid var(--line);
+    padding-top:18px; margin-top:18px; }
+  .im-actions .im-note { font-size:11.5px; color:var(--faint); line-height:1.5; }
+  @media(max-width:700px){ .im-bar { flex-direction:column; align-items:stretch; } #im-draft { width:100%; }
+    .im-grid { grid-template-columns:1fr; } .im-seed { grid-template-columns:1fr; } }
+
   /* keyboard focus rings for the new controls (additive — mouse focus is unaffected) */
   #cal-refresh:focus-visible, #insp-tabs button:focus-visible,
   nav.segmented button:focus-visible { outline:2px solid var(--blue); outline-offset:2px; border-radius:999px; }
@@ -948,6 +1003,7 @@
       <button data-view="graph">Belief graph <span class="livedot"></span></button>
       <button data-view="calibration" type="button">Calibration</button>
       <button data-view="redteam">Red team</button>
+      <button data-view="importfield" type="button">Import field</button>
     </nav>
     <div class="spacer"></div>
     <div class="status-cluster">
@@ -1255,6 +1311,39 @@
                would transform one grounded spec into another and re-bind to the ledger
                — it would NEVER touch belief. Intentionally not implemented.
                =================================================================== -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Import field (draft ANY field of knowledge) ---------- -->
+    <section id="importfield" class="view">
+      <div class="im-scroll">
+        <div class="im-wrap">
+          <div class="rt-head">
+            <h1>Import a field of knowledge</h1>
+            <p class="sub">Describe any field in plain English. <b>An LLM drafts an ontology; you review and
+              activate it</b> — then the same gated belief engine tracks calibrated belief in your new field.
+              A field is <b>trusted config, never belief</b>: seed claims start at the skeptical prior, and
+              confidence still only ever moves through the engine.</p>
+          </div>
+
+          <div class="im-bar">
+            <div class="rt-field">
+              <label class="rt-lbl" for="im-desc">Describe the field</label>
+              <textarea id="im-desc" placeholder="e.g. The effects of coffee consumption on sleep quality, mood, and cardiovascular health…" autocomplete="off"></textarea>
+            </div>
+            <button id="im-draft" class="primary" type="button">Draft ontology &#9656;</button>
+          </div>
+          <div class="rt-hint">The model proposes entity types, property types, scope, and seed propositions.
+            With no model key it falls back to a deterministic draft built from your keywords. Press
+            <b>&#8984;/Ctrl + Enter</b> to draft.</div>
+          <div class="im-presets" id="im-presets">
+            <button class="im-preset" type="button" data-desc="The effects of coffee consumption on sleep quality, mood, and cardiovascular health.">Coffee &amp; health</button>
+            <button class="im-preset" type="button" data-desc="Materials science: how composition and processing affect the tensile strength, conductivity, and corrosion resistance of alloys.">Materials science</button>
+            <button class="im-preset" type="button" data-desc="Machine learning benchmarks: how model architecture and training data affect accuracy, robustness, and inference latency.">ML benchmarks</button>
+          </div>
+
+          <div id="im-out"><div class="im-empty">Your drafted ontology appears here for review before you activate it.</div></div>
         </div>
       </div>
     </section>
@@ -1659,6 +1748,7 @@ function setView(view){
   if (view === "redteam") setTimeout(() => { const t = $("rt-text"); if (t) t.focus(); }, 40);
   if (view === "calibration") loadCalibration();
   if (view === "report") setTimeout(() => { const i = $("rp-prompt"); if (i) i.focus(); }, 40);
+  if (view === "importfield") setTimeout(() => { const i = $("im-desc"); if (i) i.focus(); }, 40);
 }
 $("nav").querySelectorAll("button").forEach((b) => b.onclick = () => setView(b.dataset.view));
 
@@ -3172,6 +3262,161 @@ async function rpGenerate(){
   if (inp) inp.onkeydown = (e) => { if (e.key === "Enter"){ e.preventDefault(); rpGenerate(); } };
   document.querySelectorAll("#rp-presets .rp-preset").forEach((b) =>
     b.onclick = () => { if (inp){ inp.value = b.dataset.prompt || ""; } rpGenerate(); });
+})();
+
+// ==================== Import a field of knowledge (draft -> review -> activate) ====================
+// POST /domain/draft {description} -> {source, draft}: an LLM (or a deterministic fallback with no key)
+// DRAFTS an ontology. We render it as an EDITABLE review form. On Activate we gather the (human-edited)
+// draft and POST /domain/activate — the server registers + activates the Domain, rebuilds a fresh KB,
+// and seeds the claims at the skeptical prior (ontology-gated). Belief still moves only through the
+// engine: this only authors CONFIG + structural seed nodes.
+
+let IMPORT_DRAFT = null;   // the draft currently under review (from the server)
+
+// comma-separated string <-> list helpers (all values escaped on render)
+const csList = (arr) => (arr || []).join(", ");
+const parseCs = (s) => (s || "").split(",").map((x) => x.trim()).filter(Boolean);
+
+function renderDraftReview(data){
+  const out = $("im-out"); if (!out) return;
+  const d = data.draft || {};
+  IMPORT_DRAFT = d;
+  const src = data.source === "llm" ? "model-drafted" : "deterministic draft (no model key)";
+  const problems = data.problems || [];
+  const warn = problems.length
+    ? `<div class="im-warn"><b>Ontology gate:</b> ${esc(problems.join("; "))}. Fix the tags before activating — off-ontology seed claims are rejected.</div>`
+    : "";
+  const seeds = (d.seed_claims || []).map((sc, i) => seedRowHTML(sc, i)).join("");
+  out.innerHTML =
+      `<div class="im-review">`
+    + `<div class="im-review-head"><h2>Review the drafted field</h2>`
+    + `<span class="im-srcpill">${esc(src)}</span></div>`
+    + `<div class="im-grid">`
+    + fldHTML("im-name", "Field name (slug)", d.name || "", "one lowercase word")
+    + fldHTML("im-label", "Label", d.label || "", "human-readable title")
+    + fldHTML("im-ents", "Entity types", csList(d.entity_types), "the kinds of things studied (comma-separated)")
+    + fldHTML("im-props", "Property types", csList(d.property_types), "measurable properties tracked (comma-separated)")
+    + fldAreaHTML("im-markers", "Out-of-scope markers", csList(d.out_of_scope_markers), "phrases that flag a claim as off-field (comma-separated)")
+    + fldAreaHTML("im-examples", "Out-of-scope examples", csList(d.out_of_scope_examples), "example off-field claims (comma-separated)")
+    + `</div>`
+    + `<div class="im-slbl">Seed claims — start at the skeptical prior; tags must be &lt;namespace&gt;:&lt;slug&gt; from the types above</div>`
+    + `<div class="im-seeds" id="im-seeds">${seeds}</div>`
+    + `<button class="im-add" id="im-add" type="button">+ Add seed claim</button>`
+    + warn
+    + `<div class="im-actions"><button id="im-activate" class="primary" type="button">Activate field &#9656;</button>`
+    + `<span class="im-note">Activating switches the belief graph to this field and seeds its ontology at the prior. `
+    + `Then paste evidence in <b>Red team</b> to watch belief form.</span></div>`
+    + `</div>`;
+  bindReviewControls();
+}
+
+function fldHTML(id, label, value, help){
+  return `<div class="im-fld"><label for="${id}">${esc(label)}</label>`
+    + `<input id="${id}" type="text" value="${esc(value)}" autocomplete="off" />`
+    + `<span class="im-help">${esc(help)}</span></div>`;
+}
+function fldAreaHTML(id, label, value, help){
+  return `<div class="im-fld wide"><label for="${id}">${esc(label)}</label>`
+    + `<textarea id="${id}" rows="2">${esc(value)}</textarea>`
+    + `<span class="im-help">${esc(help)}</span></div>`;
+}
+function seedRowHTML(sc, i){
+  return `<div class="im-seed" data-seed="${i}">`
+    + `<input class="im-seed-text" type="text" value="${esc((sc && sc.text) || "")}" placeholder="claim text" autocomplete="off" />`
+    + `<input class="im-seed-tags" type="text" value="${esc(csList(sc && sc.tags))}" placeholder="entity:slug, property:slug" autocomplete="off" />`
+    + `<button class="im-del" type="button" title="Remove this seed claim">&times;</button>`
+    + `</div>`;
+}
+
+function bindReviewControls(){
+  const add = $("im-add");
+  if (add) add.onclick = () => {
+    const wrap = $("im-seeds"); if (!wrap) return;
+    const div = document.createElement("div");
+    div.innerHTML = seedRowHTML({ text: "", tags: [] }, wrap.children.length);
+    const row = div.firstChild; wrap.appendChild(row);
+    row.querySelector(".im-del").onclick = () => row.remove();
+    const t = row.querySelector(".im-seed-text"); if (t) t.focus();
+  };
+  document.querySelectorAll("#im-seeds .im-del").forEach((b) =>
+    b.onclick = () => { const r = b.closest(".im-seed"); if (r) r.remove(); });
+  const act = $("im-activate");
+  if (act) act.onclick = () => imActivate();
+}
+
+// gather the (human-edited) review form back into a draft object for /domain/activate
+function collectDraft(){
+  const seeds = [];
+  document.querySelectorAll("#im-seeds .im-seed").forEach((row) => {
+    const text = (row.querySelector(".im-seed-text").value || "").trim();
+    const tags = parseCs(row.querySelector(".im-seed-tags").value);
+    if (text) seeds.push({ text, tags });
+  });
+  return {
+    name: ($("im-name").value || "").trim(),
+    label: ($("im-label").value || "").trim(),
+    entity_types: parseCs($("im-ents").value),
+    property_types: parseCs($("im-props").value),
+    out_of_scope_markers: parseCs($("im-markers").value),
+    out_of_scope_examples: parseCs($("im-examples").value),
+    plausible_value_bounds: (IMPORT_DRAFT && IMPORT_DRAFT.plausible_value_bounds) || {},
+    seed_claims: seeds,
+  };
+}
+
+async function imDraft(){
+  const ta = $("im-desc"), btn = $("im-draft"), out = $("im-out");
+  const description = ((ta && ta.value) || "").trim();
+  if (!description){ toast("Describe the field first.", "err"); if (ta) ta.focus(); return; }
+  const label = btn.innerHTML;
+  btn.disabled = true; btn.textContent = "Drafting…";
+  if (out) out.innerHTML = `<div class="im-empty">Drafting an ontology from your description…</div>`;
+  try {
+    const r = await post("/domain/draft", { description });
+    if (!r || r.status !== "ok"){ if (out) out.innerHTML = `<div class="im-empty">${esc((r && r.detail) || "Couldn't draft a field.")}</div>`; return; }
+    renderDraftReview(r);
+    toast(r.source === "llm" ? "Ontology drafted — review and edit, then activate." : "Deterministic draft built from your keywords (no model key). Review, then activate.", "ok");
+  } catch(e){
+    if (out) out.innerHTML = `<div class="im-empty">Draft request failed — is the server reachable?</div>`;
+  } finally {
+    btn.disabled = false; btn.innerHTML = label;
+  }
+}
+
+async function imActivate(){
+  const btn = $("im-activate"); if (!btn) return;
+  const draft = collectDraft();
+  if (!draft.entity_types.length || !draft.property_types.length){
+    toast("Declare at least one entity type and one property type.", "err"); return;
+  }
+  const label = btn.innerHTML;
+  btn.disabled = true; btn.textContent = "Activating…";
+  try {
+    const r = await post("/domain/activate", { draft });
+    if (!r || r.status !== "ok"){ toast((r && r.detail) || "Activation failed.", "err"); return; }
+    const dom = r.domain || {};
+    const nRej = (dom.rejected || []).length;
+    // the SSE broadcast already pushed the fresh graph; jump the audience to it.
+    firstIngestSeen = true;   // don't let the first later ingest hijack the view
+    setView("graph");
+    const rej = nRej ? ` (${nRej} off-ontology claim${nRej === 1 ? "" : "s"} rejected by the gate)` : "";
+    toast(`New field active: ${esc(dom.label || dom.name || "field")} — ${(dom.seeded || []).length} claims seeded at the prior${rej}. Paste evidence in Red team to watch belief form.`, "ok");
+  } catch(e){
+    toast("Activation request failed — is the server reachable?", "err");
+  } finally {
+    btn.disabled = false; btn.innerHTML = label;
+  }
+}
+
+(function bindImport(){
+  const btn = $("im-draft"); if (!btn) return;
+  btn.onclick = () => imDraft();
+  const ta = $("im-desc");
+  if (ta) ta.onkeydown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter"){ e.preventDefault(); imDraft(); }
+  };
+  document.querySelectorAll("#im-presets .im-preset").forEach((b) =>
+    b.onclick = () => { if (ta){ ta.value = b.dataset.desc || ""; ta.focus(); } imDraft(); });
 })();
 
 bindGraphSearch();
