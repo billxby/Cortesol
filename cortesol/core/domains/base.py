@@ -93,3 +93,14 @@ class Domain:
         """A claim tag `<namespace>:<slug>` is in-scope iff its namespace is one of
         this domain's entity or property types."""
         return frozenset(tuple(self.entity_types) + tuple(self.property_types))
+
+    @property
+    def primary_entity_type(self) -> str:
+        """The default entity namespace the judge uses when minting a new claim from
+        a subject-blind appraisal (e.g. 'peptide', 'material', 'entity')."""
+        return self.entity_types[0] if self.entity_types else "entity"
+
+    @property
+    def primary_property_type(self) -> str:
+        """The default property namespace for a minted claim's second tag."""
+        return self.property_types[0] if self.property_types else "property"

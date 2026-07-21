@@ -129,5 +129,23 @@ def screen(evidence: Evidence, kb: KB) -> list[str]:
     if f.get("case_report") is True:
         flags.add("case_report")
 
+    # --- domain-general critical-appraisal flags (assessment path only) ---
+    # Fire only when judge.apply_assessment populated the appraisal fields, so the
+    # deterministic sim/ops path is untouched. Subject-independent: they weight the
+    # strength rubric identically in every field.
+    if f.get("_appraisal"):
+        design = f.get("study_design")
+        doc = f.get("document_type")
+        if doc == "case_report" or design == "case_report":
+            flags.add("case_report")
+        if design in ("observational", "case_report") and f.get("controlled") is not True:
+            flags.add("uncontrolled")
+        if f.get("controlled") is True and f.get("blinded") is False:
+            flags.add("unblinded")
+        if f.get("overclaiming") is True:
+            flags.add("overclaiming")
+        if f.get("extraordinary_claim") is True:
+            flags.add("extraordinary_unsupported")
+
     evidence.red_flags = sorted(flags)
     return evidence.red_flags

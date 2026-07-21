@@ -30,30 +30,32 @@ def _ctx() -> Context:
 
 def _valid_assessment_json() -> str:
     return EvidenceAssessment(
-        schema_version="1.0",
+        schema_version="2.0",
         evidence_id="e0",
-        scope="peptide",
+        in_scope="in_scope",
         instruction_attack=False,
-        document_type="primary_research",
-        study_type="binding",
-        peptide="P1",
-        target_or_indication="MC4R",
-        property="binding_affinity",
-        assay="SPR",
-        endpoint="Kd",
-        finding="observed",
+        document_type="primary_study",
+        study_design="randomized_controlled",
+        subject="P1",
+        object="MC4R",
+        claim_summary="P1 binds MC4R",
+        claim_direction="supports",
+        magnitude="Kd 12 nM",
         value=12.0,
-        value_relation="approximately",
+        value_relation="approximate",
         units="nM",
         sample_size=3,
         replicate_count=3,
         p_value=0.001,
-        randomized=None,
-        blinded=None,
+        confidence_interval_reported=True,
+        effect_size_reported=True,
         controlled=True,
+        randomized=True,
+        blinded=True,
         preregistered=True,
-        control_peptide=True,
-        purity_pct=98.0,
+        independent_replication=True,
+        extraordinary_claim=False,
+        overclaiming=False,
     ).model_dump_json()
 
 
@@ -85,8 +87,8 @@ def test_valid_reply_parses_and_passes_the_assessment_schema(monkeypatch):
 
     assert isinstance(out, EvidenceAssessment)
     assert out.evidence_id == "e0"
-    assert out.scope == "peptide"
-    assert out.property == "binding_affinity"
+    assert out.in_scope == "in_scope"
+    assert out.study_design == "randomized_controlled"
     # constrained decoding: the exact assessment schema is the response_format
     rf = captured["response_format"]
     assert rf["type"] == "json_schema"
@@ -101,8 +103,8 @@ def test_malformed_reply_is_fail_safe(monkeypatch):
     # a bad reply falls back to the neutral empty form (never raises, never a claim edit)
     assert isinstance(out, EvidenceAssessment)
     assert out == ex._empty_assessment(_ctx())
-    assert out.scope == "unclear"
-    assert out.finding == "not_reported"
+    assert out.in_scope == "unclear"
+    assert out.claim_direction == "not_a_claim"
 
 
 def test_empty_reply_is_fail_safe(monkeypatch):

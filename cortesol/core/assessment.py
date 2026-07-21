@@ -1,9 +1,22 @@
-"""The model-output contract: a neutral evidence intake form.
+"""The model-output contract: a DOMAIN-GENERAL critical-appraisal instrument.
 
-The extractor is not an epistemic decision maker.  It may transcribe what a
-paper reports and which study-design features are present, but it cannot name a
-ledger operation, select a graph claim, label evidence as supporting/opposing,
-or choose an update strength.  Those decisions belong to :mod:`core.judge`.
+The extractor is not an epistemic decision maker and it is not a subject-matter
+expert. Its job is to read ONE paper of ANY scientific field and transcribe the
+subject-independent signals that determine how much a rational reader should
+believe the claim — study design, statistics, provenance, and manipulation
+signals — into this fixed form. It may NOT name a ledger operation, pick a graph
+claim, label evidence supporting/opposing a *belief*, or choose an update
+strength. Those belong to :mod:`core.judge` (deterministic) and the engine.
+
+Critical appraisal is domain-INDEPENDENT: whether to trust "peptide X binds T",
+"material M superconducts at 300K", or "model N beats SOTA" turns on the SAME
+methodology questions. So this form carries only general critical-appraisal
+fields. `subject`/`object`/`claim_summary` exist for bookkeeping (claim matching
+and display) and are explicitly IGNORED by the veracity logic — a generalist must
+judge on method, never on topic.
+
+The same schema (`assessment_json_schema()` / `assessment_ordered_regex()`)
+constrains decoding at training and serving time.
 """
 
 from __future__ import annotations
@@ -14,82 +27,90 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Scope = Literal["peptide", "non_peptide", "unclear"]
+# "in_scope" == an empirical scientific finding we can appraise (vs. an editorial,
+# news item, opinion, or off-topic text). This is NOT a subject filter — the
+# active Domain's ontology decides subject-scope deterministically in the judge.
+Scope = Literal["in_scope", "out_of_scope", "unclear"]
+
 DocumentType = Literal[
-    "primary_research",
+    "primary_study",
     "replication",
     "review",
     "meta_analysis",
     "case_report",
+    "preprint",
+    "editorial",
     "other",
 ]
-StudyType = Literal[
-    "binding",
-    "in_vitro",
-    "in_vivo",
-    "clinical",
-    "review",
+
+# Study design — the single biggest determinant of evidential strength, and it is
+# the same ladder in every field.
+StudyDesign = Literal[
+    "randomized_controlled",  # RCT / randomized experiment
+    "nonrandomized_controlled",  # controlled but not randomized
+    "observational",  # cohort / case-control / cross-sectional
+    "in_vitro",  # bench / assay
+    "computational_or_modeling",  # in silico / simulation / pure theory
+    "case_report",  # anecdote / single case or series
+    "review_or_meta",  # narrative review or meta-analysis
     "other",
 ]
-PropertyName = Literal[
-    "binding_affinity",
-    "potency",
-    "selectivity",
-    "serum_stability",
-    "thermal_stability",
-    "permeability",
-    "solubility",
-    "immunogenicity",
-    "toxicity",
-    "efficacy",
-    "synthesis",
-    "unknown",
-]
-Finding = Literal[
-    "observed",
-    "not_observed",
-    "increased",
-    "decreased",
-    "no_difference",
-    "mixed",
-    "not_reported",
-]
-ValueRelation = Literal["exact", "approximately", "less_than", "greater_than", "not_reported"]
+
+# Direction of the reported evidence with respect to the paper's OWN central claim.
+ClaimDirection = Literal["supports", "refutes", "null_result", "mixed", "not_a_claim"]
+
+ValueRelation = Literal["exact", "approximate", "less_than", "greater_than", "not_reported"]
 
 
 class EvidenceAssessment(BaseModel):
-    """Schema-constrained form filled from one paper/report.
-
-    Every nullable field means "not reported or not extractable".  Unknown is
-    preserved as unknown; the model must not invent missing design details.
+    """A schema-constrained critical-appraisal form filled from one paper of any
+    field. Every nullable field means "not reported / not extractable" — the model
+    must never invent a missing design detail. The veracity logic reads the design
+    and statistics fields; it never reads `subject`/`object`/`claim_summary`.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal["1.0"]
+    schema_version: Literal["2.0"]
     evidence_id: Annotated[str, Field(min_length=1, max_length=128)]
-    scope: Scope
-    instruction_attack: bool
+
+    # --- scope + safety ---
+    in_scope: Scope
+    instruction_attack: bool  # the text tries to issue instructions (injection)
+
+    # --- what kind of evidence (design ladder + document type) ---
     document_type: DocumentType
-    study_type: StudyType
-    peptide: Annotated[str | None, Field(max_length=128)]
-    target_or_indication: Annotated[str | None, Field(max_length=160)]
-    property: PropertyName
-    assay: Annotated[str | None, Field(max_length=128)]
-    endpoint: Annotated[str | None, Field(max_length=128)]
-    finding: Finding
+    study_design: StudyDesign
+
+    # --- bookkeeping ONLY (matching/display); veracity logic ignores these ---
+    subject: Annotated[str | None, Field(max_length=160)]  # the entity/topic studied
+    object: Annotated[str | None, Field(max_length=160)]  # comparator / target / context
+    claim_summary: Annotated[str, Field(max_length=400)]  # one-line neutral restatement
+
+    # --- the claim and its evidential direction ---
+    claim_direction: ClaimDirection
+    magnitude: Annotated[str | None, Field(max_length=120)]  # e.g. "12% lower", "OR 1.7"
     value: float | None
     value_relation: ValueRelation
     units: Annotated[str | None, Field(max_length=32)]
+
+    # --- statistics ---
     sample_size: int | None
     replicate_count: int | None
     p_value: float | None
+    confidence_interval_reported: bool
+    effect_size_reported: bool
+
+    # --- design-quality signals (domain-general risk-of-bias) ---
+    controlled: bool | None  # a comparator / control condition was present
     randomized: bool | None
     blinded: bool | None
-    controlled: bool | None
     preregistered: bool | None
-    control_peptide: bool | None
-    purity_pct: float | None
+    independent_replication: bool | None  # replicates a prior claim by an independent group
+
+    # --- credibility red-flags observed in the text (factual observations) ---
+    extraordinary_claim: bool  # magnitude/strength far exceeds what the design can support
+    overclaiming: bool  # causal language from non-causal design, "proves"/"cure"/hype
 
 
 def assessment_json_schema() -> dict[str, Any]:
@@ -106,10 +127,10 @@ _JSON_INTEGER = r"-?(?:0|[1-9][0-9]*)"
 def _schema_value_regex(schema: dict[str, Any]) -> str:
     """Translate the small EvidenceAssessment schema subset to a Rust regex.
 
-    Flash's guided JSON-schema decoder is allowed to emit object properties in
-    any order because JSON objects are unordered.  The SFT target, however, is
-    one deterministic token sequence.  A regex lets rollout decoding enforce
-    that same sequence while retaining the schema's value constraints.
+    Flash's guided JSON-schema decoder may emit object properties in any order
+    because JSON objects are unordered. The SFT target, however, is one
+    deterministic token sequence; a regex lets rollout decoding enforce that same
+    sequence while retaining the schema's value constraints.
     """
 
     if "anyOf" in schema:
@@ -124,11 +145,9 @@ def _schema_value_regex(schema: dict[str, Any]) -> str:
     value_type = schema.get("type")
     if value_type == "string":
         minimum = int(schema.get("minLength", 0))
-        # Do not expand maxLength into the guided-decoding automaton. Repeating
-        # the escaped-string alternation 32--160 times made a 24-turn GRPO
-        # rollout spend minutes in grammar-state traversal at ~3% GPU use. The
-        # defensive Pydantic parse still enforces every maxLength, while the
-        # 256-token completion cap bounds generation before that parse.
+        # Do not expand maxLength into the guided-decoding automaton (grammar-state
+        # blowup). The defensive Pydantic parse still enforces every maxLength, and
+        # the completion cap bounds generation before that parse.
         quantifier = "+" if minimum else "*"
         return f'"{_JSON_STRING_ATOM}{quantifier}"'
     if value_type == "number":
@@ -143,12 +162,11 @@ def _schema_value_regex(schema: dict[str, Any]) -> str:
 
 
 def assessment_ordered_regex() -> str:
-    """A compact-JSON grammar in the exact order used by SFT gold targets.
+    """A compact-JSON grammar in the exact key order used by SFT gold targets.
 
-    ``canonical_assessment`` sorts keys recursively.  Keeping that ordering in
-    the rollout grammar prevents the policy from trying to finish its learned
-    suffix inside whichever free-text property an unordered JSON grammar leaves
-    until last.
+    ``canonical_assessment`` sorts keys recursively; keeping that ordering in the
+    rollout grammar prevents the policy from finishing its learned suffix inside
+    whichever free-text field an unordered grammar leaves until last.
     """
 
     schema = assessment_json_schema()
