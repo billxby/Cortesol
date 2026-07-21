@@ -7,10 +7,19 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from ..core.assessment import assessment_json_schema
 from ..core.ops import ops_json_schema
 
 CONFIG_DIR = Path(__file__).parent / "configs"
 TEMPLATES = ("smoke_sft", "sft", "grpo", "opd", "grpo_opd")
+
+# The two structured-output targets a Flash run can be pinned to. `ops` (default)
+# is the frozen ops-proposal grammar; `appraisal` is the domain-general critical-
+# appraisal form (`core/assessment.EvidenceAssessment`) for the generalist model.
+_TARGETS = {
+    "ops": ("ops.schema.json", ops_json_schema),
+    "appraisal": ("assessment.schema.json", assessment_json_schema),
+}
 
 
 def _toml_value(value: Any) -> str:
@@ -50,11 +59,21 @@ def render_configs(
     sft_adapter: str = "cortesol-sft",
     grpo_adapter: str | None = None,
     opd_adapter: str = "cortesol-opd",
+    target: str = "ops",
 ) -> dict[str, Path]:
+    """Resolve the checked-in Flash templates into schema-pinned TOML files.
+
+    ``target`` selects the structured-output grammar: ``"ops"`` (default, the frozen
+    ops-proposal schema — byte-identical to before) or ``"appraisal"`` (the
+    domain-general ``EvidenceAssessment`` form for the generalist appraisal model).
+    """
+    if target not in _TARGETS:
+        raise ValueError(f"unknown structured-output target {target!r}; known: {sorted(_TARGETS)}")
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    schema = ops_json_schema()
-    schema_path = out / "ops.schema.json"
+    schema_filename, schema_fn = _TARGETS[target]
+    schema = schema_fn()
+    schema_path = out / schema_filename
     schema_path.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     adapters = {
         "grpo": sft_adapter,

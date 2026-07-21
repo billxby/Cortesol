@@ -2,7 +2,8 @@
 # These names are a contract: CLAUDE.md and the branch briefs reference them.
 
 .PHONY: help install test test-contract test-unit test-integration lint fmt \
-        sim fetch-papers bootstrap eval run-ui run-ui-foundation train-sft train-grpo \
+        sim fetch-papers fetch-arxiv appraisal-corpus appraisal-label appraisal-sft \
+        bootstrap eval run-ui run-ui-foundation train-sft train-grpo \
         training-preflight snapshot-clean plan-b-setup plan-b-serve plan-b-tunnel
 
 CONDA_ENV := cortesol-train
@@ -39,6 +40,18 @@ sim:  ## [B2] Generate a toy peptide stream from the simulator and print it
 
 fetch-papers:  ## [B/C] Fetch real peptide abstracts from PubMed -> data/papers/ (evidence, no oracle)
 	$(RUN) python -m cortesol.ingest.fetch_papers --per-peptide 8
+
+fetch-arxiv:  ## [B] Fetch real multi-field abstracts from arXiv -> data/corpus/ (evidence, no oracle)
+	$(RUN) python -m cortesol.ingest.fetch_arxiv --per-field 40
+
+appraisal-corpus:  ## [B] Merge arXiv + PubMed into the field-tagged appraisal corpus
+	$(RUN) python -m cortesol.train.appraisal_dataset corpus
+
+appraisal-label:  ## [B] Run the frontier teacher over the corpus (needs OPENAI_API_KEY/GEMINI_API_KEY; --stub offline)
+	$(RUN) python -m cortesol.train.appraisal_dataset label
+
+appraisal-sft:  ## [B] Build the appraisal SFT train/held-out-field splits (teacher if keyed, else StubTeacher)
+	$(RUN) python -m cortesol.train.appraisal_dataset sft
 
 bootstrap:  ## [C] Build the demo foundation: replay 3 critical papers/peptide through the engine -> data/snapshots/
 	$(RUN) python -m cortesol.bootstrap --per-peptide 3
