@@ -8,7 +8,7 @@ Input is always RawEvent.untrusted_view() (gold already stripped, PD6).
 
 from __future__ import annotations
 
-from ..core.domain import correlation_group
+from ..core.domains import get_active_domain
 from ..core.schema import Evidence, RawEvent
 from .fieldparse import parse_fields
 
@@ -38,5 +38,5 @@ def quarantine(event: RawEvent) -> Evidence:
         source_id=uv.source_id,
         raw_text=uv.raw_text,
         fields=fields,
-        correlation_group=correlation_group(fields),
+        correlation_group=get_active_domain().correlation_group(fields),
     )

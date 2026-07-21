@@ -38,26 +38,18 @@ def _scored_pairs(kb: KB, ground_truth: dict[str, float]) -> list[tuple[float, f
     return [(kb.claims[cid].c, y) for cid, y in ground_truth.items() if cid in kb.claims]
 
 
-def brier(kb: KB, ground_truth: dict[str, float]) -> float:
-    """Mean squared error of claim confidences vs. truth. Lower is better.
-
-    This is the same quantity the GRPO environment uses as its terminal reward, so
-    a low Brier here and a high reward there are the same success (Fine-Tuning Plan
-    §Stage 2). Returns 0.0 when nothing is scorable."""
-    pairs = _scored_pairs(kb, ground_truth)
+def brier_pairs(pairs: list[tuple[float, float]]) -> float:
+    """Mean squared error of (confidence, truth) pairs. Lower is better; this is the
+    same quantity the GRPO environment uses as its terminal reward. 0.0 if empty."""
     if not pairs:
         return 0.0
     return sum((c - y) ** 2 for c, y in pairs) / len(pairs)
 
 
-def ece(kb: KB, ground_truth: dict[str, float], bins: int = 10) -> float:
-    """Expected calibration error — the gap between confidence and accuracy,
-    bucketed by predicted probability and weighted by bucket occupancy.
-
-    A perfectly calibrated system has ECE 0: among claims it holds at c=0.7, 70%
-    are actually true. This is the number that separates 'confident' from
-    'calibrated' — the whole Freesolo pitch."""
-    pairs = _scored_pairs(kb, ground_truth)
+def ece_pairs(pairs: list[tuple[float, float]], bins: int = 10) -> float:
+    """Expected calibration error over (confidence, truth) pairs — the gap between
+    confidence and accuracy, bucketed by predicted probability and occupancy-weighted.
+    A perfectly calibrated system scores 0: among claims held at c=0.7, 70% are true."""
     if not pairs:
         return 0.0
     n = len(pairs)
@@ -72,6 +64,49 @@ def ece(kb: KB, ground_truth: dict[str, float], bins: int = 10) -> float:
         acc = sum(y for _, y in members) / m
         total += (m / n) * abs(conf - acc)
     return total
+
+
+def reliability_pairs(
+    pairs: list[tuple[float, float]], bins: int = 10
+) -> list[dict[str, float | int | None]]:
+    """Per-bucket (mean confidence, empirical accuracy, count) over (confidence,
+    truth) pairs — the reliability-diagram data. A calibrated system's points sit on
+    the diagonal. Empty buckets carry None so the UI draws a gap, not a fake point."""
+    buckets: dict[int, list[tuple[float, float]]] = defaultdict(list)
+    for c, y in pairs:
+        idx = min(bins - 1, int(c * bins))
+        buckets[idx].append((c, y))
+    out: list[dict[str, float | int | None]] = []
+    for i in range(bins):
+        members = buckets.get(i, [])
+        m = len(members)
+        out.append(
+            {
+                "lo": i / bins,
+                "hi": (i + 1) / bins,
+                "conf": round(sum(c for c, _ in members) / m, 4) if m else None,
+                "acc": round(sum(y for _, y in members) / m, 4) if m else None,
+                "count": m,
+            }
+        )
+    return out
+
+
+def brier(kb: KB, ground_truth: dict[str, float]) -> float:
+    """Brier over every claim present in both the KB and the ground truth."""
+    return brier_pairs(_scored_pairs(kb, ground_truth))
+
+
+def ece(kb: KB, ground_truth: dict[str, float], bins: int = 10) -> float:
+    """Expected calibration error over the KB's scored claims (see `ece_pairs`)."""
+    return ece_pairs(_scored_pairs(kb, ground_truth), bins)
+
+
+def reliability_bins(
+    kb: KB, ground_truth: dict[str, float], bins: int = 10
+) -> list[dict[str, float | int | None]]:
+    """Reliability-diagram data for the KB's scored claims (see `reliability_pairs`)."""
+    return reliability_pairs(_scored_pairs(kb, ground_truth), bins)
 
 
 # --- adversarial robustness (the Prompt-Injection story) ------------------

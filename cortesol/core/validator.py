@@ -30,7 +30,7 @@ from .config import (
     CONFLICT_MASS_THRESHOLD,
     MAX_OPS_PER_SOURCE_PER_EVENT,
 )
-from .domain import IN_SCOPE_NAMESPACES
+from .domains import get_active_domain
 from .kb import KB
 from .ops import (
     AddClaim,
@@ -47,7 +47,7 @@ from .schema import ClaimStatus, Evidence
 
 def _tag_in_ontology(tag: str) -> bool:
     namespace = tag.split(":", 1)[0]
-    return namespace in IN_SCOPE_NAMESPACES
+    return namespace in get_active_domain().in_scope_namespaces
 
 
 def _hard_conflict(kb: KB, op: ApplyEvidence) -> bool:

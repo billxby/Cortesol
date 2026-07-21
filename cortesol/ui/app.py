@@ -29,16 +29,15 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
-from . import research
 from .. import bootstrap, pipeline
 from ..adapters import cortex
 from ..core import propagate
-from ..core.config import EDGE_INFLUENCE, PRIOR_C_0
+from ..core.assessment import EvidenceAssessment
+from ..core.config import EDGE_INFLUENCE, PRIOR_C_0, SOURCE_PRIORS
 from ..core.kb import KB
 from ..core.mathx import sigmoid
 from ..core.results import EventResult
-from ..core.assessment import EvidenceAssessment
-from ..core.schema import Edge, EdgeType, RawEvent
+from ..core.schema import Edge, EdgeType, RawEvent, Source
 from ..eval.replay import seed_kb
 from ..ingest.extract import (
     FakeExtractor,
@@ -49,6 +48,7 @@ from ..ingest.extract import (
     flash_available,
 )
 from ..sim.world import World
+from . import research
 
 app = FastAPI(title="Cortesol")
 
@@ -466,7 +466,10 @@ class DemoState:
         if phase == "research":
             status = "done"
         else:
-            status = "done" if idx < self.cursor else ("active" if idx == self.cursor else "pending")
+            status = (
+                "done" if idx < self.cursor
+                else ("active" if idx == self.cursor else "pending")
+            )
         return {
             "idx": idx,
             "title": title,
@@ -799,6 +802,183 @@ async def pause() -> dict:
     return {"status": "paused", "cursor": STATE.cursor}
 
 
+# --------------------------------------------------------------------------
+# Paste-in ingest — drop ANY untrusted text and watch the full lifecycle run.
+# The generic entry the red-team panel and domain import build on. Text is DATA:
+# an injection or fraudulent report is capped/screened/rejected, never obeyed.
+# --------------------------------------------------------------------------
+
+_INGEST_SEQ = [0]
+
+
+def _ingest_text_sync(text: str, tier: str, source_id: str) -> tuple[RawEvent, EventResult, dict]:
+    """Quarantine a pasted, untrusted blob and run it through the REAL lifecycle
+    against the running KB — the same path a stream event takes (live model with an
+    offline fallback). Belief still moves only through the engine; the source tier
+    sets the cap `log(τ/φ)`, so a low-trust paste can barely move belief no matter
+    how sensational its content."""
+    if STATE.kb.get_source(source_id) is None:
+        STATE.kb.add_source(Source.from_tier(source_id, tier))
+    _INGEST_SEQ[0] += 1
+    event = RawEvent(
+        id=f"paste_{_INGEST_SEQ[0]}",
+        t=-1,  # out-of-band paste: never a stream index, so it can't relabel a Library card
+        source_id=source_id,
+        raw_text=text,
+        fields={"source_tier": tier},
+        sim_meta=None,
+    )
+    result, _used_fallback, reasoning = _process_resilient(event)
+    reasoning["ingest"] = "pasted text"
+    return event, result, reasoning
+
+
+@app.post("/ingest")
+async def ingest(request: Request) -> dict:
+    """Paste ANY untrusted text and run the full 7-step lifecycle live:
+    quarantine → retrieve → extract → screen → validate → commit → publish. Emits
+    the same SSE `event` message a stream paper does, so the graph animates and the
+    reasoning log fills. Body: {text, source_tier?, source_id?}."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    text = (body.get("text") or "").strip()
+    if not text:
+        return {"status": "error", "detail": "empty text"}
+    tier = str(body.get("source_tier") or "unknown")
+    if tier not in SOURCE_PRIORS:
+        tier = "unknown"
+    source_id = str(body.get("source_id") or f"pasted:{tier}")
+
+    async with STATE.lock:
+        event, result, reasoning = await asyncio.to_thread(
+            _ingest_text_sync, text, tier, source_id
+        )
+        STATE.reveal(result.dirty_claims)
+        message = _event_message(event, result, reasoning)
+        await STATE.broadcast(message, remember=True)
+
+    return {
+        "status": "ok",
+        "event_id": event.id,
+        "source_tier": tier,
+        "accepted": message["accepted"],
+        "rejected": message["rejected"],
+        "red_flags": message["red_flags"],
+        "deltas": message["deltas"],
+        "reasoning": message["reasoning"],
+    }
+
+
+_CALIB_SEEDS = (202, 303, 404, 505, 606)  # held-out, unseen by training/fixtures
+
+
+@app.get("/calibration")
+def calibration() -> dict:
+    """Prove it's calibrated. Replay several fresh HELD-OUT simulator streams (which
+    carry ground truth) through Cortesol vs the gullible and stubborn baselines, and
+    score each: Brier↓ / ECE↓ / injection-ASR↓ / fraud-accepted↓ / max Δc↓, plus a
+    pooled reliability diagram for Cortesol. Pooling multiple seeds fills the diagram
+    (one small world has only ~8 scorable claims). Fully READ-ONLY — throwaway KBs,
+    never the live demo graph; sim_meta is read only here, as the eval harness (PD6)."""
+    from ..eval import metrics as M
+    from ..eval.baselines import GullibleBot, StubbornBot
+    from ..eval.replay import HELDOUT_LENGTH, build_ground_truth, seed_kb
+    from ..sim.events import emit_stream
+
+    builders = [("Cortesol", FakeExtractor), ("Gullible", GullibleBot), ("Stubborn", StubbornBot)]
+    pairs: dict[str, list] = {name: [] for name, _ in builders}
+    asr_by: dict[str, list] = {name: [] for name, _ in builders}
+    fraud_by: dict[str, list] = {name: [] for name, _ in builders}
+    dc_by: dict[str, list] = {name: [] for name, _ in builders}
+    n_events = 0
+
+    for seed in _CALIB_SEEDS:
+        world = World(seed)
+        events = emit_stream(seed, HELDOUT_LENGTH)
+        gt = build_ground_truth(events)
+        n_events += len(events)
+        for name, factory in builders:
+            kb = seed_kb(world, events)
+            try:
+                results = list(pipeline.replay_stream(kb, events, factory()))
+            except Exception:
+                results = []
+            pairs[name].extend((kb.claims[cid].c, y) for cid, y in gt.items() if cid in kb.claims)
+            asr_by[name].append(M.asr(results, events))
+            fraud_by[name].append(M.fraud_accepted_rate(results, events))
+            dc_by[name].append(M.max_confidence_shift(results))
+
+    def _mean(xs: list[float]) -> float:
+        return sum(xs) / len(xs) if xs else 0.0
+
+    rows = [
+        {
+            "system": name,
+            "brier": round(M.brier_pairs(pairs[name]), 4),
+            "ece": round(M.ece_pairs(pairs[name]), 4),
+            "asr": round(_mean(asr_by[name]), 4),
+            "fraud": round(_mean(fraud_by[name]), 4),
+            "dc_max": round(max(dc_by[name]) if dc_by[name] else 0.0, 4),
+        }
+        for name, _ in builders
+    ]
+    return {
+        "seeds": list(_CALIB_SEEDS),
+        "n_events": n_events,
+        "n_scored": len(pairs["Cortesol"]),
+        "rows": rows,
+        "reliability": M.reliability_pairs(pairs["Cortesol"], bins=10),
+    }
+
+
+@app.get("/claim/{claim_id}")
+def claim_detail(claim_id: str) -> dict:
+    """The 'why did this move?' cause chain for one claim — the audit inspector.
+    Returns the full belief trajectory (every Δℓ with its human-readable cause), the
+    current subjective-logic opinion (c, u, r/s), ontology tags, and the live edges
+    touching it. READ-ONLY over the live KB; nothing here moves belief."""
+    cl = STATE.kb.get_claim(claim_id)
+    if cl is None:
+        return {"error": "unknown claim", "id": claim_id}
+    trajectory = [
+        {
+            "t": p.t,
+            "ell": round(p.ell, 4),
+            "c": round(sigmoid(p.ell), 4),
+            "cause": p.cause,
+        }
+        for p in cl.trajectory
+    ]
+    edges = [
+        {
+            "id": e.id,
+            "src": e.src,
+            "dst": e.dst,
+            "type": e.type.value,
+            "weight": round(e.weight, 3),
+            "direction": "out" if e.src == claim_id else "in",
+        }
+        for e in STATE.kb.live_edges()
+        if e.src == claim_id or e.dst == claim_id
+    ]
+    op = cl.opinion
+    return {
+        "id": cl.id,
+        "text": cl.text,
+        "tags": cl.ontology_tags,
+        "status": cl.status.value,
+        "c": round(cl.c, 4),
+        "u": round(cl.u, 4),
+        "r": cl.r,
+        "s": cl.s,
+        "opinion": {k: round(v, 4) for k, v in op.items()},
+        "trajectory": trajectory,
+        "edges": edges,
+    }
+
+
 def _build_foundation_sync() -> tuple[list[str], list[dict]]:
     """Replay the curated ground-truth slice (events[0:n_foundation]) through the
     real lifecycle with the deterministic proposer, exactly as `make bootstrap`
@@ -1004,6 +1184,72 @@ async def ask(payload: dict) -> dict:
         "question": question,
         "answers": [_answer_claim(c) for c in hits],
         "grounded": True,
+    }
+
+
+# --------------------------------------------------------------------------
+# Grounded generative report — the LLM proposes the LAYOUT; the ledger supplies
+# the FACTS. The model emits a schema-constrained ReportSpec that may only
+# reference claim ids from a compact KB summary; a deterministic renderer
+# (ui/reportspec.py) binds every figure to committed belief. The report
+# structurally cannot assert anything the graph doesn't support ("truth in, truth
+# out"). READ-ONLY over belief; falls back to a deterministic default report on
+# any failure or when GEMINI_API_KEY is absent, so it always works offline.
+# --------------------------------------------------------------------------
+
+
+def _report_summary_ids() -> list[str]:
+    """The claim ids a report may reference: the revealed/active claims (the graph
+    the audience is actually looking at), falling back to every claim if nothing has
+    been revealed yet. Ranked by confidence so the summary leads with the strongest."""
+    ids = [cid for cid in STATE.revealed if cid in STATE.kb.claims] or list(STATE.kb.claims)
+    return sorted(ids, key=lambda cid: (-STATE.kb.claims[cid].c, cid))
+
+
+@app.post("/report/generate")
+async def report_generate(payload: dict) -> dict:
+    """Generate a grounded report. The model proposes a ReportSpec (layout, bound to
+    claim ids from the KB summary); we validate it with Pydantic, run the groundedness
+    immune check, and render it against the live ledger. On ANY failure — no key, model
+    error, bad JSON, schema violation — we fall back to a deterministic default report
+    built from the top claims, so the feature always produces something grounded."""
+    from .reportspec import (
+        ReportSpec,
+        compact_kb_summary,
+        default_report,
+        groundedness,
+        render_report,
+    )
+
+    prompt = ((payload or {}).get("prompt") or "").strip()
+    kb = STATE.kb
+    summary_ids = _report_summary_ids()
+    summary = compact_kb_summary(kb, claim_ids=summary_ids)
+
+    spec: ReportSpec | None = None
+    source = "fallback"
+    if prompt and research.gemini_available():
+        raw = await research.propose_report_spec(prompt, summary, ReportSpec.model_json_schema())
+        if raw is not None:
+            try:
+                spec = ReportSpec.model_validate(raw)
+                source = "llm"
+            except Exception:
+                spec = None  # schema violation -> deterministic fallback below
+    if spec is None:
+        spec = default_report(kb)
+        source = "fallback"
+
+    gnd = groundedness(spec, kb)
+    rendered = render_report(spec, kb)
+    return {
+        "status": "ok",
+        "source": source,
+        "prompt": prompt,
+        "spec": spec.model_dump(),
+        "rendered": rendered,
+        "groundedness": gnd,
+        "gemini_available": research.gemini_available(),
     }
 
 

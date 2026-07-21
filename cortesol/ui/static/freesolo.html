@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cortesol × Freesolo — click-through</title>
+<style>
+  :root{
+    --ink:#0b1020; --body:#3a4051; --muted:#6b7280; --faint:#9aa3af;
+    --line:#e7e9ee; --hair:#f1f3f6;
+    --bg:#f4f5f8; --panel:#ffffff; --wash:#f8f9fb; --wash2:#eef1f5;
+    --accent:#c0202f; --accent-soft:#fbe9eb;
+    --blue:#0b5cad; --blue-soft:#e9f0f9;
+    --good:#1a7f4b; --good-soft:#e7f4ec;
+    --warn:#96650a; --warn-soft:#f7efdb;
+    --serif:"Iowan Old Style", Georgia, "Times New Roman", serif;
+    --sans:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:ui-monospace, Menlo, "SF Mono", monospace;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.04);
+    --shadow-md:0 6px 22px rgba(16,24,40,.10);
+    --r:14px;
+  }
+  *{box-sizing:border-box; margin:0;}
+  html,body{height:100%;}
+  body{background:var(--bg); color:var(--body); font-family:var(--sans); overflow:hidden;
+    -webkit-font-smoothing:antialiased; user-select:none;}
+  .mono{font-family:var(--mono);}
+  b{color:var(--ink);}
+
+  /* ---- frame ---- */
+  #deck{height:100vh; display:flex; flex-direction:column; cursor:pointer;}
+  .top{flex:0 0 auto; display:flex; align-items:center; gap:16px; height:56px; padding:0 24px;
+    background:var(--panel); border-bottom:1px solid var(--line);}
+  .brand{font-family:var(--serif); font-weight:700; font-size:21px; letter-spacing:-.5px; color:var(--ink);}
+  .brand span{color:var(--accent);}
+  .part{font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+    background:var(--accent-soft); border:1px solid #e6bcc0; border-radius:999px; padding:4px 12px;}
+  .spacer{flex:1;}
+
+  /* ---- top rail (fills as you click) ---- */
+  .rail{display:flex; align-items:center; gap:0;}
+  .rail .r{display:flex; align-items:center; gap:0;}
+  .rail .d{width:11px; height:11px; border-radius:50%; background:var(--wash2); border:2px solid var(--line);
+    transition:all .25s ease; flex:0 0 auto;}
+  .rail .r .ln{width:26px; height:2px; background:var(--line); transition:background .25s ease;}
+  .rail .r:first-child .ln{display:none;}
+  .rail .d.on{background:var(--blue); border-color:var(--blue);}
+  .rail .r.on .ln{background:var(--blue);}
+  .rail .d.cur{transform:scale(1.5); box-shadow:0 0 0 5px var(--blue-soft);}
+  .rlab{font-size:11px; color:var(--muted); margin-left:12px; white-space:nowrap; min-width:118px;}
+
+  /* ---- stage ---- */
+  .stage{flex:1 1 auto; position:relative;}
+  .slide{position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
+    justify-content:center; padding:26px 30px 84px; text-align:center; gap:26px;}
+  .slide.active{display:flex; animation:in .35s ease;}
+  @keyframes in{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+
+  .badge{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
+  .title{font-family:var(--serif); font-size:40px; font-weight:700; color:var(--ink); letter-spacing:-.5px; line-height:1.05;}
+  .lede{font-family:var(--serif); font-size:20px; color:var(--body); max-width:620px;}
+
+  /* input -> output row */
+  .io{display:flex; align-items:stretch; gap:16px; flex-wrap:wrap; justify-content:center;}
+  .box{border-radius:var(--r); padding:16px 20px; min-width:190px; text-align:left; box-shadow:var(--shadow-sm);
+    display:flex; flex-direction:column; gap:5px;}
+  .box .k{font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--faint);}
+  .box .v{font-size:16px; color:var(--ink); font-weight:600; line-height:1.25;}
+  .box .s{font-size:12.5px; color:var(--muted);}
+  .box.in{background:var(--wash); border:1px solid var(--line);}
+  .box.out{background:var(--good-soft); border:1px solid #bfe0cd;}
+  .box.out .v{color:var(--good);}
+  .box.mid{background:var(--blue-soft); border:1px solid #b6cfe8; align-items:center; justify-content:center;
+    min-width:96px; text-align:center;}
+  .box.mid .v{color:var(--blue); font-size:15px;}
+  .arrow{align-self:center; color:var(--muted); font-size:26px; font-weight:300;}
+
+  .bul{display:flex; flex-direction:column; gap:9px; align-items:flex-start; text-align:left;}
+  .bul div{font-size:15.5px; color:var(--body); display:flex; gap:10px; align-items:baseline;}
+  .bul div::before{content:"▸"; color:var(--accent); font-size:12px; flex:0 0 auto;}
+  .bul b{color:var(--ink);}
+  .formula{font-family:var(--mono); font-size:15px; color:var(--ink); background:var(--wash);
+    border:1px solid var(--line); border-radius:10px; padding:10px 16px;}
+
+  .chips{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  .chip{font-size:12.5px; font-weight:600; color:var(--muted); background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; padding:6px 13px;}
+  .chip b{color:var(--ink);} .chip.good{background:var(--good-soft); border-color:#bfe0cd; color:var(--good);}
+  .chip.good b{color:var(--good);}
+
+  /* the little GRPO trajectory diagram */
+  .traj{display:flex; flex-direction:column; gap:6px; background:var(--wash); border:1px solid var(--line);
+    border-radius:12px; padding:14px 18px;}
+  .traj .row{display:flex; align-items:center; gap:10px;}
+  .traj .ticks{display:flex; gap:2px;}
+  .traj .ticks i{width:6px; height:14px; border-radius:2px; background:var(--wash2); border:1px solid var(--line);}
+  .traj .rw{font-family:var(--mono); font-size:12px; color:var(--blue); min-width:52px; text-align:right;}
+  .traj .cap{font-size:12px; color:var(--muted);}
+  .traj .best i{background:var(--blue-soft); border-color:#b6cfe8;}
+
+  /* big result numbers */
+  .nums{display:flex; gap:26px; flex-wrap:wrap; justify-content:center;}
+  .num{display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .num .n{font-family:var(--serif); font-size:42px; font-weight:700; color:var(--ink); line-height:1;}
+  .num .l{font-size:12px; color:var(--muted);}
+  .num.hero .n{color:var(--accent);}
+
+  .paper{width:64px; height:80px; border-radius:6px; background:var(--panel); border:1px solid var(--line);
+    box-shadow:var(--shadow-sm); position:relative;}
+  .paper::before,.paper::after{content:""; position:absolute; left:10px; right:10px; height:3px; border-radius:2px;
+    background:var(--wash2);} .paper::before{top:16px;} .paper::after{top:26px; right:24px;}
+  .graphmini{display:flex; gap:8px; align-items:center;}
+  .graphmini .nd{width:16px; height:16px; border-radius:50%; border:2px solid var(--blue); background:var(--blue-soft);}
+  .graphmini .nd.g{border-color:var(--good); background:var(--good-soft);}
+  .graphmini .nd.r{border-color:var(--accent); background:var(--accent-soft);}
+  .graphmini .e{width:20px; height:2px; background:var(--line);}
+
+  /* ---- hud ---- */
+  .hud{position:fixed; left:0; right:0; bottom:0; height:52px; display:flex; align-items:center;
+    justify-content:space-between; padding:0 22px; background:var(--panel); border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--muted);}
+  .hud .back{cursor:pointer; padding:7px 14px; border:1px solid var(--line); border-radius:999px; background:var(--panel);
+    color:var(--muted); font-size:12.5px; font-family:var(--sans);}
+  .hud .back:hover{background:var(--wash2); color:var(--ink);}
+  .hud .hint{display:flex; align-items:center; gap:8px;}
+  .hud .kbd{font-family:var(--mono); background:var(--wash2); border:1px solid var(--line); border-radius:6px; padding:1px 7px;}
+  #counter{font-variant-numeric:tabular-nums;}
+  @media(max-height:640px){ .title{font-size:30px;} .slide{gap:18px;} .num .n{font-size:34px;} }
+</style>
+</head>
+<body>
+<div id="deck">
+
+  <div class="top">
+    <div class="brand">Corte<span>sol</span></div>
+    <div class="part" id="partlbl">overview</div>
+    <div class="spacer"></div>
+    <div class="rail" id="rail-wf" style="display:none">
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="rlab" id="rlab-wf"></span>
+    </div>
+    <div class="rail" id="rail-tr" style="display:none">
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="r"><span class="ln"></span><span class="d"></span></span>
+      <span class="rlab" id="rlab-tr"></span>
+    </div>
+  </div>
+
+  <div class="stage">
+
+    <!-- 0 · overview -->
+    <section class="slide" data-rail="none" data-part="overview">
+      <div class="badge">Cortesol × Freesolo Flash</div>
+      <div class="title">A belief graph that reads,<br>but never gets rewritten by what it reads</div>
+      <div class="io">
+        <div class="paper"></div>
+        <span class="arrow">→</span>
+        <div class="box mid"><div class="v">Cortesol<br>7 steps</div></div>
+        <span class="arrow">→</span>
+        <div class="graphmini"><span class="nd g"></span><span class="e"></span><span class="nd"></span><span class="e"></span><span class="nd r"></span></div>
+      </div>
+      <div class="lede">Part 1 — how one paper updates the graph. Part 2 — how we post-trained the reader on Freesolo.</div>
+    </section>
+
+    <!-- ===================== PART 1 : WORKFLOW ===================== -->
+    <!-- 1 quarantine -->
+    <section class="slide" data-rail="wf" data-pos="0" data-part="Part 1 · the lifecycle">
+      <div class="badge">Step 1 — Quarantine</div>
+      <div class="title">Quarantine</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Raw paper text</div><div class="s">untrusted</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Evidence</div><div class="s">isolated</div></div>
+      </div>
+      <div class="bul">
+        <div>Text is <b>data</b>, never instructions.</div>
+        <div>Untrusted content can enter <b>only here</b>.</div>
+      </div>
+    </section>
+
+    <!-- 2 retrieve -->
+    <section class="slide" data-rail="wf" data-pos="1" data-part="Part 1 · the lifecycle">
+      <div class="badge">Step 2 — Retrieve</div>
+      <div class="title">Retrieve</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Evidence + graph</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Bounded Context</div></div>
+      </div>
+      <div class="bul">
+        <div>Top-<b>k</b> relevant claims + their neighbours.</div>
+        <div>This is <b>all</b> the model is ever shown.</div>
+      </div>
+    </section>
+
+    <!-- 3 extract -->
+    <section class="slide" data-rail="wf" data-pos="2" data-part="Part 1 · the lifecycle">
+      <div class="badge">Step 3 — Extract &nbsp;·&nbsp; this is the trained model</div>
+      <div class="title">Extract</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Context</div></div>
+        <span class="arrow">→</span>
+        <div class="box mid"><div class="v">the model<br>reads</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">EvidenceAssessment</div><div class="s">24-field JSON form</div></div>
+      </div>
+      <div class="bul">
+        <div>The model only <b>describes</b> the paper. It never names an op or sets a confidence.</div>
+        <div>A deterministic <b>judge</b> then compiles the form → operations.</div>
+      </div>
+    </section>
+
+    <!-- 4 screen -->
+    <section class="slide" data-rail="wf" data-pos="3" data-part="Part 1 · the lifecycle">
+      <div class="badge">Step 4 — Screen</div>
+      <div class="title">Screen</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Assessment</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Red flags</div></div>
+      </div>
+      <div class="bul">
+        <div><b>GRIM</b> · <b>statcheck</b> · implausible K<sub>d</sub> — deterministic checks.</div>
+        <div>Run <b>after</b> the model, so flags never leak into its input.</div>
+      </div>
+    </section>
+
+    <!-- 5 validate -->
+    <section class="slide" data-rail="wf" data-pos="4" data-part="Part 1 · the lifecycle">
+      <div class="badge">Step 5 — Validate &nbsp;·&nbsp; the gate</div>
+      <div class="title">Validate</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Proposed operations</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Accepted / rejected</div></div>
+      </div>
+      <div class="bul">
+        <div>Only <b>enumerated</b> ops allowed — no "set confidence" op exists.</div>
+        <div>Every update is bounded: <span class="mono">|logΛ| ≤ log(τ/φ)</span>.</div>
+        <div><b>Provenance required</b>, or it is rejected.</div>
+      </div>
+    </section>
+
+    <!-- 6 commit -->
+    <section class="slide" data-rail="wf" data-pos="5" data-part="Part 1 · the lifecycle">
+      <div class="badge">Step 6 — Commit + Propagate</div>
+      <div class="title">Commit + Propagate</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Accepted ops</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Δ belief + ripple</div></div>
+      </div>
+      <div class="formula">ℓ′ = ℓ + logΛ &nbsp;&nbsp;(confidence is log-odds)</div>
+      <div class="bul"><div>Change ripples across the dirty neighbourhood of the graph.</div></div>
+    </section>
+
+    <!-- 7 publish -->
+    <section class="slide" data-rail="wf" data-pos="6" data-part="Part 1 · the lifecycle">
+      <div class="badge">Step 7 — Publish</div>
+      <div class="title">Publish</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Deltas</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Live graph + audit log</div></div>
+      </div>
+      <div class="bul">
+        <div>Every change is <b>logged</b> — the history is the product.</div>
+        <div>Streamed to the UI you are looking at.</div>
+      </div>
+    </section>
+
+    <!-- ===================== PART 2 : TRAINING ===================== -->
+    <!-- 8 model card -->
+    <section class="slide" data-rail="none" data-part="Part 2 · how we trained the reader">
+      <div class="badge">Part 2 — the model</div>
+      <div class="title">One small model, three phases</div>
+      <div class="io">
+        <div class="box in"><div class="k">base</div><div class="v">Qwen3.5-4B</div><div class="s">4B params · frozen</div></div>
+        <span class="arrow">+</span>
+        <div class="box out"><div class="k">what we train</div><div class="v">LoRA rank 32</div><div class="s">adapters on attention + MLP</div></div>
+      </div>
+      <div class="chips">
+        <div class="chip">context <b>≤ 12,288 tok</b></div>
+        <div class="chip">output <b>≤ 256 tok</b></div>
+        <div class="chip">ladder <b>SFT → GRPO → OPD</b></div>
+      </div>
+    </section>
+
+    <!-- 9 SFT -->
+    <section class="slide" data-rail="tr" data-pos="0" data-part="Part 2 · how we trained the reader">
+      <div class="badge">Phase 1 — SFT &nbsp;·&nbsp; supervised fine-tuning</div>
+      <div class="title">SFT — imitate the gold form</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">One paper</div><div class="s">single turn</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">target</div><div class="v">Gold assessment</div><div class="s">copied token-for-token</div></div>
+      </div>
+      <div class="bul">
+        <div>Loss = <b>token cross-entropy</b> on the gold form.</div>
+        <div>Teaches the <b>format</b> and basic reading.</div>
+      </div>
+      <div class="chips">
+        <div class="chip">2,800 examples</div><div class="chip">100 steps</div>
+        <div class="chip">dev <b>0.72</b> · exact-ops <b>65%</b></div>
+      </div>
+    </section>
+
+    <!-- 10 GRPO -->
+    <section class="slide" data-rail="tr" data-pos="1" data-part="Part 2 · how we trained the reader">
+      <div class="badge">Phase 2 — GRPO &nbsp;·&nbsp; reinforcement learning (on-policy)</div>
+      <div class="title">GRPO — optimise the real reward</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">1 episode = 24 reads</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Reward-max policy</div></div>
+      </div>
+      <div class="traj">
+        <div class="row"><span class="cap">episode</span><span class="ticks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="cap">24 turns, graph carries state</span></div>
+        <div class="row"><span class="cap">×4 traj</span>
+          <span class="ticks"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="rw">r=.71</span>
+          <span class="ticks best"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="rw">r=.83</span>
+          <span class="ticks"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="rw">r=.60</span>
+          <span class="ticks"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="rw">r=.75</span>
+        </div>
+        <div class="row"><span class="cap">advantage = reward − group mean → push toward above-average · 8 episodes/step = 32 trajectories</span></div>
+      </div>
+      <div class="formula">reward = 0.75·(1 − Brier) + 0.25·exact_operations</div>
+      <div class="chips">
+        <div class="chip">25 steps</div><div class="chip">reward <b>0.30 → 0.75</b></div>
+        <div class="chip good">exact-ops <b>100%</b></div><div class="chip">$0.22</div>
+      </div>
+    </section>
+
+    <!-- 11 OPD -->
+    <section class="slide" data-rail="tr" data-pos="2" data-part="Part 2 · how we trained the reader">
+      <div class="badge">Phase 3 — OPD &nbsp;·&nbsp; on-policy distillation</div>
+      <div class="title">OPD — distil a stronger teacher</div>
+      <div class="io">
+        <div class="box in"><div class="k">input</div><div class="v">Student's own rollouts</div></div>
+        <span class="arrow">→</span>
+        <div class="box mid"><div class="v">teacher<br>scores</div></div>
+        <span class="arrow">→</span>
+        <div class="box out"><div class="k">output</div><div class="v">Matched to teacher</div></div>
+      </div>
+      <div class="bul">
+        <div>Teacher = <b>GLM-5.2</b>, managed and billed by Flash.</div>
+        <div>Targets <b>calibration</b> — the Brier half of the reward.</div>
+      </div>
+      <div class="chips">
+        <div class="chip">20 steps</div><div class="chip good">best Brier <b>0.2544</b></div>
+        <div class="chip">≈ $15 (teacher tokens)</div>
+      </div>
+    </section>
+
+    <!-- 12 results -->
+    <section class="slide" data-rail="none" data-part="Part 2 · result">
+      <div class="badge">Result — what we serve</div>
+      <div class="title">Calibrated, correct, un-hijackable</div>
+      <div class="nums">
+        <div class="num hero"><span class="n">0.8062</span><span class="l">dev score (the ceiling)</span></div>
+        <div class="num"><span class="n">100%</span><span class="l">exact operations</span></div>
+        <div class="num"><span class="n">0%</span><span class="l">injection attack success</span></div>
+      </div>
+      <div class="formula">exact-ops = 100% ⇒ gold trajectory ⇒ Brier pinned ⇒ score pinned at 0.8062 (the ceiling)</div>
+      <div class="chips"><div class="chip">served: <b>Qwen3.5-4B · SFT → GRPO</b></div>
+        <div class="chip">3-phase SFT→OPD→GRPO ties it exactly</div></div>
+    </section>
+
+  </div>
+
+  <div class="hud">
+    <button class="back" id="back">‹ back</button>
+    <div class="hint"><span class="kbd">click</span> or <span class="kbd">→</span> to advance</div>
+    <div id="counter">1 / 13</div>
+  </div>
+
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const railWf=document.getElementById('rail-wf'), railTr=document.getElementById('rail-tr');
+  const rlabWf=document.getElementById('rlab-wf'), rlabTr=document.getElementById('rlab-tr');
+  const partlbl=document.getElementById('partlbl'), counter=document.getElementById('counter');
+  const wfNames=["Quarantine","Retrieve","Extract","Screen","Validate","Commit","Publish"];
+  const trNames=["SFT","GRPO","OPD"];
+  let i=0;
+  function paintRail(rail, labelEl, names, pos){
+    [...rail.querySelectorAll('.r')].forEach((r,k)=>{
+      const dot=r.querySelector('.d');
+      dot.classList.toggle('on', k<=pos);
+      dot.classList.toggle('cur', k===pos);
+      r.classList.toggle('on', k<=pos && k>0);
+    });
+    labelEl.textContent = names[pos] || "";
+  }
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    const s=slides[i], rail=s.dataset.rail, pos=parseInt(s.dataset.pos);
+    railWf.style.display = rail==='wf'?'flex':'none';
+    railTr.style.display = rail==='tr'?'flex':'none';
+    if(rail==='wf') paintRail(railWf, rlabWf, wfNames, pos);
+    if(rail==='tr') paintRail(railTr, rlabTr, trNames, pos);
+    partlbl.textContent = s.dataset.part || "";
+    counter.textContent = (i+1)+" / "+slides.length;
+  }
+  document.getElementById('deck').addEventListener('click',()=>show(i+1));
+  document.getElementById('back').addEventListener('click',e=>{e.stopPropagation();show(i-1);});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'){e.preventDefault();show(i+1);}
+    if(e.key==='ArrowLeft'){e.preventDefault();show(i-1);}
+  });
+  show(0);
+</script>
+</body>
+</html>

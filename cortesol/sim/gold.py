@@ -86,7 +86,9 @@ def build_gold(
 
     if event_class is EventClass.OUT_OF_SCOPE:
         assert payload is not None
-        return [flag_ood_gold(payload, reason or "outside the peptide ontology")]
+        # The reason is supplied by the domain (sim/specs.py `oos_reason`); the
+        # fallback is deliberately field-neutral so gold.py stays domain-agnostic.
+        return [flag_ood_gold(payload, reason or "outside the active domain ontology")]
 
     raise ValueError(f"unknown event class: {event_class!r}")
 

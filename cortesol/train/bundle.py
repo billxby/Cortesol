@@ -10,7 +10,7 @@ from pathlib import Path
 
 from ..core.ops import ops_json_schema
 
-PUBLISHED_SPLITS = ("sft_smoke", "sft_train", "rl_train")
+PUBLISHED_SPLITS = ("sft_smoke", "sft_train", "sft_train_multidomain", "rl_train")
 FIXED_MTIME = 946_684_800
 RUNTIME_FILES = (
     "cortesol/__init__.py",
@@ -19,6 +19,9 @@ RUNTIME_FILES = (
     "cortesol/core/config.py",
     "cortesol/core/context.py",
     "cortesol/core/domain.py",
+    "cortesol/core/domains/__init__.py",
+    "cortesol/core/domains/base.py",
+    "cortesol/core/domains/peptides.py",
     "cortesol/core/engine.py",
     "cortesol/core/judge.py",
     "cortesol/core/kb.py",
@@ -37,6 +40,7 @@ RUNTIME_FILES = (
     "cortesol/sim/__init__.py",
     "cortesol/sim/events.py",
     "cortesol/sim/gold.py",
+    "cortesol/sim/specs.py",
     "cortesol/sim/world.py",
     "cortesol/train/__init__.py",
     "cortesol/train/datasets.py",

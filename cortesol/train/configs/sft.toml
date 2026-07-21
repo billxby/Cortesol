@@ -1,4 +1,10 @@
 # Production deterministic-gold SFT. The coordinator replaces environment.id.
+# Trains on the multi-domain split (peptides + materials + ml_benchmarks, 8,400
+# rows) so the policy is FIELD-INDEPENDENT. max_steps=1500 gives the same
+# per-example exposure as the peptide 500-step run scaled to 3x the data (~1
+# epoch). save_at_steps intentionally omits the coordinator's screened steps
+# (100/250/500) so `_checkpoint_refs` falls back to the fully-trained final
+# checkpoint rather than selecting an undertrained early one.
 model = "Qwen/Qwen3.5-4B"
 algorithm = "sft"
 thinking = false
@@ -9,13 +15,13 @@ id = "local/cortesol-belief-update"
 pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
 
 [environment.params]
-split = "sft_train"
+split = "sft_train_multidomain"
 
 [train]
 lora_rank = 32
 lora_alpha = 64
 max_context_tokens = 2048
 max_completion_tokens = 256
-max_examples = 2800
-max_steps = 500
-save_at_steps = [100, 250, 500]
+max_examples = 8400
+max_steps = 1500
+save_at_steps = [1500]

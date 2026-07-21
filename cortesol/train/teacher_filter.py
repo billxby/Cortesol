@@ -305,7 +305,10 @@ def build_teacher_seed_dataset(source_dir: str | Path, out_dir: str | Path) -> d
                 {"input": row["input"], "output": _completion(proposed), "metadata": metadata}
             )
         files[split] = _write_jsonl(out / f"{split}.jsonl", seeded)
-    for split in ("rl_train", "dev", "final", "security"):
+    # Pass through the non-peptide multi-domain SFT split verbatim (simulator gold)
+    # alongside the sealed/RL splits, so the teacher manifest stays self-consistent
+    # with the source `files` map (the coordinator's --reuse path re-checks each).
+    for split in ("sft_train_multidomain", "rl_train", "dev", "final", "security"):
         shutil.copy2(source / f"{split}.jsonl", out / f"{split}.jsonl")
     manifest = dict(source_manifest)
     manifest.update(
@@ -375,7 +378,10 @@ def build_teacher_filtered_dataset(
     files = dict(source_manifest["files"])
     for split, rows in filtered.items():
         files[split] = _write_jsonl(out / f"{split}.jsonl", rows)
-    for split in ("rl_train", "dev", "final", "security"):
+    # Pass through the non-peptide multi-domain SFT split verbatim (simulator gold)
+    # alongside the sealed/RL splits, so the teacher manifest stays self-consistent
+    # with the source `files` map (the coordinator's --reuse path re-checks each).
+    for split in ("sft_train_multidomain", "rl_train", "dev", "final", "security"):
         shutil.copy2(source / f"{split}.jsonl", out / f"{split}.jsonl")
     manifest = dict(source_manifest)
     manifest.update(

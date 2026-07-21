@@ -28,7 +28,7 @@ from .config import (
     RHO_WITHIN_GROUP,
     STRENGTH_TO_LOGLR,
 )
-from .domain import PEPTIDE_RED_FLAG_PHI_BUMP, correlation_group
+from .domains import get_active_domain
 from .kb import KB
 from .mathx import clip, neff_marginal_factor
 from .ops import AddClaim, AddEdge, ApplyEvidence, FlagOOD, InvalidateEdge, Op, Reject
@@ -67,7 +67,7 @@ def fraud_switch_factor(red_flags: list[str], phi: float) -> float:
     """
     bump = 0.0
     for flag in red_flags:
-        bump += RED_FLAG_PHI_BUMP.get(flag, PEPTIDE_RED_FLAG_PHI_BUMP.get(flag, 0.0))
+        bump += RED_FLAG_PHI_BUMP.get(flag, get_active_domain().red_flag_phi_bump.get(flag, 0.0))
     headroom = max(1e-9, PHI_CEILING - max(0.0, phi - 0.30))
     return clip(1.0 - bump / headroom, 0.0, 1.0)
 
@@ -76,7 +76,7 @@ def neff_factor(kb: KB, claim_id: str, evidence: Evidence) -> float:
     """Marginal n_eff weight for this evidence given how many correlated reports
     (same correlation_group) the claim has already absorbed (mathx.neff_marginal_factor).
     First report in a group -> 1.0; echoes -> shrinking. Updates claim.correlation_seen."""
-    group = evidence.correlation_group or correlation_group(evidence.fields)
+    group = evidence.correlation_group or get_active_domain().correlation_group(evidence.fields)
     claim = kb.claims[claim_id]
     k_index = claim.correlation_seen.get(group, 0)
     factor = neff_marginal_factor(k_index, RHO_WITHIN_GROUP)
@@ -98,7 +98,7 @@ def _lambda_breakdown(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dict:
     cap = source_cap(source.tau, source.phi) if source is not None else None
     lam_capped = min(lam_raw, cap) if cap is not None else lam_raw
 
-    group = evidence.correlation_group or correlation_group(evidence.fields)
+    group = evidence.correlation_group or get_active_domain().correlation_group(evidence.fields)
     k_index = claim.correlation_seen.get(group, 0)
     neff = neff_marginal_factor(k_index, RHO_WITHIN_GROUP)
     lam_after_neff = lam_capped * neff
@@ -192,7 +192,8 @@ def explain_apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dic
                 "label": "Source-trust cap",
                 "detail": f"min({b['lam_raw']:.2f}, {b['cap']:.2f}) = {b['lam_capped']:.2f}",
                 "note": (
-                    f"A “{tier}” source is only trusted so far, so its pull is capped at {b['cap']:.2f}. "
+                    f"A “{tier}” source is only trusted so far, so its pull is "
+                    f"capped at {b['cap']:.2f}. "
                     + ("The cap bit here — hype can't force a big jump."
                        if capped else "Still under the cap this time.")
                 ),
@@ -217,8 +218,8 @@ def explain_apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dic
             "note": (
                 "No red flags raised — kept at full strength."
                 if not evidence.red_flags
-                else f"Red flags ({', '.join(evidence.red_flags)}) make the report less trustworthy, "
-                "shrinking its effect toward zero."
+                else f"Red flags ({', '.join(evidence.red_flags)}) make the report "
+                "less trustworthy, shrinking its effect toward zero."
             ),
         }
     )
@@ -227,13 +228,19 @@ def explain_apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dic
             {
                 "label": "Safety clamp",
                 "detail": f"clip to ±{DELTA_MAX} = {b['delta']:.2f}",
-                "note": f"No single report may move one claim by more than ±{DELTA_MAX} — a hard blast-radius bound.",
+                "note": (
+                    f"No single report may move one claim by more than ±{DELTA_MAX} "
+                    "— a hard blast-radius bound."
+                ),
             }
         )
     steps.append(
         {
             "label": "Which way?",
-            "detail": f"{'supports (+)' if op.direction == '+' else 'contradicts (−)'} → {b['signed']:+.2f}",
+            "detail": (
+                f"{'supports (+)' if op.direction == '+' else 'contradicts (−)'} "
+                f"→ {b['signed']:+.2f}"
+            ),
             "note": "A “+” report raises confidence in the claim; a “−” report lowers it.",
         }
     )
@@ -243,8 +250,8 @@ def explain_apply_evidence(kb: KB, op: ApplyEvidence, evidence: Evidence) -> dic
             "detail": (
                 f"{sigmoid(before_ell) * 100:.0f}% → {sigmoid(after_ell) * 100:.0f}%"
             ),
-            "note": "The only place belief actually changes — computed by the engine from the steps "
-            "above, never written by the model.",
+            "note": "The only place belief actually changes — computed by the "
+            "engine from the steps above, never written by the model.",
         }
     )
 

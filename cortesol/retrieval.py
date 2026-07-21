@@ -14,6 +14,7 @@ import re
 
 from .core.config import RETRIEVE_TOP_K
 from .core.context import Context
+from .core.domains import get_active_domain
 from .core.kb import KB
 from .core.schema import Claim, Evidence, RawEvent
 
@@ -35,7 +36,7 @@ def retrieve(kb: KB, event: RawEvent, evidence: Evidence, k: int | None = None) 
     """Select the top-k relevant claims + neighborhood and pack a Context."""
     k = k or RETRIEVE_TOP_K
     query = _tokens(event.raw_text)
-    for key in ("assay", "metric", "units", "organism", "cell_line"):
+    for key in get_active_domain().retrieval_query_fields:
         v = evidence.fields.get(key)
         if isinstance(v, str):
             query |= _tokens(v)

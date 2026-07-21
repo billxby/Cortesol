@@ -175,6 +175,7 @@ def test_dataset_profile_is_complete_deterministic_and_sealed(generated, tmp_pat
     assert {name: item["rows"] for name, item in manifest["files"].items()} == {
         "sft_smoke": 64,
         "sft_train": 2800,
+        "sft_train_multidomain": 8400,
         "rl_train": 1024,
         "dev": 128,
         "final": 256,
