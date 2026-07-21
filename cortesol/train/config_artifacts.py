@@ -12,6 +12,10 @@ from ..core.ops import ops_json_schema
 
 CONFIG_DIR = Path(__file__).parent / "configs"
 TEMPLATES = ("smoke_sft", "sft", "grpo", "opd", "grpo_opd")
+# The SFT-ONLY appraisal ladder. The generalist student emits EvidenceAssessment,
+# not ops, so there is no GRPO/OPD stage; every appraisal config gets the appraisal
+# grammar pinned as structured_outputs (unlike the ops SFT, which learns the grammar).
+APPRAISAL_TEMPLATES = ("appraisal_smoke", "appraisal_sft")
 
 # The two structured-output targets a Flash run can be pinned to. `ops` (default)
 # is the frozen ops-proposal grammar; `appraisal` is the domain-general critical-
@@ -75,12 +79,18 @@ def render_configs(
     schema = schema_fn()
     schema_path = out / schema_filename
     schema_path.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    structured_outputs = json.dumps({"json": schema}, sort_keys=True, separators=(",", ":"))
+    if target == "appraisal":
+        # SFT-only: Flash 1.0 forbids train.structured_outputs on SFT (it trains on
+        # dataset completions and never generates), so the appraisal grammar is pinned
+        # only as the emitted assessment.schema.json artifact above — the gold rows
+        # already match assessment_ordered_regex and serving re-imposes the schema.
+        return _render_appraisal(out, environment_id)
     adapters = {
         "grpo": sft_adapter,
         "opd": grpo_adapter or sft_adapter,
         "grpo_opd": opd_adapter,
     }
-    structured_outputs = json.dumps({"json": schema}, sort_keys=True, separators=(",", ":"))
     rendered: dict[str, Path] = {}
     for name in TEMPLATES:
         with (CONFIG_DIR / f"{name}.toml").open("rb") as handle:
@@ -96,3 +106,43 @@ def render_configs(
         _write_toml(path, config)
         rendered[name] = path
     return rendered
+
+
+def _render_appraisal(out: Path, environment_id: str) -> dict[str, Path]:
+    """Resolve the SFT-only appraisal templates by stamping the published environment
+    id (there is no ops warm-start / GRPO / OPD here). The appraisal grammar rides
+    along as the emitted ``assessment.schema.json`` and as the gold completions'
+    ordered form; Flash rejects ``structured_outputs`` on an SFT run."""
+    rendered: dict[str, Path] = {}
+    for name in APPRAISAL_TEMPLATES:
+        with (CONFIG_DIR / f"{name}.toml").open("rb") as handle:
+            config = tomllib.load(handle)
+        config["environment"]["id"] = environment_id
+        path = out / f"{name}.toml"
+        _write_toml(path, config)
+        rendered[name] = path
+    return rendered
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    ap = sub.add_parser(
+        "appraisal", help="render the SFT-only appraisal configs with the appraisal grammar pinned"
+    )
+    ap.add_argument(
+        "--environment-id",
+        required=True,
+        help="the published environment id from `flash env push` (owner/name)",
+    )
+    ap.add_argument("--out", default="runs/appraisal/configs")
+    args = parser.parse_args()
+    if args.command == "appraisal":
+        paths = render_configs(args.out, environment_id=args.environment_id, target="appraisal")
+        print(json.dumps({name: str(path) for name, path in paths.items()}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

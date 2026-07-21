@@ -24,6 +24,10 @@ from ..sim.specs import PEPTIDES_SPEC, SPECS, WorldSpec
 from ..sim.world import World
 
 DATASET_VERSION = "1.2.0"
+# Repo-root data dir holding the committed appraisal corpus + teacher labels. The
+# appraisal SFT split is regenerated from it (deterministic, network-free) so a
+# single `build_all` ships everything the coordinator bundle needs.
+_REPO_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 DEFAULT_SFT_COUNT = 2_800
 DEFAULT_RL_EPISODES = 1_024
 DEFAULT_DEV_EPISODES = 128
@@ -499,7 +503,7 @@ def _assert_disjoint(*row_groups: Sequence[dict[str, Any]]) -> None:
         seen_cases |= cases
 
 
-def build_all(out_dir: str | Path) -> dict[str, Any]:
+def build_all(out_dir: str | Path, *, source_data_dir: str | Path | None = None) -> dict[str, Any]:
     out = Path(out_dir)
     sft = build_sft_rows()
     smoke = _diverse_stateful_rows(
@@ -603,8 +607,31 @@ def build_all(out_dir: str | Path) -> dict[str, Any]:
             "final": ["seed", "entity_family=FN", "template_family=final_template_v1"],
             "security": ["seed", "entity_family=SC", "attack_family"],
         },
-        "published_splits": ["sft_smoke", "sft_train", "sft_train_multidomain", "rl_train"],
+        "published_splits": [
+            "sft_smoke",
+            "sft_train",
+            "sft_train_multidomain",
+            "rl_train",
+            "appraisal_sft_train",
+        ],
         "sealed_splits": ["dev", "final", "security"],
+    }
+    # Domain-general critical-appraisal SFT split (SFT-ONLY; the GRPO/OPD ladder does
+    # not apply to it). Regenerated from the committed teacher labels and written
+    # alongside the ops splits under a SEPARATE `appraisal` manifest key so the frozen
+    # ops `files` map, hashes, and tests are untouched (add, don't replace).
+    from .appraisal_dataset import build_appraisal_from_labels  # lazy: breaks import cycle
+
+    appraisal = build_appraisal_from_labels(out, data_dir=source_data_dir or _REPO_DATA_DIR)
+    manifest["appraisal"] = {
+        "dataset_version": appraisal["appraisal_dataset_version"],
+        "target": appraisal["target"],
+        "schema_hash": appraisal["schema_hash"],
+        "heldout_fields": appraisal["heldout_fields"],
+        "train_fields": appraisal["train_fields"],
+        "files": appraisal["files"],
+        "shipped_split": "appraisal_sft_train",
+        "heldout_split": "appraisal_sft_heldout",
     }
     manifest_text = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     (out / "manifest.json").write_text(manifest_text, encoding="utf-8")

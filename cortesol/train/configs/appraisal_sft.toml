@@ -1,0 +1,40 @@
+# Appraisal SFT — the domain-general critical-appraisal student. SFT-ONLY.
+#
+# This student emits core/assessment.EvidenceAssessment (a neutral critical-appraisal
+# form), NOT ledger ops, so the ops GRPO/OPD ladder does NOT apply here: there is no
+# engine reward to optimize against a fabricated world. Supervision is the frozen
+# frontier-teacher labels (data/appraisal/labels_part_*.jsonl) replayed into 213 rows
+# spanning biomed/cs/econ/physics/stat; math + q-bio are held out for the eval.
+#
+# `render_configs(..., target="appraisal")` stamps the published environment id and
+# emits the appraisal grammar as assessment.schema.json. Flash 1.0 forbids
+# train.structured_outputs on SFT (it trains on dataset completions, never
+# generates), so the grammar is enforced two ways: every gold completion already
+# matches assessment_ordered_regex(), and serving re-imposes assessment_json_schema()
+# as the response_format. Launch:
+#   python -m cortesol.train.config_artifacts appraisal --environment-id <published>
+#   flash train runs/appraisal/configs/appraisal_sft.toml            # real run
+#   flash train runs/appraisal/configs/appraisal_sft.toml --dry-run  # offline quote
+#
+# max_steps=200 is ~1 epoch over 213 rows (budget-safe: a few dollars — see the
+# offline flash.cost estimate). save_at_steps=[200] deploys the fully-trained final.
+model = "Qwen/Qwen3.5-4B"
+algorithm = "sft"
+thinking = false
+seed = 0
+
+[environment]
+id = "local/cortesol-belief-update"
+pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
+
+[environment.params]
+split = "appraisal_sft_train"
+
+[train]
+lora_rank = 32
+lora_alpha = 64
+max_context_tokens = 4096
+max_completion_tokens = 512
+max_examples = 213
+max_steps = 200
+save_at_steps = [200]

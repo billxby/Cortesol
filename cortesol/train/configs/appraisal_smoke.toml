@@ -1,0 +1,24 @@
+# Appraisal smoke SFT — a tiny mechanical gate for the SFT-only appraisal run.
+# A few steps over a handful of the appraisal rows to confirm the checkpoint can
+# execute the appraisal grammar before paying for the full 200-step run. Same model
+# family + grammar as appraisal_sft.toml; render_configs pins structured_outputs.
+model = "Qwen/Qwen3.5-4B"
+algorithm = "sft"
+thinking = false
+seed = 0
+
+[environment]
+id = "local/cortesol-belief-update"
+pip = ["networkx>=3.3", "numpy>=2.0", "pydantic>=2.7"]
+
+[environment.params]
+split = "appraisal_sft_train"
+
+[train]
+lora_rank = 32
+lora_alpha = 64
+max_context_tokens = 4096
+max_completion_tokens = 512
+max_examples = 16
+max_steps = 8
+save_at_steps = [8]

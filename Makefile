@@ -3,6 +3,7 @@
 
 .PHONY: help install test test-contract test-unit test-integration lint fmt \
         sim fetch-papers fetch-arxiv appraisal-corpus appraisal-label appraisal-sft \
+        appraisal-labels appraisal-eval \
         bootstrap eval run-ui run-ui-foundation train-sft train-grpo \
         training-preflight snapshot-clean plan-b-setup plan-b-serve plan-b-tunnel
 
@@ -52,6 +53,12 @@ appraisal-label:  ## [B] Run the frontier teacher over the corpus (needs OPENAI_
 
 appraisal-sft:  ## [B] Build the appraisal SFT train/held-out-field splits (teacher if keyed, else StubTeacher)
 	$(RUN) python -m cortesol.train.appraisal_dataset sft
+
+appraisal-labels:  ## [B] Rebuild the appraisal SFT splits from the committed teacher labels (offline, deterministic)
+	$(RUN) python -m cortesol.train.appraisal_dataset labels
+
+appraisal-eval:  ## [B3] Score the appraisal student on the held-out fields (offline stub; add ARGS='--run-id RUN@rev' for the deployed adapter)
+	$(RUN) python -m cortesol.eval.appraisal_eval --offline stub $(ARGS)
 
 bootstrap:  ## [C] Build the demo foundation: replay 3 critical papers/peptide through the engine -> data/snapshots/
 	$(RUN) python -m cortesol.bootstrap --per-peptide 3

@@ -36,6 +36,7 @@ import re
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
+from glob import glob
 from pathlib import Path
 from typing import Any
 
@@ -489,6 +490,79 @@ def load_known_cases(data_dir: str | Path = "data") -> list[dict[str, Any]]:
 
 
 # --------------------------------------------------------------------------
+# Committed teacher labels — the frozen supervision the appraisal SFT trains on.
+# A frontier reader labeled each real abstract into the appraisal form once; those
+# labels live in data/appraisal/labels_part_*.jsonl and are replayed deterministically
+# (k=1 self-consistency is trivial for a fixed label; the screen-agreement filter and
+# adversarial gold still gate quality). This is the canonical, network-free path used
+# by build_all (to ship the split) and the eval (for the teacher reference).
+# --------------------------------------------------------------------------
+
+LABELS_GLOB = "appraisal/labels_part_*.jsonl"
+_PRELABELED_TEACHER = "prelabeled"
+
+
+def label_paths(data_dir: str | Path = "data") -> list[str]:
+    return sorted(glob(str(Path(data_dir) / LABELS_GLOB)))
+
+
+def labeled_appraiser(data_dir: str | Path = "data") -> ta.PrelabeledAppraiser:
+    """Load the committed teacher labels into a deterministic offline appraiser."""
+    paths = label_paths(data_dir)
+    if not paths:
+        raise FileNotFoundError(
+            f"no committed teacher labels found under {Path(data_dir) / LABELS_GLOB}; "
+            "run `make appraisal-label` (frontier key) or ship labels_part_*.jsonl"
+        )
+    return ta.PrelabeledAppraiser.from_jsonl(*paths)
+
+
+def labeled_corpus(
+    data_dir: str | Path = "data", appraiser: ta.PrelabeledAppraiser | None = None
+) -> list[CorpusPaper]:
+    """The corpus filtered to papers that carry a committed teacher label."""
+    appraiser = appraiser or labeled_appraiser(data_dir)
+    return [paper for paper in load_corpus(data_dir) if appraiser.has(paper.paper_id)]
+
+
+def build_appraisal_from_labels(
+    out_dir: str | Path, *, data_dir: str | Path = "data"
+) -> dict[str, Any]:
+    """Regenerate the appraisal SFT splits from the committed teacher labels.
+
+    This is the canonical, deterministic, network-free build: the prelabeled teacher
+    replays its stored appraisals (k=1, min_agreement=0.5) over the labeled corpus.
+    Produces exactly ``appraisal_sft_train.jsonl`` (train fields) +
+    ``appraisal_sft_heldout.jsonl`` (HELDOUT_FIELDS) in ``out_dir``."""
+    appraiser = labeled_appraiser(data_dir)
+    corpus = labeled_corpus(data_dir, appraiser)
+    return build_appraisal_all(
+        out_dir,
+        corpus=corpus,
+        data_dir=data_dir,
+        appraiser=appraiser,
+        teacher=_PRELABELED_TEACHER,
+        k=1,
+        min_agreement=0.5,
+    )
+
+
+def appraisal_examples_from_labels(
+    data_dir: str | Path = "data",
+) -> tuple[list[AppraisalExample], list[AppraisalExample]]:
+    """Return ``(train_examples, heldout_examples)`` from the committed teacher labels.
+
+    Each real held-out example carries its teacher gold assessment, so the eval can
+    use it as the cross-domain reference without re-touching a frontier model."""
+    appraiser = labeled_appraiser(data_dir)
+    corpus = labeled_corpus(data_dir, appraiser)
+    examples, _ = build_appraisal_sft(
+        corpus, appraiser=appraiser, teacher=_PRELABELED_TEACHER, k=1, min_agreement=0.5
+    )
+    return split_examples_by_field(examples)
+
+
+# --------------------------------------------------------------------------
 # Writer + CLI.
 # --------------------------------------------------------------------------
 
@@ -580,7 +654,18 @@ def main() -> None:
     p_sft.add_argument("--k", type=int, default=3)
     p_sft.add_argument("--min-agreement", type=float, default=0.5)
     p_sft.add_argument("--stub", action="store_true", help="force the offline StubTeacher")
+
+    p_labels = sub.add_parser(
+        "labels", help="build the appraisal SFT splits from the committed teacher labels (offline)"
+    )
+    p_labels.add_argument("--data-dir", default="data")
+    p_labels.add_argument("--out", default="runs/appraisal/data")
     args = parser.parse_args()
+
+    if args.stage == "labels":
+        manifest = build_appraisal_from_labels(args.out, data_dir=args.data_dir)
+        print(json.dumps(manifest, indent=2, sort_keys=True))
+        return
 
     if args.stage == "corpus":
         manifest = write_corpus(args.data_dir)

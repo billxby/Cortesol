@@ -10,7 +10,17 @@ from pathlib import Path
 
 from ..core.ops import ops_json_schema
 
-PUBLISHED_SPLITS = ("sft_smoke", "sft_train", "sft_train_multidomain", "rl_train")
+# Splits shipped inside the published environment. `appraisal_sft_train` is the
+# domain-general critical-appraisal SFT split (SFT-ONLY); its held-out-field eval
+# split (`appraisal_sft_heldout`) is deliberately NOT shipped. Its file record lives
+# under the source manifest's separate `appraisal` key (see datasets.build_all).
+PUBLISHED_SPLITS = (
+    "sft_smoke",
+    "sft_train",
+    "sft_train_multidomain",
+    "rl_train",
+    "appraisal_sft_train",
+)
 FIXED_MTIME = 946_684_800
 RUNTIME_FILES = (
     "cortesol/__init__.py",
@@ -145,11 +155,17 @@ def build_bundle(
         json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     source_manifest = json.loads((data / "manifest.json").read_text(encoding="utf-8"))
+    # The ops splits live under `files`; the appraisal split's record lives under the
+    # separate `appraisal.files` key (keeping the frozen ops manifest untouched).
+    available_files = {
+        **source_manifest["files"],
+        **source_manifest.get("appraisal", {}).get("files", {}),
+    }
     public_manifest = {
         "dataset_version": source_manifest["dataset_version"],
         "contract_version": source_manifest["contract_version"],
         "git_commit": source_manifest["git_commit"],
-        "files": {name: source_manifest["files"][name] for name in PUBLISHED_SPLITS},
+        "files": {name: available_files[name] for name in PUBLISHED_SPLITS},
         "sealed_data_included": False,
     }
     (out / "dataset-manifest.json").write_text(
@@ -163,7 +179,7 @@ def build_bundle(
     (out / "bundle-manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    forbidden = {"dev.jsonl", "final.jsonl", "security.jsonl"}
+    forbidden = {"dev.jsonl", "final.jsonl", "security.jsonl", "appraisal_sft_heldout.jsonl"}
     present = {path.name for path in out.rglob("*") if path.is_file()}
     if present & forbidden:
         raise ValueError(f"sealed datasets leaked into bundle: {sorted(present & forbidden)}")
