@@ -129,3 +129,26 @@ Full lineage caps at ~$60–67 (`docs/TRAINING.md:39`), over budget — so go le
 4. **Present it**: "build me a report on the strongest claims" → grounded
    dashboard → talk to it to rearrange → every number traces to the ledger.
 5. Note the update policy driving all of this is one **generalist** Freesolo model.
+
+## Result (2026-07-21)
+
+Delivered. All tracks committed to `main` (HEAD 6893030); 133 tests green, ruff clean.
+
+| Track | Outcome |
+|---|---|
+| T0 domains · T1 panels · T2 report · T3 multi-domain sim · T4 import-any-field | ✅ done & verified |
+| T5 generalist training | ✅ **SFT generalist trained** |
+
+**Generalist model:** multi-domain production SFT (peptides + materials + ml_benchmarks)
+banked as `safety_anchor` — **score 0.870, attack_success 0.0, protocol_valid 1.0** (beats
+the peptide-only champion's 0.806), for **$4.19** of the $45-capped budget. Adapter revision
+`flash-1784612021-47de79e1@final.64d6a3de991c4db8063a36aa7769ca0aa2096933`.
+
+The GRPO stage **failed at $0** (transient Flash rollout hiccup, no GPU consumed) but is
+**peptide-only** in its config, so it does not affect the generalist result and was not
+retried. The generalist story is the multi-domain SFT policy.
+
+**Optional follow-ups:** deploy + wire the SFT adapter as the live `FreesoloExtractor` for
+imported domains (serving cost); a browser visual pass of the UI panels (endpoint/structure-
+tested, not browser-verified); `STATUS.md` row updates for the new modules; T3b if the
+assessment serving path is ever standardized.
