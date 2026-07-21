@@ -43,7 +43,10 @@ English, and **generate a grounded report** where every figure traces to the led
 - **Serving:** FastAPI + Server-Sent Events streaming a live 3D-force-graph frontend.
 - **Model stack:** the update-policy model runs on Freesolo / Flash, which is
   **OpenAI-SDK-compatible**; the research-chat, report-generation, and import-field
-  features call OpenAI-compatible model APIs (set `OPENAI_API_KEY` to run them live).
+  features are **provider-pluggable** — **Claude (Anthropic) by default**, with
+  **OpenAI** and **Gemini** as drop-in options (set `ANTHROPIC_API_KEY`,
+  `OPENAI_API_KEY`, or `GEMINI_API_KEY` to run them live; unset, they degrade to a
+  deterministic offline mode).
 
 ## Challenges
 Making the belief move provably bounded *even under a fully compromised model*
@@ -67,7 +70,7 @@ based retrieval; and more imported domains.
 
 ## Built with
 python · fastapi · server-sent-events · networkx · numpy · pydantic · 3d-force-graph ·
-freesolo / flash · openai-compatible model APIs
+freesolo / flash · anthropic (claude) · openai · gemini
 
 ## Tools & AI disclosure
 [Fill this in truthfully per the hackathon rules — which AI coding assistants and
