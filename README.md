@@ -54,3 +54,13 @@ make help           # everything else
 - `docs/COMPONENTS.md` — how the code splits into three logical areas
 
 Design notes and research live in the Obsidian vault one level up.
+
+## AI assistance
+
+Cortesol was built with substantial help from AI coding assistants — referred to
+here collectively as **AI** (spanning both the OpenAI and Anthropic assistants the
+team used). Working under the team's direction and review, AI wrote much of the
+implementation: the deterministic belief engine and the domain-general
+critical-appraisal contract, the live belief-graph UI, the pluggable model-provider
+layer, and the training / eval / deployment wiring. Architecture, scope, and final
+review were the team's.
