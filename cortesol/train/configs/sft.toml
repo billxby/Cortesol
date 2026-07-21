@@ -1,11 +1,12 @@
 # Production deterministic-gold SFT. The coordinator replaces environment.id.
 # Trains on the multi-domain split (peptides + materials + ml_benchmarks, 8,400
-# rows) so the policy is FIELD-INDEPENDENT. max_steps=800 (~0.5 epoch over the
-# 8,400 rows) trims the lineage estimate under the approved $45 cap once $13.22
-# of already-paid prior training is folded into the lineage total; a PoC
-# generalist needs breadth, not many epochs. save_at_steps=[800] omits the
-# coordinator's screened steps (100/250/500) so `_checkpoint_refs` falls back to
-# the fully-trained final checkpoint rather than selecting an undertrained one.
+# rows) so the policy is FIELD-INDEPENDENT. max_steps=400 keeps the RUN-TIME
+# projection (which uses live server quotes, ~$4 above the offline estimate)
+# under the approved $45 cap once $13.22 of already-paid prior training + the
+# eval reserve are folded into the lineage total. A PoC generalist needs breadth
+# across fields, not many epochs. save_at_steps=[400] omits the coordinator's
+# screened steps (100/250/500) so `_checkpoint_refs` falls back to the
+# fully-trained final checkpoint rather than selecting an undertrained one.
 model = "Qwen/Qwen3.5-4B"
 algorithm = "sft"
 thinking = false
@@ -24,5 +25,5 @@ lora_alpha = 64
 max_context_tokens = 2048
 max_completion_tokens = 256
 max_examples = 8400
-max_steps = 800
-save_at_steps = [800]
+max_steps = 400
+save_at_steps = [400]
