@@ -1,0 +1,3175 @@
+{
+  "contract_version": "0.2.1",
+  "event_cursor": 144,
+  "claims": {
+    "c_bind_semaglutide_GLP1R": {
+      "id": "c_bind_semaglutide_GLP1R",
+      "text": "semaglutide binds GLP1R",
+      "ontology_tags": [
+        "peptide:semaglutide",
+        "target:GLP1R",
+        "binding_affinity:Kd"
+      ],
+      "ell": 5.771329304537849,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_trends_in_cardiovascular_medicine [reputable] (ev=pmid_34942372)"
+        },
+        {
+          "t": 0,
+          "ell": 1.3479293045378486,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": 3.347929304537849,
+          "cause": "APPLY_EVIDENCE +strong from venue_journal_of_the_asean_federation_of_endocrine_soc [reputable] (ev=pmid_36578889)"
+        },
+        {
+          "t": 1,
+          "ell": 3.412729304537849,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": 4.912729304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_frontiers_in_endocrinology [reputable] (ev=pmid_31031702)"
+        },
+        {
+          "t": 2,
+          "ell": 4.961329304537849,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 5.23132930453785,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 5.501329304537849,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 5.771329304537849,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {
+        "Trends in cardiovascular medicine|?|?": 1,
+        "Journal of the ASEAN Federation of Endocrine Societies|?|?": 1,
+        "Frontiers in endocrinology|?|?": 1
+      }
+    },
+    "c_efficacy_semaglutide_obesity": {
+      "id": "c_efficacy_semaglutide_obesity",
+      "text": "semaglutide reduces body weight in obesity",
+      "ontology_tags": [
+        "peptide:semaglutide",
+        "efficacy:obesity"
+      ],
+      "ell": 3.9965293045378485,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_trends_in_cardiovascular_medicine [reputable] (ev=pmid_34942372)"
+        },
+        {
+          "t": 0,
+          "ell": 1.4793293045378486,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": 3.4793293045378486,
+          "cause": "APPLY_EVIDENCE +strong from venue_journal_of_the_asean_federation_of_endocrine_soc [reputable] (ev=pmid_36578889)"
+        },
+        {
+          "t": 1,
+          "ell": 3.7193293045378484,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": 3.8993293045378485,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 3.9317293045378485,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 3.9641293045378485,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 3.9965293045378485,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {
+        "Trends in cardiovascular medicine|?|?": 1,
+        "Journal of the ASEAN Federation of Endocrine Societies|?|?": 1
+      }
+    },
+    "c_efficacy_semaglutide_type_2_diabetes": {
+      "id": "c_efficacy_semaglutide_type_2_diabetes",
+      "text": "semaglutide improves glycemic control in type 2 diabetes",
+      "ontology_tags": [
+        "peptide:semaglutide",
+        "efficacy:type_2_diabetes"
+      ],
+      "ell": 1.9965293045378487,
+      "r": 1,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": -0.02067069546215125,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": 0.21932930453784874,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": 1.7193293045378488,
+          "cause": "APPLY_EVIDENCE +moderate from venue_frontiers_in_endocrinology [reputable] (ev=pmid_31031702)"
+        },
+        {
+          "t": 2,
+          "ell": 1.8993293045378488,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 1.9317293045378487,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 1.9641293045378487,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 1.9965293045378487,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {
+        "Frontiers in endocrinology|?|?": 1
+      }
+    },
+    "c_efficacy_semaglutide_cardiovascular": {
+      "id": "c_efficacy_semaglutide_cardiovascular",
+      "text": "semaglutide reduces major cardiovascular events",
+      "ontology_tags": [
+        "peptide:semaglutide",
+        "efficacy:cardiovascular"
+      ],
+      "ell": 0.4965293045378487,
+      "r": 0,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": -0.02067069546215125,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": 0.21932930453784874,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": 0.39932930453784876,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 0.43172930453784875,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 0.46412930453784873,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 0.4965293045378487,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {}
+    },
+    "c_serum_stability_semaglutide_long_half_life": {
+      "id": "c_serum_stability_semaglutide_long_half_life",
+      "text": "semaglutide has a ~1-week half-life enabling once-weekly dosing",
+      "ontology_tags": [
+        "peptide:semaglutide",
+        "serum_stability:long_half_life"
+      ],
+      "ell": 5.496529304537849,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": -0.02067069546215125,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": 0.21932930453784874,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": 0.39932930453784876,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 0.43172930453784875,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 0.46412930453784873,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 0.4965293045378487,
+          "cause": "propagate via depends_on from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 37,
+          "ell": 2.496529304537849,
+          "cause": "APPLY_EVIDENCE +strong from venue_the_new_england_journal_of_medicine [top_journal] (ev=pmid_40544432)"
+        },
+        {
+          "t": 57,
+          "ell": 3.996529304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_oxidative_medicine_and_cellular_longevity [top_journal] (ev=pmid_29085556)"
+        },
+        {
+          "t": 79,
+          "ell": 5.496529304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_medicina_clinica [reputable] (ev=pmid_34238582)"
+        }
+      ],
+      "correlation_seen": {
+        "The New England journal of medicine|?|?": 1,
+        "Oxidative medicine and cellular longevity|?|?": 1,
+        "Medicina clinica|?|?": 1
+      }
+    },
+    "c_bind_tirzepatide_GLP1R/GIPR": {
+      "id": "c_bind_tirzepatide_GLP1R/GIPR",
+      "text": "tirzepatide binds GLP1R/GIPR",
+      "ontology_tags": [
+        "peptide:tirzepatide",
+        "target:GLP1R/GIPR",
+        "binding_affinity:Kd"
+      ],
+      "ell": 5.2993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 7,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_jama_internal_medicine [top_journal] (ev=pmid_38976257)"
+        },
+        {
+          "t": 8,
+          "ell": 3.7993293045378485,
+          "cause": "APPLY_EVIDENCE +strong from venue_lancet__london__england [top_journal] (ev=pmid_34186022)"
+        },
+        {
+          "t": 13,
+          "ell": 5.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_jama [top_journal] (ev=pmid_40886075)"
+        }
+      ],
+      "correlation_seen": {
+        "JAMA internal medicine|?|?": 1,
+        "Lancet (London, England)|?|?": 1,
+        "JAMA|?|?": 1
+      }
+    },
+    "c_efficacy_tirzepatide_obesity": {
+      "id": "c_efficacy_tirzepatide_obesity",
+      "text": "tirzepatide produces substantial weight loss in obesity",
+      "ontology_tags": [
+        "peptide:tirzepatide",
+        "efficacy:obesity"
+      ],
+      "ell": 2.8343293045378486,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 7,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_jama_internal_medicine [top_journal] (ev=pmid_38976257)"
+        },
+        {
+          "t": 7,
+          "ell": 2.0393293045378487,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 8,
+          "ell": 2.2793293045378484,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 13,
+          "ell": 2.4593293045378486,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 44,
+          "ell": 2.8343293045378486,
+          "cause": "APPLY_EVIDENCE +moderate from venue_jama_internal_medicine [top_journal] (ev=pmid_38466272)"
+        }
+      ],
+      "correlation_seen": {
+        "JAMA internal medicine|?|?": 2
+      }
+    },
+    "c_efficacy_tirzepatide_type_2_diabetes": {
+      "id": "c_efficacy_tirzepatide_type_2_diabetes",
+      "text": "tirzepatide improves glycemic control in type 2 diabetes",
+      "ontology_tags": [
+        "peptide:tirzepatide",
+        "efficacy:type_2_diabetes"
+      ],
+      "ell": 3.9593293045378486,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 7,
+          "ell": 0.03932930453784875,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 8,
+          "ell": 2.0393293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_lancet__london__england [top_journal] (ev=pmid_34186022)"
+        },
+        {
+          "t": 8,
+          "ell": 2.2793293045378484,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 13,
+          "ell": 3.7793293045378484,
+          "cause": "APPLY_EVIDENCE +moderate from venue_jama [top_journal] (ev=pmid_40886075)"
+        },
+        {
+          "t": 13,
+          "ell": 3.9593293045378486,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        }
+      ],
+      "correlation_seen": {
+        "Lancet (London, England)|?|?": 1,
+        "JAMA|?|?": 1
+      }
+    },
+    "c_selectivity_tirzepatide_dual_agonist": {
+      "id": "c_selectivity_tirzepatide_dual_agonist",
+      "text": "tirzepatide co-activates the GLP-1 and GIP receptors",
+      "ontology_tags": [
+        "peptide:tirzepatide",
+        "selectivity:dual_agonist"
+      ],
+      "ell": 4.959329304537849,
+      "r": 3,
+      "s": 0,
+      "status": "quarantined",
+      "trajectory": [
+        {
+          "t": 7,
+          "ell": 0.03932930453784875,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 8,
+          "ell": 0.2793293045378487,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 13,
+          "ell": 0.4593293045378487,
+          "cause": "propagate via depends_on from c_bind_tirzepatide_GLP1R/GIPR"
+        },
+        {
+          "t": 32,
+          "ell": 1.9593293045378486,
+          "cause": "APPLY_EVIDENCE +moderate from venue_journal_of_labelled_compounds___radiopharmaceuti [reputable] (ev=pmid_31070270)"
+        },
+        {
+          "t": 65,
+          "ell": 3.4593293045378486,
+          "cause": "APPLY_EVIDENCE +moderate from venue_biochemical_pharmacology [reputable] (ev=pmid_34224692)"
+        },
+        {
+          "t": 66,
+          "ell": 4.959329304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_nature_communications [top_journal] (ev=pmid_37258510)"
+        }
+      ],
+      "correlation_seen": {
+        "Journal of labelled compounds & radiopharmaceuticals|?|?": 1,
+        "Biochemical pharmacology|?|?": 1,
+        "Nature communications|?|?": 1
+      }
+    },
+    "c_bind_retatrutide_GLP1R/GIPR/GCGR": {
+      "id": "c_bind_retatrutide_GLP1R/GIPR/GCGR",
+      "text": "retatrutide binds GLP1R/GIPR/GCGR",
+      "ontology_tags": [
+        "peptide:retatrutide",
+        "target:GLP1R/GIPR/GCGR",
+        "binding_affinity:Kd"
+      ],
+      "ell": 5.2993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 15,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_the_new_england_journal_of_medicine [top_journal] (ev=pmid_37366315)"
+        },
+        {
+          "t": 16,
+          "ell": 3.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_diabetes_care [reputable] (ev=pmid_38843460)"
+        },
+        {
+          "t": 21,
+          "ell": 5.2993293045378485,
+          "cause": "APPLY_EVIDENCE +strong from venue_lancet__london__england [top_journal] (ev=pmid_37385280)"
+        }
+      ],
+      "correlation_seen": {
+        "The New England journal of medicine|?|?": 1,
+        "Diabetes care|?|?": 1,
+        "Lancet (London, England)|?|?": 1
+      }
+    },
+    "c_efficacy_retatrutide_obesity": {
+      "id": "c_efficacy_retatrutide_obesity",
+      "text": "retatrutide produces large weight loss in obesity",
+      "ontology_tags": [
+        "peptide:retatrutide",
+        "efficacy:obesity"
+      ],
+      "ell": 0.4593293045378487,
+      "r": 0,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 15,
+          "ell": 0.03932930453784875,
+          "cause": "propagate via depends_on from c_bind_retatrutide_GLP1R/GIPR/GCGR"
+        },
+        {
+          "t": 16,
+          "ell": 0.2193293045378487,
+          "cause": "propagate via depends_on from c_bind_retatrutide_GLP1R/GIPR/GCGR"
+        },
+        {
+          "t": 21,
+          "ell": 0.4593293045378487,
+          "cause": "propagate via depends_on from c_bind_retatrutide_GLP1R/GIPR/GCGR"
+        }
+      ],
+      "correlation_seen": {}
+    },
+    "c_selectivity_retatrutide_triple_agonist": {
+      "id": "c_selectivity_retatrutide_triple_agonist",
+      "text": "retatrutide is a GLP-1 / GIP / glucagon receptor triple agonist",
+      "ontology_tags": [
+        "peptide:retatrutide",
+        "selectivity:triple_agonist"
+      ],
+      "ell": 7.9593293045378495,
+      "r": 5,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 15,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_the_new_england_journal_of_medicine [top_journal] (ev=pmid_37366315)"
+        },
+        {
+          "t": 15,
+          "ell": 2.0393293045378487,
+          "cause": "propagate via depends_on from c_bind_retatrutide_GLP1R/GIPR/GCGR"
+        },
+        {
+          "t": 16,
+          "ell": 3.5393293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_diabetes_care [reputable] (ev=pmid_38843460)"
+        },
+        {
+          "t": 16,
+          "ell": 3.719329304537849,
+          "cause": "propagate via depends_on from c_bind_retatrutide_GLP1R/GIPR/GCGR"
+        },
+        {
+          "t": 21,
+          "ell": 5.719329304537849,
+          "cause": "APPLY_EVIDENCE +strong from venue_lancet__london__england [top_journal] (ev=pmid_37385280)"
+        },
+        {
+          "t": 21,
+          "ell": 5.9593293045378495,
+          "cause": "propagate via depends_on from c_bind_retatrutide_GLP1R/GIPR/GCGR"
+        },
+        {
+          "t": 30,
+          "ell": 6.4593293045378495,
+          "cause": "APPLY_EVIDENCE +weak from venue_neurology_and_therapy [reputable] (ev=pmid_40172827)"
+        },
+        {
+          "t": 31,
+          "ell": 7.9593293045378495,
+          "cause": "APPLY_EVIDENCE +moderate from venue_brain_circulation [reputable] (ev=pmid_34084977)"
+        }
+      ],
+      "correlation_seen": {
+        "The New England journal of medicine|?|?": 1,
+        "Diabetes care|?|?": 1,
+        "Lancet (London, England)|?|?": 1,
+        "Neurology and therapy|?|?": 1,
+        "Brain circulation|?|?": 1
+      }
+    },
+    "c_bind_liraglutide_GLP1R": {
+      "id": "c_bind_liraglutide_GLP1R",
+      "text": "liraglutide binds GLP1R",
+      "ontology_tags": [
+        "peptide:liraglutide",
+        "target:GLP1R",
+        "binding_affinity:Kd"
+      ],
+      "ell": 5.4909293045378496,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": 0.06932930453784877,
+          "cause": "propagate via supports from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": 0.4293293045378488,
+          "cause": "propagate via supports from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": 0.6993293045378488,
+          "cause": "propagate via supports from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 2.199329304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_the_american_journal_of_emergency_medicine [reputable] (ev=pmid_38241775)"
+        },
+        {
+          "t": 23,
+          "ell": 2.247929304537849,
+          "cause": "propagate via supports from c_bind_exenatide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 2.2965293045378488,
+          "cause": "propagate via supports from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 3.7965293045378488,
+          "cause": "APPLY_EVIDENCE +moderate from venue_the_journal_of_clinical_investigation [reputable] (ev=pmid_25202980)"
+        },
+        {
+          "t": 24,
+          "ell": 3.8451293045378487,
+          "cause": "propagate via supports from c_bind_exenatide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 3.8937293045378487,
+          "cause": "propagate via supports from c_bind_semaglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 5.393729304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_advanced_science__weinheim__baden_wurttemberg__g [top_journal] (ev=pmid_39159301)"
+        },
+        {
+          "t": 25,
+          "ell": 5.442329304537849,
+          "cause": "propagate via supports from c_bind_exenatide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 5.4909293045378496,
+          "cause": "propagate via supports from c_bind_semaglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {
+        "The American journal of emergency medicine|?|?": 1,
+        "The Journal of clinical investigation|?|?": 1,
+        "Advanced science (Weinheim, Baden-Wurttemberg, Germany)|?|?": 1
+      }
+    },
+    "c_efficacy_liraglutide_obesity": {
+      "id": "c_efficacy_liraglutide_obesity",
+      "text": "liraglutide reduces body weight in obesity",
+      "ontology_tags": [
+        "peptide:liraglutide",
+        "efficacy:obesity"
+      ],
+      "ell": 0.44732930453784875,
+      "r": 0,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": -0.16827069546215123,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": -0.12507069546215124,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": -0.09267069546215125,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 0.08732930453784875,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 0.26732930453784876,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 0.44732930453784875,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {}
+    },
+    "c_efficacy_liraglutide_type_2_diabetes": {
+      "id": "c_efficacy_liraglutide_type_2_diabetes",
+      "text": "liraglutide improves glycemic control in type 2 diabetes",
+      "ontology_tags": [
+        "peptide:liraglutide",
+        "efficacy:type_2_diabetes"
+      ],
+      "ell": 4.947329304537849,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": -0.16827069546215123,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": -0.12507069546215124,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": -0.09267069546215125,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 1.4073293045378488,
+          "cause": "APPLY_EVIDENCE +moderate from venue_the_american_journal_of_emergency_medicine [reputable] (ev=pmid_38241775)"
+        },
+        {
+          "t": 23,
+          "ell": 1.5873293045378487,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 3.0873293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_the_journal_of_clinical_investigation [reputable] (ev=pmid_25202980)"
+        },
+        {
+          "t": 24,
+          "ell": 3.267329304537849,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 4.767329304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_advanced_science__weinheim__baden_wurttemberg__g [top_journal] (ev=pmid_39159301)"
+        },
+        {
+          "t": 25,
+          "ell": 4.947329304537849,
+          "cause": "propagate via depends_on from c_bind_liraglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {
+        "The American journal of emergency medicine|?|?": 1,
+        "The Journal of clinical investigation|?|?": 1,
+        "Advanced science (Weinheim, Baden-Wurttemberg, Germany)|?|?": 1
+      }
+    },
+    "c_bind_exenatide_GLP1R": {
+      "id": "c_bind_exenatide_GLP1R",
+      "text": "exenatide binds GLP1R",
+      "ontology_tags": [
+        "peptide:exenatide",
+        "target:GLP1R",
+        "binding_affinity:Kd"
+      ],
+      "ell": 0.7713293045378489,
+      "r": 0,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 0,
+          "ell": -0.15207069546215124,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 1,
+          "ell": -0.08727069546215124,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 2,
+          "ell": -0.03867069546215124,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 23,
+          "ell": 0.23132930453784878,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": 0.5013293045378489,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": 0.7713293045378489,
+          "cause": "propagate via supports from c_bind_liraglutide_GLP1R"
+        }
+      ],
+      "correlation_seen": {}
+    },
+    "c_efficacy_exenatide_type_2_diabetes": {
+      "id": "c_efficacy_exenatide_type_2_diabetes",
+      "text": "exenatide improves glycemic control in type 2 diabetes",
+      "ontology_tags": [
+        "peptide:exenatide",
+        "efficacy:type_2_diabetes"
+      ],
+      "ell": -0.10347069546215125,
+      "r": 0,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 23,
+          "ell": -0.16827069546215123,
+          "cause": "propagate via depends_on from c_bind_exenatide_GLP1R"
+        },
+        {
+          "t": 24,
+          "ell": -0.13587069546215125,
+          "cause": "propagate via depends_on from c_bind_exenatide_GLP1R"
+        },
+        {
+          "t": 25,
+          "ell": -0.10347069546215125,
+          "cause": "propagate via depends_on from c_bind_exenatide_GLP1R"
+        }
+      ],
+      "correlation_seen": {}
+    },
+    "c_bind_cagrilintide_amylin receptor": {
+      "id": "c_bind_cagrilintide_amylin receptor",
+      "text": "cagrilintide binds amylin receptor",
+      "ontology_tags": [
+        "peptide:cagrilintide",
+        "target:amylin receptor",
+        "binding_affinity:Kd"
+      ],
+      "ell": 3.7993293045378485,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 36,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_the_new_england_journal_of_medicine [top_journal] (ev=pmid_40544433)"
+        },
+        {
+          "t": 38,
+          "ell": 3.7993293045378485,
+          "cause": "APPLY_EVIDENCE +strong from venue_lancet__london__england [top_journal] (ev=pmid_34798060)"
+        }
+      ],
+      "correlation_seen": {
+        "The New England journal of medicine|?|?": 1,
+        "Lancet (London, England)|?|?": 1
+      }
+    },
+    "c_efficacy_cagrilintide_obesity": {
+      "id": "c_efficacy_cagrilintide_obesity",
+      "text": "cagrilintide reduces body weight in obesity",
+      "ontology_tags": [
+        "peptide:cagrilintide",
+        "efficacy:obesity"
+      ],
+      "ell": 4.279329304537849,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 36,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_the_new_england_journal_of_medicine [top_journal] (ev=pmid_40544433)"
+        },
+        {
+          "t": 36,
+          "ell": 2.0393293045378487,
+          "cause": "propagate via depends_on from c_bind_cagrilintide_amylin receptor"
+        },
+        {
+          "t": 38,
+          "ell": 4.039329304537849,
+          "cause": "APPLY_EVIDENCE +strong from venue_lancet__london__england [top_journal] (ev=pmid_34798060)"
+        },
+        {
+          "t": 38,
+          "ell": 4.279329304537849,
+          "cause": "propagate via depends_on from c_bind_cagrilintide_amylin receptor"
+        }
+      ],
+      "correlation_seen": {
+        "The New England journal of medicine|?|?": 1,
+        "Lancet (London, England)|?|?": 1
+      }
+    },
+    "c_bind_setmelanotide_MC4R": {
+      "id": "c_bind_setmelanotide_MC4R",
+      "text": "setmelanotide binds MC4R",
+      "ontology_tags": [
+        "peptide:setmelanotide",
+        "target:MC4R",
+        "binding_affinity:Kd"
+      ],
+      "ell": 3.436529304537849,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 45,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_the_lancet__diabetes___endocrinology [top_journal] (ev=pmid_39547253)"
+        },
+        {
+          "t": 45,
+          "ell": 1.3479293045378486,
+          "cause": "propagate via supports from c_bind_bremelanotide_MC4R"
+        },
+        {
+          "t": 47,
+          "ell": 2.847929304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_international_journal_of_molecular_sciences [top_journal] (ev=pmid_36768472)"
+        },
+        {
+          "t": 47,
+          "ell": 2.896529304537849,
+          "cause": "propagate via supports from c_bind_bremelanotide_MC4R"
+        },
+        {
+          "t": 51,
+          "ell": 3.166529304537849,
+          "cause": "propagate via supports from c_bind_bremelanotide_MC4R"
+        },
+        {
+          "t": 54,
+          "ell": 3.436529304537849,
+          "cause": "propagate via supports from c_bind_bremelanotide_MC4R"
+        }
+      ],
+      "correlation_seen": {
+        "The lancet. Diabetes & endocrinology|?|?": 1,
+        "International journal of molecular sciences|?|?": 1
+      }
+    },
+    "c_efficacy_setmelanotide_obesity": {
+      "id": "c_efficacy_setmelanotide_obesity",
+      "text": "setmelanotide reduces weight in MC4R-pathway genetic obesity",
+      "ontology_tags": [
+        "peptide:setmelanotide",
+        "efficacy:obesity"
+      ],
+      "ell": 3.2241293045378487,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 45,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_the_lancet__diabetes___endocrinology [top_journal] (ev=pmid_39547253)"
+        },
+        {
+          "t": 45,
+          "ell": 1.4793293045378486,
+          "cause": "propagate via depends_on from c_bind_setmelanotide_MC4R"
+        },
+        {
+          "t": 47,
+          "ell": 2.9793293045378486,
+          "cause": "APPLY_EVIDENCE +moderate from venue_international_journal_of_molecular_sciences [top_journal] (ev=pmid_36768472)"
+        },
+        {
+          "t": 47,
+          "ell": 3.1593293045378488,
+          "cause": "propagate via depends_on from c_bind_setmelanotide_MC4R"
+        },
+        {
+          "t": 51,
+          "ell": 3.1917293045378488,
+          "cause": "propagate via depends_on from c_bind_setmelanotide_MC4R"
+        },
+        {
+          "t": 54,
+          "ell": 3.2241293045378487,
+          "cause": "propagate via depends_on from c_bind_setmelanotide_MC4R"
+        }
+      ],
+      "correlation_seen": {
+        "The lancet. Diabetes & endocrinology|?|?": 1,
+        "International journal of molecular sciences|?|?": 1
+      }
+    },
+    "c_bind_bremelanotide_MC4R": {
+      "id": "c_bind_bremelanotide_MC4R",
+      "text": "bremelanotide binds MC4R",
+      "ontology_tags": [
+        "peptide:bremelanotide",
+        "target:MC4R",
+        "binding_affinity:Kd"
+      ],
+      "ell": 3.436529304537849,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 45,
+          "ell": 0.06932930453784877,
+          "cause": "propagate via supports from c_bind_setmelanotide_MC4R"
+        },
+        {
+          "t": 47,
+          "ell": 0.3393293045378488,
+          "cause": "propagate via supports from c_bind_setmelanotide_MC4R"
+        },
+        {
+          "t": 51,
+          "ell": 1.839329304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_journal_of_midwifery___women_s_health [reputable] (ev=pmid_34510696)"
+        },
+        {
+          "t": 51,
+          "ell": 1.887929304537849,
+          "cause": "propagate via supports from c_bind_setmelanotide_MC4R"
+        },
+        {
+          "t": 54,
+          "ell": 3.387929304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_nature_reviews__endocrinology [top_journal] (ev=pmid_37365323)"
+        },
+        {
+          "t": 54,
+          "ell": 3.436529304537849,
+          "cause": "propagate via supports from c_bind_setmelanotide_MC4R"
+        }
+      ],
+      "correlation_seen": {
+        "Journal of midwifery & women's health|?|?": 1,
+        "Nature reviews. Endocrinology|?|?": 1
+      }
+    },
+    "c_efficacy_bremelanotide_sexual_dysfunction": {
+      "id": "c_efficacy_bremelanotide_sexual_dysfunction",
+      "text": "bremelanotide improves hypoactive sexual desire",
+      "ontology_tags": [
+        "peptide:bremelanotide",
+        "efficacy:sexual_dysfunction"
+      ],
+      "ell": 3.224129304537849,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 45,
+          "ell": -0.16827069546215123,
+          "cause": "propagate via depends_on from c_bind_bremelanotide_MC4R"
+        },
+        {
+          "t": 47,
+          "ell": -0.13587069546215125,
+          "cause": "propagate via depends_on from c_bind_bremelanotide_MC4R"
+        },
+        {
+          "t": 51,
+          "ell": 1.3641293045378489,
+          "cause": "APPLY_EVIDENCE +moderate from venue_journal_of_midwifery___women_s_health [reputable] (ev=pmid_34510696)"
+        },
+        {
+          "t": 51,
+          "ell": 1.5441293045378488,
+          "cause": "propagate via depends_on from c_bind_bremelanotide_MC4R"
+        },
+        {
+          "t": 54,
+          "ell": 3.044129304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_nature_reviews__endocrinology [top_journal] (ev=pmid_37365323)"
+        },
+        {
+          "t": 54,
+          "ell": 3.224129304537849,
+          "cause": "propagate via depends_on from c_bind_bremelanotide_MC4R"
+        }
+      ],
+      "correlation_seen": {
+        "Journal of midwifery & women's health|?|?": 1,
+        "Nature reviews. Endocrinology|?|?": 1
+      }
+    },
+    "c_bind_melanotan-II_MC1R/MC4R": {
+      "id": "c_bind_melanotan-II_MC1R/MC4R",
+      "text": "melanotan-II binds MC1R/MC4R",
+      "ontology_tags": [
+        "peptide:melanotan-II",
+        "target:MC1R/MC4R",
+        "binding_affinity:Kd"
+      ],
+      "ell": 2.7993293045378485,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 58,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_american_journal_of_clinical_dermatology [reputable] (ev=pmid_31119650)"
+        },
+        {
+          "t": 59,
+          "ell": 2.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_progress_in_nucleic_acid_research_and_molecular_ [reputable] (ev=pmid_11051769)"
+        }
+      ],
+      "correlation_seen": {
+        "American journal of clinical dermatology|?|?": 1,
+        "Progress in nucleic acid research and molecular biology|?|?": 1
+      }
+    },
+    "c_efficacy_melanotan-II_melanogenesis": {
+      "id": "c_efficacy_melanotan-II_melanogenesis",
+      "text": "melanotan-II stimulates melanogenesis and skin pigmentation",
+      "ontology_tags": [
+        "peptide:melanotan-II",
+        "efficacy:melanogenesis"
+      ],
+      "ell": 3.1593293045378488,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 58,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_american_journal_of_clinical_dermatology [reputable] (ev=pmid_31119650)"
+        },
+        {
+          "t": 58,
+          "ell": 1.4793293045378486,
+          "cause": "propagate via depends_on from c_bind_melanotan-II_MC1R/MC4R"
+        },
+        {
+          "t": 59,
+          "ell": 2.9793293045378486,
+          "cause": "APPLY_EVIDENCE +moderate from venue_progress_in_nucleic_acid_research_and_molecular_ [reputable] (ev=pmid_11051769)"
+        },
+        {
+          "t": 59,
+          "ell": 3.1593293045378488,
+          "cause": "propagate via depends_on from c_bind_melanotan-II_MC1R/MC4R"
+        }
+      ],
+      "correlation_seen": {
+        "American journal of clinical dermatology|?|?": 1,
+        "Progress in nucleic acid research and molecular biology|?|?": 1
+      }
+    },
+    "c_bind_teriparatide_PTH1R": {
+      "id": "c_bind_teriparatide_PTH1R",
+      "text": "teriparatide binds PTH1R",
+      "ontology_tags": [
+        "peptide:teriparatide",
+        "target:PTH1R",
+        "binding_affinity:Kd"
+      ],
+      "ell": 0.2993293045378488,
+      "r": 1,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 67,
+          "ell": 0.2993293045378488,
+          "cause": "APPLY_EVIDENCE +weak from venue_progress_in_molecular_biology_and_translational_ [top_journal] (ev=pmid_23764060)"
+        }
+      ],
+      "correlation_seen": {
+        "Progress in molecular biology and translational science|?|?": 1
+      }
+    },
+    "c_efficacy_teriparatide_osteoporosis": {
+      "id": "c_efficacy_teriparatide_osteoporosis",
+      "text": "teriparatide increases bone mineral density in osteoporosis",
+      "ontology_tags": [
+        "peptide:teriparatide",
+        "efficacy:osteoporosis"
+      ],
+      "ell": 0.3593293045378488,
+      "r": 1,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 67,
+          "ell": 0.2993293045378488,
+          "cause": "APPLY_EVIDENCE +weak from venue_progress_in_molecular_biology_and_translational_ [top_journal] (ev=pmid_23764060)"
+        },
+        {
+          "t": 67,
+          "ell": 0.3593293045378488,
+          "cause": "propagate via depends_on from c_bind_teriparatide_PTH1R"
+        }
+      ],
+      "correlation_seen": {
+        "Progress in molecular biology and translational science|?|?": 1
+      }
+    },
+    "c_bind_octreotide_SSTR2": {
+      "id": "c_bind_octreotide_SSTR2",
+      "text": "octreotide binds SSTR2",
+      "ontology_tags": [
+        "peptide:octreotide",
+        "target:SSTR2",
+        "binding_affinity:Kd"
+      ],
+      "ell": 2.7993293045378485,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 72,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_neonatal_network___nn [reputable] (ev=pmid_16989134)"
+        },
+        {
+          "t": 73,
+          "ell": 2.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_journal_of_drug_targeting [reputable] (ev=pmid_37211679)"
+        }
+      ],
+      "correlation_seen": {
+        "Neonatal network : NN|?|?": 1,
+        "Journal of drug targeting|?|?": 1
+      }
+    },
+    "c_efficacy_octreotide_acromegaly": {
+      "id": "c_efficacy_octreotide_acromegaly",
+      "text": "octreotide suppresses growth hormone in acromegaly",
+      "ontology_tags": [
+        "peptide:octreotide",
+        "efficacy:acromegaly"
+      ],
+      "ell": 1.6593293045378488,
+      "r": 1,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 72,
+          "ell": -0.02067069546215125,
+          "cause": "propagate via depends_on from c_bind_octreotide_SSTR2"
+        },
+        {
+          "t": 73,
+          "ell": 1.4793293045378488,
+          "cause": "APPLY_EVIDENCE +moderate from venue_journal_of_drug_targeting [reputable] (ev=pmid_37211679)"
+        },
+        {
+          "t": 73,
+          "ell": 1.6593293045378488,
+          "cause": "propagate via depends_on from c_bind_octreotide_SSTR2"
+        }
+      ],
+      "correlation_seen": {
+        "Journal of drug targeting|?|?": 1
+      }
+    },
+    "c_efficacy_octreotide_neuroendocrine": {
+      "id": "c_efficacy_octreotide_neuroendocrine",
+      "text": "octreotide controls neuroendocrine tumor symptoms",
+      "ontology_tags": [
+        "peptide:octreotide",
+        "efficacy:neuroendocrine"
+      ],
+      "ell": 0.15932930453784871,
+      "r": 0,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 72,
+          "ell": -0.02067069546215125,
+          "cause": "propagate via depends_on from c_bind_octreotide_SSTR2"
+        },
+        {
+          "t": 73,
+          "ell": 0.15932930453784871,
+          "cause": "propagate via depends_on from c_bind_octreotide_SSTR2"
+        }
+      ],
+      "correlation_seen": {}
+    },
+    "c_bind_linaclotide_guanylate cyclase-C": {
+      "id": "c_bind_linaclotide_guanylate cyclase-C",
+      "text": "linaclotide binds guanylate cyclase-C",
+      "ontology_tags": [
+        "peptide:linaclotide",
+        "target:guanylate cyclase-C",
+        "binding_affinity:Kd"
+      ],
+      "ell": 3.2993293045378485,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 80,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_gastroenterology [reputable] (ev=pmid_37211380)"
+        },
+        {
+          "t": 82,
+          "ell": 3.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_nature_reviews__gastroenterology___hepatology [top_journal] (ev=pmid_27033126)"
+        }
+      ],
+      "correlation_seen": {
+        "Gastroenterology|?|?": 1,
+        "Nature reviews. Gastroenterology & hepatology|?|?": 1
+      }
+    },
+    "c_efficacy_linaclotide_constipation": {
+      "id": "c_efficacy_linaclotide_constipation",
+      "text": "linaclotide relieves constipation in IBS-C",
+      "ontology_tags": [
+        "peptide:linaclotide",
+        "efficacy:constipation"
+      ],
+      "ell": 3.719329304537849,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 80,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_gastroenterology [reputable] (ev=pmid_37211380)"
+        },
+        {
+          "t": 80,
+          "ell": 2.0393293045378487,
+          "cause": "propagate via depends_on from c_bind_linaclotide_guanylate cyclase-C"
+        },
+        {
+          "t": 82,
+          "ell": 3.5393293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_nature_reviews__gastroenterology___hepatology [top_journal] (ev=pmid_27033126)"
+        },
+        {
+          "t": 82,
+          "ell": 3.719329304537849,
+          "cause": "propagate via depends_on from c_bind_linaclotide_guanylate cyclase-C"
+        }
+      ],
+      "correlation_seen": {
+        "Gastroenterology|?|?": 1,
+        "Nature reviews. Gastroenterology & hepatology|?|?": 1
+      }
+    },
+    "c_bind_ziconotide_N-type calcium channel": {
+      "id": "c_bind_ziconotide_N-type calcium channel",
+      "text": "ziconotide binds N-type calcium channel",
+      "ontology_tags": [
+        "peptide:ziconotide",
+        "target:N-type calcium channel",
+        "binding_affinity:Kd"
+      ],
+      "ell": 4.7993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 87,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_deutsches_arzteblatt_international [reputable] (ev=pmid_39475707)"
+        },
+        {
+          "t": 88,
+          "ell": 3.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_journal_of_pain___palliative_care_pharmacotherap [reputable] (ev=pmid_24397285)"
+        },
+        {
+          "t": 89,
+          "ell": 4.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_pharmacological_reviews [reputable] (ev=pmid_26362469)"
+        }
+      ],
+      "correlation_seen": {
+        "Deutsches Arzteblatt international|?|?": 1,
+        "Journal of pain & palliative care pharmacotherapy|?|?": 1,
+        "Pharmacological reviews|?|?": 1
+      }
+    },
+    "c_efficacy_ziconotide_chronic_pain": {
+      "id": "c_efficacy_ziconotide_chronic_pain",
+      "text": "ziconotide relieves severe chronic pain",
+      "ontology_tags": [
+        "peptide:ziconotide",
+        "efficacy:chronic_pain"
+      ],
+      "ell": 5.399329304537849,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 87,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_deutsches_arzteblatt_international [reputable] (ev=pmid_39475707)"
+        },
+        {
+          "t": 87,
+          "ell": 2.0393293045378487,
+          "cause": "propagate via depends_on from c_bind_ziconotide_N-type calcium channel"
+        },
+        {
+          "t": 88,
+          "ell": 3.5393293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_journal_of_pain___palliative_care_pharmacotherap [reputable] (ev=pmid_24397285)"
+        },
+        {
+          "t": 88,
+          "ell": 3.719329304537849,
+          "cause": "propagate via depends_on from c_bind_ziconotide_N-type calcium channel"
+        },
+        {
+          "t": 89,
+          "ell": 5.219329304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_pharmacological_reviews [reputable] (ev=pmid_26362469)"
+        },
+        {
+          "t": 89,
+          "ell": 5.399329304537849,
+          "cause": "propagate via depends_on from c_bind_ziconotide_N-type calcium channel"
+        }
+      ],
+      "correlation_seen": {
+        "Deutsches Arzteblatt international|?|?": 1,
+        "Journal of pain & palliative care pharmacotherapy|?|?": 1,
+        "Pharmacological reviews|?|?": 1
+      }
+    },
+    "c_bind_icatibant_bradykinin B2 receptor": {
+      "id": "c_bind_icatibant_bradykinin B2 receptor",
+      "text": "icatibant binds bradykinin B2 receptor",
+      "ontology_tags": [
+        "peptide:icatibant",
+        "target:bradykinin B2 receptor",
+        "binding_affinity:Kd"
+      ],
+      "ell": 4.2993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 93,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_polskie_archiwum_medycyny_wewnetrznej [reputable] (ev=pmid_26842379)"
+        },
+        {
+          "t": 94,
+          "ell": 2.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_international_immunopharmacology [reputable] (ev=pmid_31835086)"
+        },
+        {
+          "t": 95,
+          "ell": 4.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_general_pharmacology [reputable] (ev=pmid_9112069)"
+        }
+      ],
+      "correlation_seen": {
+        "Polskie Archiwum Medycyny Wewnetrznej|?|?": 1,
+        "International immunopharmacology|?|?": 1,
+        "General pharmacology|?|?": 1
+      }
+    },
+    "c_efficacy_icatibant_angioedema": {
+      "id": "c_efficacy_icatibant_angioedema",
+      "text": "icatibant resolves hereditary angioedema attacks",
+      "ontology_tags": [
+        "peptide:icatibant",
+        "efficacy:angioedema"
+      ],
+      "ell": 3.339329304537849,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 93,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_polskie_archiwum_medycyny_wewnetrznej [reputable] (ev=pmid_26842379)"
+        },
+        {
+          "t": 93,
+          "ell": 1.4793293045378486,
+          "cause": "propagate via depends_on from c_bind_icatibant_bradykinin B2 receptor"
+        },
+        {
+          "t": 94,
+          "ell": 2.9793293045378486,
+          "cause": "APPLY_EVIDENCE +moderate from venue_international_immunopharmacology [reputable] (ev=pmid_31835086)"
+        },
+        {
+          "t": 94,
+          "ell": 3.1593293045378488,
+          "cause": "propagate via depends_on from c_bind_icatibant_bradykinin B2 receptor"
+        },
+        {
+          "t": 95,
+          "ell": 3.339329304537849,
+          "cause": "propagate via depends_on from c_bind_icatibant_bradykinin B2 receptor"
+        }
+      ],
+      "correlation_seen": {
+        "Polskie Archiwum Medycyny Wewnetrznej|?|?": 1,
+        "International immunopharmacology|?|?": 1
+      }
+    },
+    "c_bind_degarelix_GnRH receptor": {
+      "id": "c_bind_degarelix_GnRH receptor",
+      "text": "degarelix binds GnRH receptor",
+      "ontology_tags": [
+        "peptide:degarelix",
+        "target:GnRH receptor",
+        "binding_affinity:Kd"
+      ],
+      "ell": 1.3239341133017561,
+      "r": 1,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 101,
+          "ell": 1.3239341133017561,
+          "cause": "APPLY_EVIDENCE +strong from venue_bju_international [reputable] (ev=pmid_19035858)"
+        }
+      ],
+      "correlation_seen": {
+        "BJU international|?|?": 1
+      }
+    },
+    "c_efficacy_degarelix_prostate_cancer": {
+      "id": "c_efficacy_degarelix_prostate_cancer",
+      "text": "degarelix suppresses testosterone in prostate cancer",
+      "ontology_tags": [
+        "peptide:degarelix",
+        "efficacy:prostate_cancer"
+      ],
+      "ell": 1.506886690353425,
+      "r": 1,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 101,
+          "ell": 1.3239341133017561,
+          "cause": "APPLY_EVIDENCE +strong from venue_bju_international [reputable] (ev=pmid_19035858)"
+        },
+        {
+          "t": 101,
+          "ell": 1.506886690353425,
+          "cause": "propagate via depends_on from c_bind_degarelix_GnRH receptor"
+        }
+      ],
+      "correlation_seen": {
+        "BJU international|?|?": 1
+      }
+    },
+    "c_bind_enfuvirtide_gp41": {
+      "id": "c_bind_enfuvirtide_gp41",
+      "text": "enfuvirtide binds gp41",
+      "ontology_tags": [
+        "peptide:enfuvirtide",
+        "target:gp41",
+        "binding_affinity:Kd"
+      ],
+      "ell": 3.7993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 108,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_expert_opinion_on_investigational_drugs [reputable] (ev=pmid_12457443)"
+        },
+        {
+          "t": 109,
+          "ell": 2.2993293045378485,
+          "cause": "APPLY_EVIDENCE +weak from venue_drugs_of_today__barcelona__spain___1998 [reputable] (ev=pmid_15148534)"
+        },
+        {
+          "t": 111,
+          "ell": 3.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_lancet__london__england [top_journal] (ev=pmid_17617275)"
+        }
+      ],
+      "correlation_seen": {
+        "Expert opinion on investigational drugs|?|?": 1,
+        "Drugs of today (Barcelona, Spain : 1998)|?|?": 1,
+        "Lancet (London, England)|?|?": 1
+      }
+    },
+    "c_efficacy_enfuvirtide_hiv": {
+      "id": "c_efficacy_enfuvirtide_hiv",
+      "text": "enfuvirtide inhibits HIV-1 fusion and entry",
+      "ontology_tags": [
+        "peptide:enfuvirtide",
+        "efficacy:hiv"
+      ],
+      "ell": 4.279329304537848,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 108,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_expert_opinion_on_investigational_drugs [reputable] (ev=pmid_12457443)"
+        },
+        {
+          "t": 108,
+          "ell": 2.0393293045378487,
+          "cause": "propagate via depends_on from c_bind_enfuvirtide_gp41"
+        },
+        {
+          "t": 109,
+          "ell": 2.5393293045378487,
+          "cause": "APPLY_EVIDENCE +weak from venue_drugs_of_today__barcelona__spain___1998 [reputable] (ev=pmid_15148534)"
+        },
+        {
+          "t": 109,
+          "ell": 2.5993293045378487,
+          "cause": "propagate via depends_on from c_bind_enfuvirtide_gp41"
+        },
+        {
+          "t": 111,
+          "ell": 4.099329304537848,
+          "cause": "APPLY_EVIDENCE +moderate from venue_lancet__london__england [top_journal] (ev=pmid_17617275)"
+        },
+        {
+          "t": 111,
+          "ell": 4.279329304537848,
+          "cause": "propagate via depends_on from c_bind_enfuvirtide_gp41"
+        }
+      ],
+      "correlation_seen": {
+        "Expert opinion on investigational drugs|?|?": 1,
+        "Drugs of today (Barcelona, Spain : 1998)|?|?": 1,
+        "Lancet (London, England)|?|?": 1
+      }
+    },
+    "c_bind_elamipretide_cardiolipin": {
+      "id": "c_bind_elamipretide_cardiolipin",
+      "text": "elamipretide binds cardiolipin",
+      "ontology_tags": [
+        "peptide:elamipretide",
+        "target:cardiolipin",
+        "binding_affinity:Kd"
+      ],
+      "ell": 3.1743293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 114,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_cells [top_journal] (ev=pmid_34572131)"
+        },
+        {
+          "t": 117,
+          "ell": 2.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_international_journal_of_molecular_sciences [top_journal] (ev=pmid_39940712)"
+        },
+        {
+          "t": 118,
+          "ell": 3.1743293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_cells [top_journal] (ev=pmid_40497970)"
+        }
+      ],
+      "correlation_seen": {
+        "Cells|?|?": 2,
+        "International journal of molecular sciences|?|?": 1
+      }
+    },
+    "c_efficacy_elamipretide_mitochondrial": {
+      "id": "c_efficacy_elamipretide_mitochondrial",
+      "text": "elamipretide is studied for mitochondrial dysfunction",
+      "ontology_tags": [
+        "peptide:elamipretide",
+        "efficacy:mitochondrial"
+      ],
+      "ell": 5.579329304537849,
+      "r": 4,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 52,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +strong from venue_current_opinion_in_investigational_drugs__london [reputable] (ev=pmid_15134289)"
+        },
+        {
+          "t": 114,
+          "ell": 3.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_cells [top_journal] (ev=pmid_34572131)"
+        },
+        {
+          "t": 114,
+          "ell": 3.4793293045378486,
+          "cause": "propagate via depends_on from c_bind_elamipretide_cardiolipin"
+        },
+        {
+          "t": 117,
+          "ell": 4.979329304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_international_journal_of_molecular_sciences [top_journal] (ev=pmid_39940712)"
+        },
+        {
+          "t": 117,
+          "ell": 5.159329304537849,
+          "cause": "propagate via depends_on from c_bind_elamipretide_cardiolipin"
+        },
+        {
+          "t": 118,
+          "ell": 5.534329304537849,
+          "cause": "APPLY_EVIDENCE +moderate from venue_cells [top_journal] (ev=pmid_40497970)"
+        },
+        {
+          "t": 118,
+          "ell": 5.579329304537849,
+          "cause": "propagate via depends_on from c_bind_elamipretide_cardiolipin"
+        }
+      ],
+      "correlation_seen": {
+        "Current opinion in investigational drugs (London, England : 2000)|?|?": 1,
+        "Cells|?|?": 2,
+        "International journal of molecular sciences|?|?": 1
+      }
+    },
+    "c_efficacy_bpc-157_tissue_repair": {
+      "id": "c_efficacy_bpc-157_tissue_repair",
+      "text": "BPC-157 promotes tendon and tissue healing (preclinical)",
+      "ontology_tags": [
+        "peptide:bpc-157",
+        "efficacy:tissue_repair"
+      ],
+      "ell": 4.7993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 122,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_cell_and_tissue_research [top_journal] (ev=pmid_30915550)"
+        },
+        {
+          "t": 123,
+          "ell": 2.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_pharmaceuticals__basel__switzerland [reputable] (ev=pmid_40005999)"
+        },
+        {
+          "t": 124,
+          "ell": 4.7993293045378485,
+          "cause": "APPLY_EVIDENCE +strong from venue_hss_journal___the_musculoskeletal_journal_of_hos [reputable] (ev=pmid_40756949)"
+        }
+      ],
+      "correlation_seen": {
+        "Cell and tissue research|?|?": 1,
+        "Pharmaceuticals (Basel, Switzerland)|?|?": 1,
+        "HSS journal : the musculoskeletal journal of Hospital for Special Surgery|?|?": 1
+      }
+    },
+    "c_bind_thymosin-beta-4_actin": {
+      "id": "c_bind_thymosin-beta-4_actin",
+      "text": "thymosin-beta-4 binds actin",
+      "ontology_tags": [
+        "peptide:thymosin-beta-4",
+        "target:actin",
+        "binding_affinity:Kd"
+      ],
+      "ell": 3.1743293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 130,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_annals_of_the_new_york_academy_of_sciences [top_journal] (ev=pmid_17468232)"
+        },
+        {
+          "t": 133,
+          "ell": 2.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_stem_cell_reports [top_journal] (ev=pmid_40816274)"
+        },
+        {
+          "t": 134,
+          "ell": 3.1743293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_annals_of_the_new_york_academy_of_sciences [top_journal] (ev=pmid_17495248)"
+        }
+      ],
+      "correlation_seen": {
+        "Annals of the New York Academy of Sciences|?|?": 2,
+        "Stem cell reports|?|?": 1
+      }
+    },
+    "c_efficacy_thymosin-beta-4_tissue_repair": {
+      "id": "c_efficacy_thymosin-beta-4_tissue_repair",
+      "text": "thymosin beta-4 promotes tissue repair and angiogenesis",
+      "ontology_tags": [
+        "peptide:thymosin-beta-4",
+        "efficacy:tissue_repair"
+      ],
+      "ell": 3.2043293045378487,
+      "r": 2,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 130,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_annals_of_the_new_york_academy_of_sciences [top_journal] (ev=pmid_17468232)"
+        },
+        {
+          "t": 130,
+          "ell": 1.4793293045378486,
+          "cause": "propagate via depends_on from c_bind_thymosin-beta-4_actin"
+        },
+        {
+          "t": 133,
+          "ell": 2.9793293045378486,
+          "cause": "APPLY_EVIDENCE +moderate from venue_stem_cell_reports [top_journal] (ev=pmid_40816274)"
+        },
+        {
+          "t": 133,
+          "ell": 3.1593293045378488,
+          "cause": "propagate via depends_on from c_bind_thymosin-beta-4_actin"
+        },
+        {
+          "t": 134,
+          "ell": 3.2043293045378487,
+          "cause": "propagate via depends_on from c_bind_thymosin-beta-4_actin"
+        }
+      ],
+      "correlation_seen": {
+        "Annals of the New York Academy of Sciences|?|?": 1,
+        "Stem cell reports|?|?": 1
+      }
+    },
+    "c_efficacy_ghk-cu_skin": {
+      "id": "c_efficacy_ghk-cu_skin",
+      "text": "GHK-Cu improves skin quality and wound healing",
+      "ontology_tags": [
+        "peptide:ghk-cu",
+        "efficacy:skin"
+      ],
+      "ell": 3.2993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 136,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_international_journal_of_molecular_sciences [top_journal] (ev=pmid_29986520)"
+        },
+        {
+          "t": 137,
+          "ell": 1.7993293045378487,
+          "cause": "APPLY_EVIDENCE +weak from venue_aging_pathobiology_and_therapeutics [reputable] (ev=pmid_35083444)"
+        },
+        {
+          "t": 138,
+          "ell": 3.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_bioimpacts___bi [reputable] (ev=pmid_39963574)"
+        }
+      ],
+      "correlation_seen": {
+        "International journal of molecular sciences|?|?": 1,
+        "Aging pathobiology and therapeutics|?|?": 1,
+        "BioImpacts : BI|?|?": 1
+      }
+    },
+    "c_efficacy_ghk-cu_collagen": {
+      "id": "c_efficacy_ghk-cu_collagen",
+      "text": "GHK-Cu stimulates collagen and extracellular-matrix synthesis",
+      "ontology_tags": [
+        "peptide:ghk-cu",
+        "efficacy:collagen"
+      ],
+      "ell": -0.20067069546215124,
+      "r": 0,
+      "s": 0,
+      "status": "active",
+      "trajectory": [],
+      "correlation_seen": {}
+    },
+    "c_efficacy_selank_anxiolytic": {
+      "id": "c_efficacy_selank_anxiolytic",
+      "text": "Selank has anxiolytic effects (research)",
+      "ontology_tags": [
+        "peptide:selank",
+        "efficacy:anxiolytic"
+      ],
+      "ell": 4.2993293045378485,
+      "r": 3,
+      "s": 0,
+      "status": "active",
+      "trajectory": [
+        {
+          "t": 76,
+          "ell": 1.2993293045378487,
+          "cause": "APPLY_EVIDENCE +moderate from venue_research_in_pharmaceutical_sciences [top_journal] (ev=pmid_40933598)"
+        },
+        {
+          "t": 142,
+          "ell": 2.7993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_doklady_biological_sciences___proceedings_of_the [top_journal] (ev=pmid_32342318)"
+        },
+        {
+          "t": 144,
+          "ell": 4.2993293045378485,
+          "cause": "APPLY_EVIDENCE +moderate from venue_protein_and_peptide_letters [reputable] (ev=pmid_30255741)"
+        }
+      ],
+      "correlation_seen": {
+        "Research in pharmaceutical sciences|?|?": 1,
+        "Doklady biological sciences : proceedings of the Academy of Sciences of the USSR, Biological sciences sections|?|?": 1,
+        "Protein and peptide letters|?|?": 1
+      }
+    }
+  },
+  "sources": {
+    "venue_trends_in_cardiovascular_medicine": {
+      "id": "venue_trends_in_cardiovascular_medicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_the_asean_federation_of_endocrine_soc": {
+      "id": "venue_journal_of_the_asean_federation_of_endocrine_soc",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_frontiers_in_endocrinology": {
+      "id": "venue_frontiers_in_endocrinology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_investigative_medicine___the_official": {
+      "id": "venue_journal_of_investigative_medicine___the_official",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_drug_design__development_and_therapy": {
+      "id": "venue_drug_design__development_and_therapy",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_drugs": {
+      "id": "venue_drugs",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_drugs_in_dermatology___jdd": {
+      "id": "venue_journal_of_drugs_in_dermatology___jdd",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_jama_internal_medicine": {
+      "id": "venue_jama_internal_medicine",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_lancet__london__england": {
+      "id": "venue_lancet__london__england",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_the_senior_care_pharmacist": {
+      "id": "venue_the_senior_care_pharmacist",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_jci_insight": {
+      "id": "venue_jci_insight",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_diabetes_care": {
+      "id": "venue_diabetes_care",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_jama": {
+      "id": "venue_jama",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_obesity___metabolic_syndrome": {
+      "id": "venue_journal_of_obesity___metabolic_syndrome",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_the_new_england_journal_of_medicine": {
+      "id": "venue_the_new_england_journal_of_medicine",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_biomolecules": {
+      "id": "venue_biomolecules",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_pharmacological_reviews": {
+      "id": "venue_pharmacological_reviews",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_international_journal_of_obesity__2005": {
+      "id": "venue_international_journal_of_obesity__2005",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_diabetes__obesity___metabolism": {
+      "id": "venue_diabetes__obesity___metabolism",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_the_american_journal_of_emergency_medicine": {
+      "id": "venue_the_american_journal_of_emergency_medicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_the_journal_of_clinical_investigation": {
+      "id": "venue_the_journal_of_clinical_investigation",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_advanced_science__weinheim__baden_wurttemberg__g": {
+      "id": "venue_advanced_science__weinheim__baden_wurttemberg__g",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_american_journal_of_physiology__regulatory__inte": {
+      "id": "venue_american_journal_of_physiology__regulatory__inte",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_clinical_epidemiology": {
+      "id": "venue_clinical_epidemiology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_managed_care___specialty_pharmacy": {
+      "id": "venue_journal_of_managed_care___specialty_pharmacy",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_the_american_pharmacists_association_": {
+      "id": "venue_journal_of_the_american_pharmacists_association_",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_neurology_and_therapy": {
+      "id": "venue_neurology_and_therapy",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_brain_circulation": {
+      "id": "venue_brain_circulation",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_labelled_compounds___radiopharmaceuti": {
+      "id": "venue_journal_of_labelled_compounds___radiopharmaceuti",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_current_opinion_in_investigational_drugs__london": {
+      "id": "venue_current_opinion_in_investigational_drugs__london",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_nutrition__burbank__los_angeles_county__calif": {
+      "id": "venue_nutrition__burbank__los_angeles_county__calif",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_bmj__clinical_research_ed": {
+      "id": "venue_bmj__clinical_research_ed",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_medicina_clinica": {
+      "id": "venue_medicina_clinica",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_international_journal_of_molecular_sciences": {
+      "id": "venue_international_journal_of_molecular_sciences",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_cardiology_in_review": {
+      "id": "venue_cardiology_in_review",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_clinical_research_in_pediatric_endocr": {
+      "id": "venue_journal_of_clinical_research_in_pediatric_endocr",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_the_lancet__diabetes___endocrinology": {
+      "id": "venue_the_lancet__diabetes___endocrinology",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_clinical_pharmacology___advances_and_application": {
+      "id": "venue_clinical_pharmacology___advances_and_application",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_eclinicalmedicine": {
+      "id": "venue_eclinicalmedicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_midwifery___women_s_health": {
+      "id": "venue_journal_of_midwifery___women_s_health",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_nature_reviews__endocrinology": {
+      "id": "venue_nature_reviews__endocrinology",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_neurology_international": {
+      "id": "venue_neurology_international",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_women_s_health__2002": {
+      "id": "venue_journal_of_women_s_health__2002",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_oxidative_medicine_and_cellular_longevity": {
+      "id": "venue_oxidative_medicine_and_cellular_longevity",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_american_journal_of_clinical_dermatology": {
+      "id": "venue_american_journal_of_clinical_dermatology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_progress_in_nucleic_acid_research_and_molecular_": {
+      "id": "venue_progress_in_nucleic_acid_research_and_molecular_",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_chemistry__weinheim_an_der_bergstrasse__germany": {
+      "id": "venue_chemistry__weinheim_an_der_bergstrasse__germany",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_bmj_case_reports": {
+      "id": "venue_bmj_case_reports",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_neuropeptides": {
+      "id": "venue_neuropeptides",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_cen_case_reports": {
+      "id": "venue_cen_case_reports",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_dermatology__basel__switzerland": {
+      "id": "venue_dermatology__basel__switzerland",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_biochemical_pharmacology": {
+      "id": "venue_biochemical_pharmacology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_nature_communications": {
+      "id": "venue_nature_communications",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_progress_in_molecular_biology_and_translational_": {
+      "id": "venue_progress_in_molecular_biology_and_translational_",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_clinical_therapeutics": {
+      "id": "venue_clinical_therapeutics",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_biodrugs___clinical_immunotherapeutics__biopharm": {
+      "id": "venue_biodrugs___clinical_immunotherapeutics__biopharm",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_current_drug_safety": {
+      "id": "venue_current_drug_safety",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_neonatal_network___nn": {
+      "id": "venue_neonatal_network___nn",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_drug_targeting": {
+      "id": "venue_journal_of_drug_targeting",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_current_opinion_in_supportive_and_palliative_car": {
+      "id": "venue_current_opinion_in_supportive_and_palliative_car",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_pharmacotherapy": {
+      "id": "venue_pharmacotherapy",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_research_in_pharmaceutical_sciences": {
+      "id": "venue_research_in_pharmaceutical_sciences",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_gastroenterology_nursing___the_official_journal_": {
+      "id": "venue_gastroenterology_nursing___the_official_journal_",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_expert_review_of_neurotherapeutics": {
+      "id": "venue_expert_review_of_neurotherapeutics",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_gastroenterology": {
+      "id": "venue_gastroenterology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_internal_medicine__tokyo__japan": {
+      "id": "venue_internal_medicine__tokyo__japan",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_nature_reviews__gastroenterology___hepatology": {
+      "id": "venue_nature_reviews__gastroenterology___hepatology",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_gut": {
+      "id": "venue_gut",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_american_family_physician": {
+      "id": "venue_american_family_physician",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_polish_archives_of_internal_medicine": {
+      "id": "venue_polish_archives_of_internal_medicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_pediatric_gastroenterology_and_nutrit": {
+      "id": "venue_journal_of_pediatric_gastroenterology_and_nutrit",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_deutsches_arzteblatt_international": {
+      "id": "venue_deutsches_arzteblatt_international",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_pain___palliative_care_pharmacotherap": {
+      "id": "venue_journal_of_pain___palliative_care_pharmacotherap",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_cns_drugs": {
+      "id": "venue_cns_drugs",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_methods_in_molecular_biology__clifton__n_j": {
+      "id": "venue_methods_in_molecular_biology__clifton__n_j",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_polskie_archiwum_medycyny_wewnetrznej": {
+      "id": "venue_polskie_archiwum_medycyny_wewnetrznej",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_international_immunopharmacology": {
+      "id": "venue_international_immunopharmacology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_general_pharmacology": {
+      "id": "venue_general_pharmacology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_contributions_to_nephrology": {
+      "id": "venue_contributions_to_nephrology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_drugs_of_today__barcelona__spain___1998": {
+      "id": "venue_drugs_of_today__barcelona__spain___1998",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_immunology_and_allergy_clinics_of_north_america": {
+      "id": "venue_immunology_and_allergy_clinics_of_north_america",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_circulation": {
+      "id": "venue_circulation",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_bju_international": {
+      "id": "venue_bju_international",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_european_urology": {
+      "id": "venue_european_urology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_clinical_cancer_research___an_official_journal_o": {
+      "id": "venue_clinical_cancer_research___an_official_journal_o",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_expert_opinion_on_investigational_drugs": {
+      "id": "venue_expert_opinion_on_investigational_drugs",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_clinical_microbiology_and_infection___the_offici": {
+      "id": "venue_clinical_microbiology_and_infection___the_offici",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_project_inform_perspective": {
+      "id": "venue_project_inform_perspective",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_cells": {
+      "id": "venue_cells",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_neuroinflammation": {
+      "id": "venue_journal_of_neuroinflammation",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_expert_opinion_on_pharmacotherapy": {
+      "id": "venue_expert_opinion_on_pharmacotherapy",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_biomedicine___pharmacotherapy___biomedecine___ph": {
+      "id": "venue_biomedicine___pharmacotherapy___biomedecine___ph",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_sports_medicine__auckland__n_z": {
+      "id": "venue_sports_medicine__auckland__n_z",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_neurology": {
+      "id": "venue_neurology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_cell_and_tissue_research": {
+      "id": "venue_cell_and_tissue_research",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_pharmaceuticals__basel__switzerland": {
+      "id": "venue_pharmaceuticals__basel__switzerland",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_hss_journal___the_musculoskeletal_journal_of_hos": {
+      "id": "venue_hss_journal___the_musculoskeletal_journal_of_hos",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_frontiers_in_pharmacology": {
+      "id": "venue_frontiers_in_pharmacology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_alternative_therapies_in_health_and_medicine": {
+      "id": "venue_alternative_therapies_in_health_and_medicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_the_american_academy_of_orthopaedic_s": {
+      "id": "venue_journal_of_the_american_academy_of_orthopaedic_s",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_current_reviews_in_musculoskeletal_medicine": {
+      "id": "venue_current_reviews_in_musculoskeletal_medicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_arthroscopy___the_journal_of_arthroscopic___rela": {
+      "id": "venue_arthroscopy___the_journal_of_arthroscopic___rela",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_annals_of_the_new_york_academy_of_sciences": {
+      "id": "venue_annals_of_the_new_york_academy_of_sciences",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_signal_transduction_and_targeted_therapy": {
+      "id": "venue_signal_transduction_and_targeted_therapy",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_expert_opinion_on_biological_therapy": {
+      "id": "venue_expert_opinion_on_biological_therapy",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_stem_cell_reports": {
+      "id": "venue_stem_cell_reports",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_vitamins_and_hormones": {
+      "id": "venue_vitamins_and_hormones",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_aging_pathobiology_and_therapeutics": {
+      "id": "venue_aging_pathobiology_and_therapeutics",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_bioimpacts___bi": {
+      "id": "venue_bioimpacts___bi",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_biomed_research_international": {
+      "id": "venue_biomed_research_international",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_the_american_journal_of_sports_medicine": {
+      "id": "venue_the_american_journal_of_sports_medicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_journal_of_cachexia__sarcopenia_and_muscle": {
+      "id": "venue_journal_of_cachexia__sarcopenia_and_muscle",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_doklady_biological_sciences___proceedings_of_the": {
+      "id": "venue_doklady_biological_sciences___proceedings_of_the",
+      "tier": "top_journal",
+      "tau": 0.95,
+      "phi": 0.05,
+      "discredited": false,
+      "history": []
+    },
+    "venue_current_medicinal_chemistry": {
+      "id": "venue_current_medicinal_chemistry",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_protein_and_peptide_letters": {
+      "id": "venue_protein_and_peptide_letters",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_molecular_immunology": {
+      "id": "venue_molecular_immunology",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_bulletin_of_experimental_biology_and_medicine": {
+      "id": "venue_bulletin_of_experimental_biology_and_medicine",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_regulatory_peptides": {
+      "id": "venue_regulatory_peptides",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    },
+    "venue_current_reviews_in_clinical_and_experimental_pha": {
+      "id": "venue_current_reviews_in_clinical_and_experimental_pha",
+      "tier": "reputable",
+      "tau": 0.9,
+      "phi": 0.1,
+      "discredited": false,
+      "history": []
+    }
+  },
+  "edges": {
+    "edge:c_bind_semaglutide_GLP1R->c_efficacy_semaglutide_obesity:depends_on": {
+      "id": "edge:c_bind_semaglutide_GLP1R->c_efficacy_semaglutide_obesity:depends_on",
+      "src": "c_bind_semaglutide_GLP1R",
+      "dst": "c_efficacy_semaglutide_obesity",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_semaglutide_GLP1R->c_efficacy_semaglutide_type_2_diabetes:depends_on": {
+      "id": "edge:c_bind_semaglutide_GLP1R->c_efficacy_semaglutide_type_2_diabetes:depends_on",
+      "src": "c_bind_semaglutide_GLP1R",
+      "dst": "c_efficacy_semaglutide_type_2_diabetes",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_semaglutide_GLP1R->c_efficacy_semaglutide_cardiovascular:depends_on": {
+      "id": "edge:c_bind_semaglutide_GLP1R->c_efficacy_semaglutide_cardiovascular:depends_on",
+      "src": "c_bind_semaglutide_GLP1R",
+      "dst": "c_efficacy_semaglutide_cardiovascular",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_semaglutide_GLP1R->c_serum_stability_semaglutide_long_half_life:depends_on": {
+      "id": "edge:c_bind_semaglutide_GLP1R->c_serum_stability_semaglutide_long_half_life:depends_on",
+      "src": "c_bind_semaglutide_GLP1R",
+      "dst": "c_serum_stability_semaglutide_long_half_life",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_tirzepatide_GLP1R/GIPR->c_efficacy_tirzepatide_obesity:depends_on": {
+      "id": "edge:c_bind_tirzepatide_GLP1R/GIPR->c_efficacy_tirzepatide_obesity:depends_on",
+      "src": "c_bind_tirzepatide_GLP1R/GIPR",
+      "dst": "c_efficacy_tirzepatide_obesity",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_tirzepatide_GLP1R/GIPR->c_efficacy_tirzepatide_type_2_diabetes:depends_on": {
+      "id": "edge:c_bind_tirzepatide_GLP1R/GIPR->c_efficacy_tirzepatide_type_2_diabetes:depends_on",
+      "src": "c_bind_tirzepatide_GLP1R/GIPR",
+      "dst": "c_efficacy_tirzepatide_type_2_diabetes",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_tirzepatide_GLP1R/GIPR->c_selectivity_tirzepatide_dual_agonist:depends_on": {
+      "id": "edge:c_bind_tirzepatide_GLP1R/GIPR->c_selectivity_tirzepatide_dual_agonist:depends_on",
+      "src": "c_bind_tirzepatide_GLP1R/GIPR",
+      "dst": "c_selectivity_tirzepatide_dual_agonist",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_retatrutide_GLP1R/GIPR/GCGR->c_efficacy_retatrutide_obesity:depends_on": {
+      "id": "edge:c_bind_retatrutide_GLP1R/GIPR/GCGR->c_efficacy_retatrutide_obesity:depends_on",
+      "src": "c_bind_retatrutide_GLP1R/GIPR/GCGR",
+      "dst": "c_efficacy_retatrutide_obesity",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_retatrutide_GLP1R/GIPR/GCGR->c_selectivity_retatrutide_triple_agonist:depends_on": {
+      "id": "edge:c_bind_retatrutide_GLP1R/GIPR/GCGR->c_selectivity_retatrutide_triple_agonist:depends_on",
+      "src": "c_bind_retatrutide_GLP1R/GIPR/GCGR",
+      "dst": "c_selectivity_retatrutide_triple_agonist",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_liraglutide_GLP1R->c_efficacy_liraglutide_obesity:depends_on": {
+      "id": "edge:c_bind_liraglutide_GLP1R->c_efficacy_liraglutide_obesity:depends_on",
+      "src": "c_bind_liraglutide_GLP1R",
+      "dst": "c_efficacy_liraglutide_obesity",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_liraglutide_GLP1R->c_efficacy_liraglutide_type_2_diabetes:depends_on": {
+      "id": "edge:c_bind_liraglutide_GLP1R->c_efficacy_liraglutide_type_2_diabetes:depends_on",
+      "src": "c_bind_liraglutide_GLP1R",
+      "dst": "c_efficacy_liraglutide_type_2_diabetes",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_exenatide_GLP1R->c_efficacy_exenatide_type_2_diabetes:depends_on": {
+      "id": "edge:c_bind_exenatide_GLP1R->c_efficacy_exenatide_type_2_diabetes:depends_on",
+      "src": "c_bind_exenatide_GLP1R",
+      "dst": "c_efficacy_exenatide_type_2_diabetes",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_cagrilintide_amylin receptor->c_efficacy_cagrilintide_obesity:depends_on": {
+      "id": "edge:c_bind_cagrilintide_amylin receptor->c_efficacy_cagrilintide_obesity:depends_on",
+      "src": "c_bind_cagrilintide_amylin receptor",
+      "dst": "c_efficacy_cagrilintide_obesity",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_setmelanotide_MC4R->c_efficacy_setmelanotide_obesity:depends_on": {
+      "id": "edge:c_bind_setmelanotide_MC4R->c_efficacy_setmelanotide_obesity:depends_on",
+      "src": "c_bind_setmelanotide_MC4R",
+      "dst": "c_efficacy_setmelanotide_obesity",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_bremelanotide_MC4R->c_efficacy_bremelanotide_sexual_dysfunction:depends_on": {
+      "id": "edge:c_bind_bremelanotide_MC4R->c_efficacy_bremelanotide_sexual_dysfunction:depends_on",
+      "src": "c_bind_bremelanotide_MC4R",
+      "dst": "c_efficacy_bremelanotide_sexual_dysfunction",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_melanotan-II_MC1R/MC4R->c_efficacy_melanotan-II_melanogenesis:depends_on": {
+      "id": "edge:c_bind_melanotan-II_MC1R/MC4R->c_efficacy_melanotan-II_melanogenesis:depends_on",
+      "src": "c_bind_melanotan-II_MC1R/MC4R",
+      "dst": "c_efficacy_melanotan-II_melanogenesis",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_teriparatide_PTH1R->c_efficacy_teriparatide_osteoporosis:depends_on": {
+      "id": "edge:c_bind_teriparatide_PTH1R->c_efficacy_teriparatide_osteoporosis:depends_on",
+      "src": "c_bind_teriparatide_PTH1R",
+      "dst": "c_efficacy_teriparatide_osteoporosis",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_octreotide_SSTR2->c_efficacy_octreotide_acromegaly:depends_on": {
+      "id": "edge:c_bind_octreotide_SSTR2->c_efficacy_octreotide_acromegaly:depends_on",
+      "src": "c_bind_octreotide_SSTR2",
+      "dst": "c_efficacy_octreotide_acromegaly",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_octreotide_SSTR2->c_efficacy_octreotide_neuroendocrine:depends_on": {
+      "id": "edge:c_bind_octreotide_SSTR2->c_efficacy_octreotide_neuroendocrine:depends_on",
+      "src": "c_bind_octreotide_SSTR2",
+      "dst": "c_efficacy_octreotide_neuroendocrine",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_linaclotide_guanylate cyclase-C->c_efficacy_linaclotide_constipation:depends_on": {
+      "id": "edge:c_bind_linaclotide_guanylate cyclase-C->c_efficacy_linaclotide_constipation:depends_on",
+      "src": "c_bind_linaclotide_guanylate cyclase-C",
+      "dst": "c_efficacy_linaclotide_constipation",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_ziconotide_N-type calcium channel->c_efficacy_ziconotide_chronic_pain:depends_on": {
+      "id": "edge:c_bind_ziconotide_N-type calcium channel->c_efficacy_ziconotide_chronic_pain:depends_on",
+      "src": "c_bind_ziconotide_N-type calcium channel",
+      "dst": "c_efficacy_ziconotide_chronic_pain",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_icatibant_bradykinin B2 receptor->c_efficacy_icatibant_angioedema:depends_on": {
+      "id": "edge:c_bind_icatibant_bradykinin B2 receptor->c_efficacy_icatibant_angioedema:depends_on",
+      "src": "c_bind_icatibant_bradykinin B2 receptor",
+      "dst": "c_efficacy_icatibant_angioedema",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_degarelix_GnRH receptor->c_efficacy_degarelix_prostate_cancer:depends_on": {
+      "id": "edge:c_bind_degarelix_GnRH receptor->c_efficacy_degarelix_prostate_cancer:depends_on",
+      "src": "c_bind_degarelix_GnRH receptor",
+      "dst": "c_efficacy_degarelix_prostate_cancer",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_enfuvirtide_gp41->c_efficacy_enfuvirtide_hiv:depends_on": {
+      "id": "edge:c_bind_enfuvirtide_gp41->c_efficacy_enfuvirtide_hiv:depends_on",
+      "src": "c_bind_enfuvirtide_gp41",
+      "dst": "c_efficacy_enfuvirtide_hiv",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_elamipretide_cardiolipin->c_efficacy_elamipretide_mitochondrial:depends_on": {
+      "id": "edge:c_bind_elamipretide_cardiolipin->c_efficacy_elamipretide_mitochondrial:depends_on",
+      "src": "c_bind_elamipretide_cardiolipin",
+      "dst": "c_efficacy_elamipretide_mitochondrial",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_thymosin-beta-4_actin->c_efficacy_thymosin-beta-4_tissue_repair:depends_on": {
+      "id": "edge:c_bind_thymosin-beta-4_actin->c_efficacy_thymosin-beta-4_tissue_repair:depends_on",
+      "src": "c_bind_thymosin-beta-4_actin",
+      "dst": "c_efficacy_thymosin-beta-4_tissue_repair",
+      "type": "depends_on",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_exenatide_GLP1R->c_bind_liraglutide_GLP1R:supports": {
+      "id": "edge:c_bind_exenatide_GLP1R->c_bind_liraglutide_GLP1R:supports",
+      "src": "c_bind_exenatide_GLP1R",
+      "dst": "c_bind_liraglutide_GLP1R",
+      "type": "supports",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_liraglutide_GLP1R->c_bind_semaglutide_GLP1R:supports": {
+      "id": "edge:c_bind_liraglutide_GLP1R->c_bind_semaglutide_GLP1R:supports",
+      "src": "c_bind_liraglutide_GLP1R",
+      "dst": "c_bind_semaglutide_GLP1R",
+      "type": "supports",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    },
+    "edge:c_bind_bremelanotide_MC4R->c_bind_setmelanotide_MC4R:supports": {
+      "id": "edge:c_bind_bremelanotide_MC4R->c_bind_setmelanotide_MC4R:supports",
+      "src": "c_bind_bremelanotide_MC4R",
+      "dst": "c_bind_setmelanotide_MC4R",
+      "type": "supports",
+      "weight": 0.6,
+      "valid_at": 0,
+      "invalid_at": null
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# Render blueprint — one stateful web service running the Cortesol UI.
+# A container host (vs. serverless) is required: the app keeps an in-memory belief
+# KB, streams Server-Sent Events, and runs asyncio background loops.
+services:
+  - type: web
+    name: cortesol
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    branch: hackathon          # serve this branch; auto-deploys on push
+    plan: free                 # free tier is fine for a demo (cold-starts on idle)
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Open on a pre-established belief graph instead of an empty one, so visitors
+      # immediately see a populated, self-revising graph.
+      - key: CORTESOL_FOUNDATION
+        value: "1"
+      # OPTIONAL — set these in the Render dashboard to enable the live generative
+      # features (Research chat, live Report generation, Import-field drafting).
+      # Left unset, those degrade gracefully to deterministic/offline mode.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

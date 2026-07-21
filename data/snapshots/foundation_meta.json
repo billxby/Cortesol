@@ -1,0 +1,182 @@
+{
+  "per_peptide": 3,
+  "extractor": "paper",
+  "n_total": 149,
+  "n_foundation": 63,
+  "n_holdout": 86,
+  "n_claims": 48,
+  "n_claims_established": 47,
+  "n_events_committed": 63,
+  "foundation_pmids": [
+    "pmid_34942372",
+    "pmid_36578889",
+    "pmid_31031702",
+    "pmid_38976257",
+    "pmid_34186022",
+    "pmid_40886075",
+    "pmid_37366315",
+    "pmid_38843460",
+    "pmid_37385280",
+    "pmid_38241775",
+    "pmid_25202980",
+    "pmid_39159301",
+    "pmid_40172827",
+    "pmid_34084977",
+    "pmid_31070270",
+    "pmid_40544433",
+    "pmid_40544432",
+    "pmid_34798060",
+    "pmid_38466272",
+    "pmid_39547253",
+    "pmid_36768472",
+    "pmid_34510696",
+    "pmid_15134289",
+    "pmid_37365323",
+    "pmid_29085556",
+    "pmid_31119650",
+    "pmid_11051769",
+    "pmid_34224692",
+    "pmid_37258510",
+    "pmid_23764060",
+    "pmid_16989134",
+    "pmid_37211679",
+    "pmid_40933598",
+    "pmid_34238582",
+    "pmid_37211380",
+    "pmid_27033126",
+    "pmid_39475707",
+    "pmid_24397285",
+    "pmid_26362469",
+    "pmid_26842379",
+    "pmid_31835086",
+    "pmid_9112069",
+    "pmid_38583093",
+    "pmid_19035858",
+    "pmid_39355923",
+    "pmid_12457443",
+    "pmid_15148534",
+    "pmid_17617275",
+    "pmid_34572131",
+    "pmid_39940712",
+    "pmid_40497970",
+    "pmid_30915550",
+    "pmid_40005999",
+    "pmid_40756949",
+    "pmid_17468232",
+    "pmid_40816274",
+    "pmid_17495248",
+    "pmid_29986520",
+    "pmid_35083444",
+    "pmid_39963574",
+    "pmid_32342318",
+    "pmid_28745220",
+    "pmid_30255741"
+  ],
+  "top_established_claims": [
+    {
+      "claim": "c_selectivity_retatrutide_triple_agonist",
+      "text": "retatrutide is a GLP-1 / GIP / glucagon receptor triple agonist",
+      "c": 1.0,
+      "r": 5,
+      "s": 0
+    },
+    {
+      "claim": "c_bind_semaglutide_GLP1R",
+      "text": "semaglutide binds GLP1R",
+      "c": 0.997,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_efficacy_elamipretide_mitochondrial",
+      "text": "elamipretide is studied for mitochondrial dysfunction",
+      "c": 0.996,
+      "r": 4,
+      "s": 0
+    },
+    {
+      "claim": "c_serum_stability_semaglutide_long_half_life",
+      "text": "semaglutide has a ~1-week half-life enabling once-weekly dosing",
+      "c": 0.996,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_bind_liraglutide_GLP1R",
+      "text": "liraglutide binds GLP1R",
+      "c": 0.996,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_efficacy_ziconotide_chronic_pain",
+      "text": "ziconotide relieves severe chronic pain",
+      "c": 0.996,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_bind_tirzepatide_GLP1R/GIPR",
+      "text": "tirzepatide binds GLP1R/GIPR",
+      "c": 0.995,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_bind_retatrutide_GLP1R/GIPR/GCGR",
+      "text": "retatrutide binds GLP1R/GIPR/GCGR",
+      "c": 0.995,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_selectivity_tirzepatide_dual_agonist",
+      "text": "tirzepatide co-activates the GLP-1 and GIP receptors",
+      "c": 0.993,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_efficacy_liraglutide_type_2_diabetes",
+      "text": "liraglutide improves glycemic control in type 2 diabetes",
+      "c": 0.993,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_bind_ziconotide_N-type calcium channel",
+      "text": "ziconotide binds N-type calcium channel",
+      "c": 0.992,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_efficacy_bpc-157_tissue_repair",
+      "text": "BPC-157 promotes tendon and tissue healing (preclinical)",
+      "c": 0.992,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_bind_icatibant_bradykinin B2 receptor",
+      "text": "icatibant binds bradykinin B2 receptor",
+      "c": 0.987,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_efficacy_selank_anxiolytic",
+      "text": "Selank has anxiolytic effects (research)",
+      "c": 0.987,
+      "r": 3,
+      "s": 0
+    },
+    {
+      "claim": "c_efficacy_cagrilintide_obesity",
+      "text": "cagrilintide reduces body weight in obesity",
+      "c": 0.986,
+      "r": 2,
+      "s": 0
+    }
+  ]
+}
