@@ -54,3 +54,18 @@ make help           # everything else
 - `docs/COMPONENTS.md` — how the code splits into three logical areas
 
 Design notes and research live in the Obsidian vault one level up.
+
+## Codex contribution
+
+Cortesol was built with substantial help from Codex. Working under the team's direction and review, AI wrote much of the
+implementation: the deterministic belief engine and the domain-general
+critical-appraisal contract, the live belief-graph UI, the pluggable model-provider
+layer, and the training / eval / deployment wiring. Architecture, scope, and final
+review were the team's.
+
+Codex Sol helped the team devise the training pipeline:
+-> Supervised fine-tuning
+-> On-Policy Distillation
+-> Group Relative Policy Optimization
+
+Was found out to be the most effective pipeline to reduce the KL divergence between a tiny open-source Qwen gate model and a much capable teacher model, Sol 5.6.

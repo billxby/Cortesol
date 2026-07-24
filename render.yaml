@@ -15,9 +15,12 @@ services:
       # immediately see a populated, self-revising graph.
       - key: CORTESOL_FOUNDATION
         value: "1"
-      # OPTIONAL — set these in the Render dashboard to enable the live generative
+      # OPTIONAL — set ONE in the Render dashboard to enable the live generative
       # features (Research chat, live Report generation, Import-field drafting).
-      # Left unset, those degrade gracefully to deterministic/offline mode.
+      # Claude is the default; precedence Claude -> OpenAI -> Gemini. Left unset,
+      # those features degrade gracefully to deterministic/offline mode.
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: GEMINI_API_KEY

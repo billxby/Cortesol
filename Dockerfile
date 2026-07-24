@@ -9,7 +9,8 @@ WORKDIR /app
 # pyproject) are NOT needed to serve the UI, so we keep the image slim.
 RUN pip install --no-cache-dir \
     "networkx>=3.3" "numpy>=2.0" "pydantic>=2.7" \
-    "fastapi>=0.111" "uvicorn[standard]>=0.30" "sse-starlette>=2.1" "openai>=1.40"
+    "fastapi>=0.111" "uvicorn[standard]>=0.30" "sse-starlette>=2.1" \
+    "anthropic>=0.117" "openai>=1.40"
 
 COPY cortesol ./cortesol
 COPY data ./data
